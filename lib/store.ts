@@ -1,0 +1,358 @@
+"use client";
+
+import type { Character, CharacterStats, ActivityLog, BossProgress as BossProgressType, CurrentBoss } from "./types";
+import { STAT_KEYS } from "./types";
+import { xpToLevel, streakMultiplier, DAILY_MINIMUM_XP } from "./level";
+import { getActivityById, isStudyActivityForBoss } from "./activities";
+import { getSampleBosses } from "./bosses";
+
+const STORAGE_KEY_CHARACTER = "campusquest_character";
+const STORAGE_KEY_LOGS = "campusquest_activity_logs";
+const STORAGE_KEY_BOSS_PROGRESS = "campusquest_boss_progress";
+const STORAGE_KEY_CURRENT_BOSS = "campusquest_current_boss";
+
+function defaultStats(): CharacterStats {
+  return {
+    strength: 0,
+    stamina: 0,
+    knowledge: 0,
+    social: 0,
+    focus: 0,
+  };
+}
+
+function todayString(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function loadCharacter(): Character | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CHARACTER);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as Character;
+    data.stats = { ...defaultStats(), ...data.stats };
+    data.level = xpToLevel(data.totalXP);
+    if (data.streakDays == null) data.streakDays = 0;
+    if (data.lastActivityDate == null) data.lastActivityDate = null;
+    if (!Array.isArray(data.achievements)) data.achievements = [];
+    if (!data.username) data.username = (data.name || "student").toLowerCase().replace(/\s+/g, "_");
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function saveCharacter(c: Character): void {
+  if (typeof window === "undefined") return;
+  c.level = xpToLevel(c.totalXP);
+  localStorage.setItem(STORAGE_KEY_CHARACTER, JSON.stringify(c));
+}
+
+function loadLogs(): ActivityLog[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_LOGS);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function saveLogs(logs: ActivityLog[]): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(logs));
+}
+
+type BossProgressRecord = Record<string, BossProgressType>;
+
+function loadBossProgress(): BossProgressRecord {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_BOSS_PROGRESS);
+    if (!raw) return {};
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function saveBossProgress(record: BossProgressRecord): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(STORAGE_KEY_BOSS_PROGRESS, JSON.stringify(record));
+}
+
+function loadCurrentBoss(): CurrentBoss | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CURRENT_BOSS);
+    if (!raw) return null;
+    return JSON.parse(raw) as CurrentBoss;
+  } catch {
+    return null;
+  }
+}
+
+function saveCurrentBoss(boss: CurrentBoss | null): void {
+  if (typeof window === "undefined") return;
+  if (boss === null) {
+    localStorage.removeItem(STORAGE_KEY_CURRENT_BOSS);
+  } else {
+    localStorage.setItem(STORAGE_KEY_CURRENT_BOSS, JSON.stringify(boss));
+  }
+}
+
+function calculateXp(
+  baseXp: number,
+  activityId: string,
+  minutes: number | undefined,
+  streakDays: number
+): number {
+  let xp = baseXp;
+  const def = getActivityById(activityId);
+  if (def?.usesMinutes && minutes != null && minutes > 0) {
+    xp += Math.floor(minutes / 10) * 5;
+  }
+  xp = Math.floor(xp * streakMultiplier(streakDays));
+  return Math.max(1, xp);
+}
+
+function applyStatIncrease(
+  activityId: string,
+  stat: keyof CharacterStats,
+  statGain: number,
+  minutes: number | undefined,
+  c: Character
+): void {
+  const def = getActivityById(activityId);
+  if (def?.usesMinutes && minutes != null && minutes > 0) {
+    if (stat === "knowledge") {
+      c.stats.knowledge = (c.stats.knowledge ?? 0) + Math.max(1, Math.floor(minutes / 20));
+    } else if (stat === "focus") {
+      c.stats.focus = (c.stats.focus ?? 0) + Math.max(1, Math.floor(minutes / 25));
+    } else {
+      c.stats[stat] = (c.stats[stat] ?? 0) + statGain;
+    }
+  } else {
+    if (activityId === "gym") {
+      c.stats.strength = (c.stats.strength ?? 0) + 2;
+    } else if (stat === "social" && (activityId === "club" || activityId === "group-study")) {
+      c.stats.social = (c.stats.social ?? 0) + 1;
+    } else {
+      c.stats[stat] = (c.stats[stat] ?? 0) + statGain;
+    }
+  }
+}
+
+function ensureAchievement(c: Character, id: string): void {
+  if (!c.achievements.includes(id)) c.achievements.push(id);
+}
+
+export function getCharacter(): Character | null {
+  return loadCharacter();
+}
+
+/** Clear character from storage; next getCharacter() will return null (shows CharacterGate). */
+export function logout(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(STORAGE_KEY_CHARACTER);
+}
+
+export function createCharacter(name: string, avatar: string, username?: string): Character {
+  const existing = loadCharacter();
+  if (existing) return existing;
+
+  const id = `char-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const un = (username || name || "student").trim().toLowerCase().replace(/\s+/g, "_") || "student";
+  const character: Character = {
+    id,
+    name: name.trim() || "Student",
+    username: un,
+    avatar: avatar || "🎓",
+    level: 1,
+    totalXP: 0,
+    stats: defaultStats(),
+    streakDays: 0,
+    lastActivityDate: null,
+    achievements: [],
+    createdAt: Date.now(),
+  };
+  saveCharacter(character);
+  return character;
+}
+
+export function updateCharacter(
+  updates: Partial<Pick<Character, "name" | "avatar" | "username">>
+): Character | null {
+  const c = loadCharacter();
+  if (!c) return null;
+  if (updates.name !== undefined) c.name = updates.name.trim() || c.name;
+  if (updates.avatar !== undefined) c.avatar = updates.avatar || c.avatar;
+  if (updates.username !== undefined) c.username = (updates.username || c.username).toLowerCase().replace(/\s+/g, "_");
+  saveCharacter(c);
+  return c;
+}
+
+export interface LogActivityOptions {
+  minutes?: number;
+  proofUrl?: string;
+  tags?: string[];
+}
+
+/** Spec: verify_proof — proof must be non-empty (image/link/text evidence). */
+function verifyProof(proof: string | undefined): boolean {
+  return typeof proof === "string" && proof.trim().length > 0;
+}
+
+export function logActivity(
+  characterId: string,
+  activityId: string,
+  options?: LogActivityOptions
+): Character | null {
+  const activity = getActivityById(activityId);
+  if (!activity) return null;
+
+  if (!verifyProof(options?.proofUrl)) return null;
+
+  const c = loadCharacter();
+  if (!c || c.id !== characterId) return null;
+
+  const baseXp = activity.baseXp ?? activity.xp;
+  const minutes = options?.minutes;
+  const xpEarned = calculateXp(baseXp, activityId, minutes, c.streakDays);
+
+  const logs = loadLogs();
+  const log: ActivityLog = {
+    id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    characterId,
+    activityId,
+    createdAt: Date.now(),
+    minutes,
+    proofUrl: options?.proofUrl,
+    tags: options?.tags,
+    xpEarned,
+  };
+  logs.push(log);
+  saveLogs(logs);
+
+  applyStatIncrease(activityId, activity.stat, activity.statGain, minutes, c);
+  c.totalXP += xpEarned;
+  const prevLevel = c.level;
+  c.level = xpToLevel(c.totalXP);
+
+  const today = todayString();
+  const todayStart = new Date(today).getTime();
+  const todayEnd = todayStart + 24 * 60 * 60 * 1000;
+  const todaysXp = logs
+    .filter((l) => l.characterId === characterId && l.createdAt >= todayStart && l.createdAt < todayEnd && l.xpEarned != null)
+    .reduce((sum, l) => sum + (l.xpEarned ?? 0), 0);
+
+  if (todaysXp >= DAILY_MINIMUM_XP) {
+    if (c.lastActivityDate !== today) {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
+      if (c.lastActivityDate === yesterdayStr) {
+        c.streakDays += 1;
+      } else {
+        c.streakDays = 1;
+      }
+      c.lastActivityDate = today;
+    }
+  } else {
+    // Python spec: if below minimum and today > last_active_day, break streak
+    if (c.lastActivityDate != null) {
+      const last = c.lastActivityDate;
+      if (today > last) c.streakDays = 0;
+    }
+  }
+
+  ensureAchievement(c, "First Quest Completed");
+  if (c.streakDays >= 7) ensureAchievement(c, "7-Day Streak");
+  if (c.streakDays >= 30) ensureAchievement(c, "30-Day Streak");
+  if (c.level > prevLevel) ensureAchievement(c, `Reached Level ${c.level}`);
+
+  if (isStudyActivityForBoss(activityId)) {
+    applyStudyDamageToCurrentBoss(c, minutes ?? 30);
+  }
+
+  saveCharacter(c);
+  return c;
+}
+
+/** Python spec: damage = (knowledge*2) + (focus*2) + (studyMinutes/10)*5; defeat = +100 XP */
+function applyStudyDamageToCurrentBoss(c: Character, studyMinutes: number): void {
+  const boss = loadCurrentBoss();
+  if (!boss || !boss.active) return;
+
+  const damage =
+    (c.stats.knowledge ?? 0) * 2 +
+    (c.stats.focus ?? 0) * 2 +
+    Math.floor(studyMinutes / 10) * 5;
+  const actualDamage = Math.max(1, damage);
+  boss.hp = Math.max(0, boss.hp - actualDamage);
+
+  if (boss.hp <= 0) {
+    boss.hp = 0;
+    boss.active = false;
+    c.totalXP += 100;
+    c.level = xpToLevel(c.totalXP);
+    ensureAchievement(c, `Defeated ${boss.name} Boss (+100 XP)`);
+  }
+  saveCurrentBoss(boss);
+}
+
+export function getBossProgress(characterId: string): BossProgressType[] {
+  const bosses = getSampleBosses();
+  const progress = loadBossProgress();
+  const key = `${characterId}:`;
+  return bosses.map((boss) => {
+    const pk = key + boss.id;
+    const p = progress[pk];
+    if (p) return p;
+    return { bossId: boss.id, currentHp: boss.bossHp, defeated: false };
+  });
+}
+
+export function getCurrentBoss(): CurrentBoss | null {
+  return loadCurrentBoss();
+}
+
+/** Python-style: start a boss battle (name + HP). Study sessions deal damage to this boss. */
+export function startBossBattle(name: string, hp: number): void {
+  const boss: CurrentBoss = {
+    name: name.trim() || "Boss",
+    hp,
+    maxHp: hp,
+    active: true,
+    startedAt: Date.now(),
+  };
+  saveCurrentBoss(boss);
+}
+
+export function getActivityLogs(characterId: string): ActivityLog[] {
+  return loadLogs()
+    .filter((l) => l.characterId === characterId)
+    .sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export function getStats(): CharacterStats | null {
+  const c = loadCharacter();
+  return c?.stats ?? null;
+}
+
+export function getLogsByActivity(characterId: string): Record<string, number> {
+  const logs = loadLogs().filter((l) => l.characterId === characterId);
+  const today = todayString();
+  const todayStart = new Date(today).getTime();
+  const todayEnd = todayStart + 24 * 60 * 60 * 1000;
+  const count: Record<string, number> = {};
+  logs.forEach((l) => {
+    if (l.createdAt >= todayStart && l.createdAt < todayEnd) {
+      count[l.activityId] = (count[l.activityId] ?? 0) + 1;
+    }
+  });
+  return count;
+}
