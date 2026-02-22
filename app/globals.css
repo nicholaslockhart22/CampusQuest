@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* URI official: Navy #041E42, Keaney Blue #68ABE8, White */
+  --uri-navy: #041E42;
+  --uri-keaney: #68ABE8;
+  --uri-white: #FFFFFF;
+  --uri-gold: #c5a028;
+  --uri-accent: #0066b3;
+}
+
+body {
+  @apply bg-uri-navy text-uri-white antialiased;
+  min-height: 100vh;
+}
+
+.stat-bar {
+  @apply h-2.5 rounded-full bg-white/15 overflow-hidden;
+}
+.stat-fill {
+  @apply h-full rounded-full transition-all duration-500 ease-out;
+}
+
+/* RamMark: campus tag style — Keaney blue tint */
+.ram-mark {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem 0.2rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--uri-navy);
+  background: linear-gradient(135deg, #e8f2fc 0%, #cce0f5 100%);
+  border: 1px solid rgba(4, 30, 66, 0.15);
+  border-radius: 0 6px 6px 0;
+  transform: rotate(-1.5deg);
+  box-shadow: 0 1px 2px rgba(4, 30, 66, 0.08);
+  position: relative;
+}
+.ram-mark::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--uri-navy);
+  border: 2px solid #e8f2fc;
+}
