@@ -1,6 +1,6 @@
 "use client";
 
-import type { Character, CharacterStats, ActivityLog, BossProgress as BossProgressType, CurrentBoss } from "./types";
+import type { Character, CharacterStats, ActivityLog, BossProgress as BossProgressType, CurrentBoss, UserBoss } from "./types";
 import { STAT_KEYS } from "./types";
 import { xpToLevel, streakMultiplier, DAILY_MINIMUM_XP } from "./level";
 import { getActivityById, isStudyActivityForBoss } from "./activities";
@@ -11,6 +11,17 @@ const STORAGE_KEY_CHARACTER = "campusquest_character";
 const STORAGE_KEY_LOGS = "campusquest_activity_logs";
 const STORAGE_KEY_BOSS_PROGRESS = "campusquest_boss_progress";
 const STORAGE_KEY_CURRENT_BOSS = "campusquest_current_boss";
+const STORAGE_KEY_USER_BOSSES = "campusquest_user_bosses";
+const STORAGE_KEY_ACTIVE_BOSS_ID = "campusquest_active_boss_id";
+
+const MAX_USER_BOSSES = 4;
+const MIN_BOSS_HP = 250;
+
+/** XP on defeat: 100 at 250 HP, +5 per 10 HP above 250 */
+function bossXpReward(maxHp: number): number {
+  const hp = Math.max(MIN_BOSS_HP, maxHp);
+  return 100 + Math.floor((hp - MIN_BOSS_HP) / 10) * 5;
+}
 
 function defaultStats(): CharacterStats {
   return {
@@ -104,6 +115,37 @@ function saveCurrentBoss(boss: CurrentBoss | null): void {
   } else {
     localStorage.setItem(STORAGE_KEY_CURRENT_BOSS, JSON.stringify(boss));
   }
+}
+
+function loadUserBosses(): UserBoss[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_USER_BOSSES);
+    if (!raw) return [];
+    const list = JSON.parse(raw) as UserBoss[];
+    return list.map((b) => ({
+      ...b,
+      xpReward: b.xpReward ?? bossXpReward(b.maxHp),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function saveUserBosses(bosses: UserBoss[]): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(STORAGE_KEY_USER_BOSSES, JSON.stringify(bosses));
+}
+
+function loadActiveBossId(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(STORAGE_KEY_ACTIVE_BOSS_ID);
+}
+
+function saveActiveBossId(id: string | null): void {
+  if (typeof window === "undefined") return;
+  if (id === null) localStorage.removeItem(STORAGE_KEY_ACTIVE_BOSS_ID);
+  else localStorage.setItem(STORAGE_KEY_ACTIVE_BOSS_ID, id);
 }
 
 function calculateXp(
@@ -286,24 +328,29 @@ export function logActivity(
 
 /** Python spec: damage = (knowledge*2) + (focus*2) + (studyMinutes/10)*5; defeat = +100 XP */
 function applyStudyDamageToCurrentBoss(c: Character, studyMinutes: number): void {
-  const boss = loadCurrentBoss();
-  if (!boss || !boss.active) return;
+  const activeId = loadActiveBossId();
+  if (!activeId) return;
+  const bosses = loadUserBosses();
+  const boss = bosses.find((b) => b.id === activeId);
+  if (!boss || boss.defeated) return;
 
   const damage =
     (c.stats.knowledge ?? 0) * 2 +
     (c.stats.focus ?? 0) * 2 +
     Math.floor(studyMinutes / 10) * 5;
   const actualDamage = Math.max(1, damage);
-  boss.hp = Math.max(0, boss.hp - actualDamage);
+  boss.currentHp = Math.max(0, boss.currentHp - actualDamage);
 
-  if (boss.hp <= 0) {
-    boss.hp = 0;
-    boss.active = false;
-    c.totalXP += 100;
+  if (boss.currentHp <= 0) {
+    boss.currentHp = 0;
+    boss.defeated = true;
+    boss.defeatedAt = Date.now();
+    const xp = boss.xpReward ?? bossXpReward(boss.maxHp);
+    c.totalXP += xp;
     c.level = xpToLevel(c.totalXP);
-    ensureAchievement(c, `Defeated ${boss.name} Boss (+100 XP)`);
+    ensureAchievement(c, `Defeated ${boss.name} Boss (+${xp} XP)`);
   }
-  saveCurrentBoss(boss);
+  saveUserBosses(bosses);
 }
 
 export function getBossProgress(characterId: string): BossProgressType[] {
@@ -318,20 +365,75 @@ export function getBossProgress(characterId: string): BossProgressType[] {
   });
 }
 
-export function getCurrentBoss(): CurrentBoss | null {
-  return loadCurrentBoss();
+/** User-created bosses (custom names). Study damage goes to the active one. */
+export function getUserBosses(): UserBoss[] {
+  return loadUserBosses();
 }
 
-/** Python-style: start a boss battle (name + HP). Study sessions deal damage to this boss. */
-export function startBossBattle(name: string, hp: number): void {
-  const boss: CurrentBoss = {
+/** The boss currently being attacked (study sessions deal damage to this one). */
+export function getActiveBoss(): UserBoss | null {
+  const id = loadActiveBossId();
+  if (!id) return null;
+  return loadUserBosses().find((b) => b.id === id) ?? null;
+}
+
+export function getActiveBossId(): string | null {
+  return loadActiveBossId();
+}
+
+/** Set which boss receives study damage. Pass null to attack none. */
+export function setActiveBossId(bossId: string | null): void {
+  saveActiveBossId(bossId);
+}
+
+/** Add a new boss (custom name + HP). Max 4 bosses; min HP 250. Returns null if at limit. */
+export function addUserBoss(name: string, hp: number, setAsActive = true): UserBoss | null {
+  const bosses = loadUserBosses();
+  if (bosses.length >= MAX_USER_BOSSES) return null;
+  const maxHp = Math.max(MIN_BOSS_HP, Math.floor(hp));
+  const id = `ub-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const xp = bossXpReward(maxHp);
+  const boss: UserBoss = {
+    id,
     name: name.trim() || "Boss",
-    hp,
-    maxHp: hp,
-    active: true,
-    startedAt: Date.now(),
+    maxHp,
+    currentHp: maxHp,
+    defeated: false,
+    createdAt: Date.now(),
+    xpReward: xp,
   };
-  saveCurrentBoss(boss);
+  bosses.push(boss);
+  saveUserBosses(bosses);
+  if (setAsActive) saveActiveBossId(id);
+  return boss;
+}
+
+/** Remove a boss (no XP). Frees a slot. If deleted boss was active, clears active target. */
+export function deleteUserBoss(bossId: string): void {
+  const bosses = loadUserBosses().filter((b) => b.id !== bossId);
+  saveUserBosses(bosses);
+  if (loadActiveBossId() === bossId) saveActiveBossId(null);
+}
+
+export const MAX_BOSSES = MAX_USER_BOSSES;
+export { MIN_BOSS_HP, bossXpReward };
+
+/** Legacy: return active user boss in old shape for any code that still expects it. */
+export function getCurrentBoss(): CurrentBoss | null {
+  const b = getActiveBoss();
+  if (!b) return null;
+  return {
+    name: b.name,
+    hp: b.currentHp,
+    maxHp: b.maxHp,
+    active: !b.defeated,
+    startedAt: b.createdAt,
+  };
+}
+
+/** Legacy: add a boss and set as active (replaces old single-boss behavior). */
+export function startBossBattle(name: string, hp: number): void {
+  addUserBoss(name, hp, true);
 }
 
 export function getActivityLogs(characterId: string): ActivityLog[] {

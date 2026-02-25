@@ -195,3 +195,16 @@ export interface CurrentBoss {
   active: boolean;
   startedAt: number;
 }
+
+/** User-created boss: custom name and HP; one can be "active" (receiving study damage). XP = 100 + (maxHp - 250) / 10 * 5. */
+export interface UserBoss {
+  id: string;
+  name: string;
+  maxHp: number;
+  currentHp: number;
+  defeated: boolean;
+  defeatedAt?: number;
+  createdAt: number;
+  /** XP awarded on defeat (100 at 250 HP, +5 per 10 HP above 250) */
+  xpReward: number;
+}
