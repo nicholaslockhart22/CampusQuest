@@ -172,7 +172,7 @@ export function Dashboard() {
 
       {tab === "me" && (
         <>
-          <CharacterCard character={character} />
+          <CharacterCard character={character} onRefresh={refresh} />
           <ActivityList onLog={handleLog} />
           <RecentActivities characterId={character.id} />
           <StreakCard character={character} />
