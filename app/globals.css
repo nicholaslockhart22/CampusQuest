@@ -11,6 +11,40 @@
   --uri-accent: #0066b3;
 }
 
+/* Welcome splash animation */
+@keyframes welcome-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes welcome-word-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.welcome-splash-emoji {
+  animation: welcome-zoom-in 0.6s ease-out forwards;
+}
+.welcome-splash-title {
+  animation: welcome-zoom-in 0.6s 0.15s ease-out both;
+}
+.welcome-splash-word {
+  animation: welcome-word-pop 0.55s 0.35s ease-out both;
+}
+.welcome-splash-tagline {
+  animation: welcome-zoom-in 0.5s 0.5s ease-out both;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;

@@ -5,6 +5,7 @@ import { getCharacter, logActivity, logout as storeLogout } from "@/lib/store";
 import type { Character } from "@/lib/types";
 import { CharacterCard } from "./CharacterCard";
 import { CharacterGate } from "./CharacterGate";
+import { WelcomeSplash } from "./WelcomeSplash";
 import { ActivityList } from "./ActivityList";
 import { TheQuad } from "./TheQuad";
 import { DailyQuests } from "./DailyQuests";
@@ -28,7 +29,7 @@ function Header({ showLogout, onLogout }: { showLogout: boolean; onLogout: () =>
               CampusQuest
             </h1>
             <p className="text-[10px] sm:text-xs text-uri-keaney font-medium hidden sm:block">
-              URI · Level up IRL
+              URI · Level up for real
             </p>
           </div>
         </div>
@@ -50,6 +51,7 @@ function Header({ showLogout, onLogout }: { showLogout: boolean; onLogout: () =>
 export function Dashboard() {
   const [character, setCharacter] = useState<Character | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [showWelcomeSplash, setShowWelcomeSplash] = useState(true);
   const [tab, setTab] = useState<Tab>("quad");
 
   const refresh = useCallback(() => {
@@ -92,7 +94,9 @@ export function Dashboard() {
   }
 
   if (!character) {
-    return (
+    return showWelcomeSplash ? (
+      <WelcomeSplash onComplete={() => setShowWelcomeSplash(false)} />
+    ) : (
       <>
         <Header showLogout={false} onLogout={handleLogout} />
         <CharacterGate onReady={refresh} />
