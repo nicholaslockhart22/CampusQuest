@@ -69,3 +69,73 @@
   background: var(--uri-navy);
   border: 2px solid #e8f2fc;
 }
+
+/* Boss battle — game-style HP bar and cards */
+.boss-hp-bar {
+  @apply h-3 rounded-full overflow-hidden bg-uri-navy/80 border border-red-900/40;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+.boss-hp-fill {
+  @apply h-full rounded-full transition-all duration-500 ease-out;
+  background: linear-gradient(180deg, #f87171 0%, #dc2626 50%, #991b1b 100%);
+  box-shadow: 0 0 8px rgba(220, 38, 38, 0.5);
+}
+.boss-card-active {
+  background: linear-gradient(135deg, rgba(254, 202, 202, 0.08) 0%, rgba(30, 58, 138, 0.15) 50%, rgba(4, 30, 66, 0.4) 100%);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  box-shadow: 0 0 20px rgba(220, 38, 38, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.boss-card-defeated {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(4, 30, 66, 0.3) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.boss-card-default {
+  @apply border border-white/10 transition-all duration-200;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+}
+.boss-card-default:hover {
+  border-color: rgba(197, 165, 40, 0.35);
+  box-shadow: 0 0 16px rgba(197, 165, 40, 0.06);
+}
+
+/* Final Boss — 500+ HP: epic, crown, glow */
+.final-boss-box {
+  background: linear-gradient(145deg, rgba(30, 58, 138, 0.4) 0%, rgba(4, 30, 66, 0.9) 40%, rgba(76, 29, 149, 0.35) 100%);
+  border: 2px solid rgba(197, 165, 40, 0.6);
+  box-shadow:
+    0 0 32px rgba(197, 165, 40, 0.2),
+    0 0 64px rgba(139, 92, 246, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+.final-boss-box::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(135deg, rgba(197, 165, 40, 0.4), rgba(139, 92, 246, 0.3), rgba(197, 165, 40, 0.2));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.final-boss-card {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(197, 165, 40, 0.12) 50%, rgba(4, 30, 66, 0.6) 100%);
+  border: 1px solid rgba(197, 165, 40, 0.5);
+  box-shadow: 0 0 24px rgba(139, 92, 246, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.final-boss-hp-bar {
+  @apply h-3 rounded-full overflow-hidden;
+  background: linear-gradient(180deg, #1e1b4b 0%, #0f0a1e 100%);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+.final-boss-hp-fill {
+  @apply h-full rounded-full transition-all duration-500 ease-out;
+  background: linear-gradient(90deg, #a78bfa 0%, #7c3aed 50%, #5b21b6 100%);
+  box-shadow: 0 0 12px rgba(167, 139, 250, 0.6);
+}
