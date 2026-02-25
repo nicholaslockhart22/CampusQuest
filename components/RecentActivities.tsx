@@ -9,15 +9,15 @@ export function RecentActivities({ characterId }: { characterId: string }) {
   const logs = getActivityLogs(characterId).slice(0, N);
   if (logs.length === 0) {
     return (
-      <section className="rounded-2xl bg-white/[0.08] border border-white/20 p-4 shadow-xl shadow-black/20">
-        <h3 className="font-display font-semibold text-white mb-2">📝 Recent activities</h3>
+      <section className="card p-4 sm:p-5">
+        <h3 className="font-display font-semibold text-white mb-2"><span aria-hidden>📝</span> Recent activities</h3>
         <p className="text-sm text-white/50">No activities logged yet.</p>
       </section>
     );
   }
   return (
-    <section className="rounded-2xl bg-white/[0.08] border border-white/20 p-4 shadow-xl shadow-black/20">
-      <h3 className="font-display font-semibold text-white mb-3">📝 Recent activities</h3>
+    <section className="card p-4 sm:p-5">
+      <h3 className="font-display font-semibold text-white mb-3"><span aria-hidden>📝</span> Recent activities</h3>
       <ul className="space-y-1.5">
         {logs.map((log) => {
           const def = getActivityById(log.activityId);

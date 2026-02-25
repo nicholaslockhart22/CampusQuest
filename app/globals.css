@@ -11,9 +11,28 @@
   --uri-accent: #0066b3;
 }
 
-body {
-  @apply bg-uri-navy text-uri-white antialiased;
-  min-height: 100vh;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-uri-navy text-uri-white antialiased;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* Visible focus for accessibility */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-uri-keaney ring-offset-2 ring-offset-uri-navy;
+  }
+  ::selection {
+    @apply bg-uri-keaney/30 text-white;
+  }
+}
+
+/* Card surface — consistent elevation, blue tint */
+.card {
+  @apply rounded-2xl border border-uri-keaney/20 bg-white/[0.06] shadow-lg shadow-black/10;
 }
 
 .stat-bar {

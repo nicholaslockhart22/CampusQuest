@@ -18,11 +18,10 @@ export function CharacterCard({ character }: { character: Character }) {
   const xpPct = Math.min(100, (current / needed) * 100);
 
   return (
-    <section className="rounded-2xl bg-white/[0.08] border border-white/20 p-5 shadow-xl shadow-black/20">
-      {/* Avatar + level progression */}
+    <section className="card p-5 sm:p-6">
       <div className="flex items-start gap-4">
         <div
-          className="w-20 h-20 rounded-2xl bg-gradient-to-br from-uri-keaney/30 to-uri-navy flex items-center justify-center text-4xl border-2 border-uri-keaney/50 flex-shrink-0 shadow-lg"
+          className="w-20 h-20 rounded-2xl bg-gradient-to-br from-uri-keaney/25 to-uri-navy flex items-center justify-center text-4xl border border-uri-keaney/40 flex-shrink-0"
           aria-hidden
         >
           {character.avatar}
@@ -32,34 +31,25 @@ export function CharacterCard({ character }: { character: Character }) {
             {character.name}
           </h2>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <span className="text-uri-keaney font-mono font-semibold bg-uri-keaney/20 px-1.5 py-0.5 rounded">
+            <span className="text-uri-keaney font-mono font-semibold text-sm bg-uri-keaney/15 px-2 py-0.5 rounded-lg">
               Lv.{character.level}
             </span>
-            <span className="text-white/50 text-sm font-mono">
-              @{character.username}
-            </span>
-            <span className="text-white/40 text-sm font-mono">
-              {character.totalXP} XP
-            </span>
+            <span className="text-white/50 text-sm">@{character.username}</span>
+            <span className="text-white/40 text-sm font-mono">{character.totalXP} XP</span>
           </div>
           <div className="mt-3">
             <div className="flex justify-between text-xs text-white/50 mb-1">
               <span>Level progress</span>
-              <span className="font-mono text-uri-keaney/90">
-                {current} / {needed} XP
-              </span>
+              <span className="font-mono text-uri-keaney/90">{current} / {needed} XP</span>
             </div>
             <div className="stat-bar bg-white/20">
-              <div
-                className="stat-fill bg-uri-keaney"
-                style={{ width: `${xpPct}%` }}
-              />
+              <div className="stat-fill bg-uri-keaney" style={{ width: `${xpPct}%` }} />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mt-5 pt-4 border-t border-white/15">
+      <div className="mt-5 pt-4 border-t border-uri-keaney/20">
         <h3 className="text-xs font-semibold text-uri-keaney/90 uppercase tracking-wider mb-3">
           Stats
         </h3>
@@ -92,7 +82,7 @@ export function CharacterCard({ character }: { character: Character }) {
       </div>
 
       {character.achievements && character.achievements.length > 0 && (
-        <div className="mt-5 pt-4 border-t border-white/15">
+        <div className="mt-5 pt-4 border-t border-uri-keaney/20">
           <h3 className="text-xs font-semibold text-uri-keaney/90 uppercase tracking-wider mb-2">
             Achievements
           </h3>

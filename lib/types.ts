@@ -48,6 +48,33 @@ export interface Character {
   createdAt: number;
 }
 
+// —— Find Friends (social) ——
+export type FriendRequestStatus = "pending" | "accepted" | "declined";
+
+export interface FriendRequest {
+  id: string;
+  fromUserId: string;
+  fromUsername: string;
+  fromName: string;
+  fromAvatar: string;
+  toUsername: string;
+  status: FriendRequestStatus;
+  createdAt: number;
+}
+
+/** Snapshot of a friend for display (level, stats). */
+export interface Friend {
+  userId: string;
+  username: string;
+  name: string;
+  avatar: string;
+  level: number;
+  totalXP: number;
+  stats: CharacterStats;
+  streakDays: number;
+  addedAt: number;
+}
+
 export interface ActivityDefinition {
   id: string;
   label: string;

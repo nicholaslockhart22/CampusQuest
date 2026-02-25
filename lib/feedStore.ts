@@ -54,6 +54,12 @@ export function getFeed(filterRamMark?: string): FieldNote[] {
   return list;
 }
 
+export function getFeedByAuthorId(authorId: string): FieldNote[] {
+  return [...feed]
+    .filter((n) => n.authorId === authorId)
+    .sort((a, b) => b.createdAt - a.createdAt);
+}
+
 export interface CreateFieldNoteParams {
   authorId: string;
   authorName: string;

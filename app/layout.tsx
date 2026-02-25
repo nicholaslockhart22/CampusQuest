@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -14,9 +14,17 @@ const mono = JetBrains_Mono({
   weight: ["400", "500"],
 });
 
+export const viewport: Viewport = {
+  themeColor: "#041E42",
+};
+
 export const metadata: Metadata = {
-  title: "CampusQuest — URI Life RPG + Social",
-  description: "The Quad. Field Notes, Nods, Rally Calls. Level up with real-world productivity. For Rhody undergrads.",
+  title: "CampusQuest — Level Up Your Campus Life",
+  description: "Turn real life into an RPG. Log workouts, study sessions, and campus life. Earn XP, build stats, and compete on The Quad. URI.",
+  openGraph: {
+    title: "CampusQuest — Level Up Your Campus Life",
+    description: "Turn real life into an RPG. Earn XP, build stats, compete on The Quad.",
+  },
 };
 
 export default function RootLayout({

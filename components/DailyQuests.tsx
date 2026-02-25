@@ -23,11 +23,11 @@ export function DailyQuests({ character }: { character: Character }) {
   const logsByActivity = getLogsByActivity(character.id);
 
   return (
-    <section className="rounded-2xl bg-white/[0.08] border border-white/20 p-4 shadow-xl shadow-black/20">
-      <h3 className="font-display font-semibold text-white mb-3 flex items-center gap-2">
-        <span>📋</span> Daily Quests
+    <section className="card p-4 sm:p-5">
+      <h3 className="font-display font-semibold text-white mb-2 flex items-center gap-2">
+        <span aria-hidden>📋</span> Daily Quests
       </h3>
-      <p className="text-xs text-white/50 mb-3">Complete activities to finish quests. Rewards bonus XP.</p>
+      <p className="text-xs text-white/50 mb-3">Complete activities to earn bonus XP.</p>
       <div className="space-y-2">
         {quests.map((q) => {
           const current = getProgressForQuest(q, logsByActivity);

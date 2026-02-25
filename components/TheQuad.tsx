@@ -38,8 +38,8 @@ export function TheQuad({
   }
 
   return (
-    <section className="rounded-2xl bg-white/[0.08] border border-white/20 overflow-hidden shadow-xl shadow-black/20">
-      <div className="px-4 py-3.5 border-b border-white/15 flex items-center justify-between flex-wrap gap-2 bg-white/[0.04]">
+    <section className="card overflow-hidden">
+      <div className="px-4 py-3.5 border-b border-uri-keaney/20 flex items-center justify-between flex-wrap gap-2 bg-uri-keaney/5">
         <h2 className="font-display font-bold text-lg text-white">
           The Quad
         </h2>
@@ -49,7 +49,7 @@ export function TheQuad({
           options={getAllRamMarks()}
         />
       </div>
-      <div className="p-4 border-b border-white/15 bg-white/[0.03]">
+      <div className="p-4 border-b border-uri-keaney/20 bg-uri-keaney/5">
         <FieldNoteComposer
           character={character}
           onPosted={refresh}
@@ -57,8 +57,10 @@ export function TheQuad({
       </div>
       <div className="divide-y divide-white/10 max-h-[60vh] overflow-y-auto">
         {notes.length === 0 ? (
-          <div className="p-8 text-center text-white/60 text-sm">
-            No Field Notes yet. Post something to the Quad!
+          <div className="p-10 text-center">
+            <p className="text-4xl mb-3 opacity-50">📝</p>
+            <p className="text-white/70 font-medium">No Field Notes yet</p>
+            <p className="text-sm text-white/50 mt-1">Share a study’ sesh, workout, or campus moment.</p>
           </div>
         ) : (
           notes.map((note) => (

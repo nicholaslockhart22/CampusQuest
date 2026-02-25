@@ -34,11 +34,11 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
   }, [bossName, bossHp, onRefresh]);
 
   return (
-    <section className="rounded-2xl bg-white/[0.08] border border-white/20 p-4 shadow-xl shadow-black/20">
-      <h3 className="font-display font-semibold text-white mb-3 flex items-center gap-2">
-        <span>⚔️</span> Boss Battles
+    <section className="card p-4 sm:p-5">
+      <h3 className="font-display font-semibold text-white mb-2 flex items-center gap-2">
+        <span aria-hidden>⚔️</span> Boss Battles
       </h3>
-      <p className="text-xs text-white/50 mb-3">Study sessions deal damage (Knowledge + Focus + minutes). Defeat for +100 XP.</p>
+      <p className="text-xs text-white/50 mb-3">Study sessions deal damage. Defeat the boss for +100 XP.</p>
 
       {/* Current boss (Python-style: one active boss) */}
       {currentBoss && (
@@ -95,7 +95,7 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
           <button
             type="button"
             onClick={handleStartBoss}
-            className="w-full py-2 rounded-lg bg-uri-gold text-uri-navy font-semibold hover:bg-uri-gold/90"
+            className="w-full py-2 rounded-lg bg-uri-keaney text-white font-semibold hover:bg-uri-keaney/90"
           >
             Start battle
           </button>

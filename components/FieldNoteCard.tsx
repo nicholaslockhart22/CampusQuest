@@ -30,7 +30,7 @@ export function FieldNoteCard({
   const isImgUrl = proofImgUrl && /\.(jpe?g|png|gif|webp)/i.test(proofImgUrl);
 
   return (
-    <article className="p-4 hover:bg-white/[0.06] transition-colors rounded-xl mx-1 my-0.5">
+    <article className="p-4 hover:bg-white/[0.04] transition-colors">
       <div className="flex gap-3">
         <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-uri-keaney/25 to-uri-navy flex items-center justify-center text-xl flex-shrink-0 border border-uri-keaney/30">
           {note.authorAvatar}
@@ -62,24 +62,26 @@ export function FieldNoteCard({
               ))}
             </div>
           )}
-          <div className="flex items-center gap-4 mt-3 text-sm">
+          <div className="flex items-center gap-1 mt-3 pt-3 border-t border-white/10">
             <button
               type="button"
               onClick={() => onNod(note.id)}
-              className={`flex items-center gap-1 transition-colors ${hasNodded ? "text-uri-gold" : "text-white/60 hover:text-uri-gold"}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${hasNodded ? "text-uri-gold bg-uri-gold/10" : "text-white/55 hover:text-uri-gold hover:bg-white/5"}`}
+              aria-label={hasNodded ? "Remove nod" : "Nod"}
             >
               <span>👍</span>
               <span>Nod</span>
-              {note.nodCount > 0 && <span className="font-mono">({note.nodCount})</span>}
+              {note.nodCount > 0 && <span className="font-mono text-xs">({note.nodCount})</span>}
             </button>
             <button
               type="button"
               onClick={() => onRally(note.id)}
-              className={`flex items-center gap-1 transition-colors ${hasRallied ? "text-uri-keaney" : "text-white/60 hover:text-uri-keaney"}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${hasRallied ? "text-uri-keaney bg-uri-keaney/10" : "text-white/55 hover:text-uri-keaney hover:bg-white/5"}`}
+              aria-label={hasRallied ? "Remove rally" : "Rally"}
             >
               <span>🦌</span>
               <span>Rally</span>
-              {note.rallyCount > 0 && <span className="font-mono">({note.rallyCount})</span>}
+              {note.rallyCount > 0 && <span className="font-mono text-xs">({note.rallyCount})</span>}
             </button>
           </div>
         </div>

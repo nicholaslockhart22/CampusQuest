@@ -5,6 +5,7 @@ import { STAT_KEYS } from "./types";
 import { xpToLevel, streakMultiplier, DAILY_MINIMUM_XP } from "./level";
 import { getActivityById, isStudyActivityForBoss } from "./activities";
 import { getSampleBosses } from "./bosses";
+import { registerCharacter as registerCharacterInFriends } from "./friendsStore";
 
 const STORAGE_KEY_CHARACTER = "campusquest_character";
 const STORAGE_KEY_LOGS = "campusquest_activity_logs";
@@ -48,6 +49,7 @@ function saveCharacter(c: Character): void {
   if (typeof window === "undefined") return;
   c.level = xpToLevel(c.totalXP);
   localStorage.setItem(STORAGE_KEY_CHARACTER, JSON.stringify(c));
+  registerCharacterInFriends(c);
 }
 
 function loadLogs(): ActivityLog[] {

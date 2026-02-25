@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { createFieldNote, normalizeRamMarkTag } from "@/lib/feedStore";
 import type { Character } from "@/lib/types";
 import { FIELD_NOTE_MAX_CHARS, RAMMARK_MAX_LENGTH, RAMMARK_MAX_PER_POST } from "@/lib/types";
@@ -18,6 +18,7 @@ export function FieldNoteComposer({
   const [ramMarks, setRamMarks] = useState<RamMark[]>([]);
   const [proofUrl, setProofUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const proofFileRef = useRef<HTMLInputElement>(null);
 
   const bodyCount = body.length;
   const canAddRamMark = ramMarks.length < RAMMARK_MAX_PER_POST && ramMarkInput.trim().length > 0 &&
@@ -37,6 +38,22 @@ export function FieldNoteComposer({
   const removeRamMark = useCallback((tag: string) => {
     setRamMarks((prev) => prev.filter((r) => r.tag !== tag));
   }, []);
+
+  function handleProofFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file (e.g. JPEG, PNG).");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setProofUrl(reader.result as string);
+      setError(null);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,14 +102,34 @@ export function FieldNoteComposer({
       </div>
 
       <div>
-        <label className="block text-xs text-white/60 mb-1">Proof photo (optional — link for XP flair)</label>
+        <label className="block text-xs text-white/60 mb-1">Proof photo (optional)</label>
         <input
           type="url"
-          value={proofUrl}
+          value={proofUrl.startsWith("data:") ? "" : proofUrl}
           onChange={(e) => setProofUrl(e.target.value)}
-          placeholder="Paste image URL (e.g. study pic, workout proof)"
+          placeholder="Paste image URL or add from device"
           className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-uri-keaney/50"
         />
+        <input
+          ref={proofFileRef}
+          type="file"
+          accept="image/*"
+          onChange={handleProofFileChange}
+          className="hidden"
+          aria-label="Add photo from device"
+        />
+        <button
+          type="button"
+          onClick={() => proofFileRef.current?.click()}
+          className="mt-2 text-xs font-medium text-uri-keaney hover:text-uri-keaney/80 px-3 py-2 rounded-lg border border-uri-keaney/40 hover:bg-uri-keaney/10 transition-colors"
+        >
+          📷 Add photo from device
+        </button>
+        {proofUrl.startsWith("data:") && (
+          <div className="mt-2 rounded-xl overflow-hidden border border-white/15 max-w-[180px]">
+            <img src={proofUrl} alt="Proof" className="w-full h-20 object-cover" />
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -140,9 +177,9 @@ export function FieldNoteComposer({
       <button
         type="submit"
         disabled={!body.trim()}
-        className="w-full py-2.5 rounded-xl font-semibold bg-uri-keaney text-uri-navy hover:bg-uri-keaney/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md"
+        className="w-full py-3 rounded-xl font-semibold bg-uri-keaney text-white hover:bg-uri-keaney/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
       >
-        Post Field Note
+        Post to The Quad
       </button>
     </form>
   );

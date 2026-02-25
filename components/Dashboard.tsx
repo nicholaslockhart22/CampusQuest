@@ -11,31 +11,37 @@ import { DailyQuests } from "./DailyQuests";
 import { StreakCard } from "./StreakCard";
 import { BossBattles } from "./BossBattles";
 import { RecentActivities } from "./RecentActivities";
+import { FindFriends } from "./FindFriends";
+import { Leaderboards } from "./Leaderboards";
+import { Profile } from "./Profile";
 
-type Tab = "quad" | "me";
+type Tab = "quad" | "me" | "friends" | "leaderboards" | "profile";
 
 function Header({ showLogout, onLogout }: { showLogout: boolean; onLogout: () => void }) {
   return (
-    <header className="border-b border-uri-keaney/30 bg-uri-navy/95 backdrop-blur-md sticky top-0 z-10 shadow-lg shadow-black/10 -mx-4 px-4 -mt-6 pt-6 mb-6">
-      <div className="max-w-2xl mx-auto py-3.5 flex items-center justify-between">
-        <h1 className="font-display font-bold text-xl text-white tracking-tight flex items-center gap-2.5">
-          <span className="text-2xl" aria-hidden>🐏</span>
-          CampusQuest
-        </h1>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-uri-keaney/90 font-mono hidden sm:inline">
-            URI · The Quad · Level up IRL
-          </span>
-          {showLogout && (
-            <button
-              type="button"
-              onClick={onLogout}
-              className="text-xs font-medium text-white/80 hover:text-white px-3 py-1.5 rounded-lg border border-white/20 hover:bg-white/10 transition-colors"
-            >
-              Log out
-            </button>
-          )}
+    <header className="sticky top-0 z-10 -mx-4 -mt-4 px-4 pt-4 pb-3 mb-4 sm:mb-5 bg-uri-navy/98 backdrop-blur-md border-b border-uri-keaney/30">
+      <div className="max-w-2xl mx-auto flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-2xl sm:text-3xl flex-shrink-0" aria-hidden>🐏</span>
+          <div className="min-w-0">
+            <h1 className="font-display font-bold text-lg sm:text-xl text-white tracking-tight truncate">
+              CampusQuest
+            </h1>
+            <p className="text-[10px] sm:text-xs text-uri-keaney font-medium hidden sm:block">
+              URI · Level up IRL
+            </p>
+          </div>
         </div>
+        {showLogout && (
+          <button
+            type="button"
+            onClick={onLogout}
+            className="flex-shrink-0 text-xs font-medium text-uri-keaney/90 hover:text-uri-keaney hover:bg-uri-keaney/10 px-3 py-2 rounded-xl border border-uri-keaney/30 transition-colors"
+            aria-label="Log out"
+          >
+            Log out
+          </button>
+        )}
       </div>
     </header>
   );
@@ -62,7 +68,26 @@ export function Dashboard() {
 
   if (!mounted) {
     return (
-      <div className="animate-pulse rounded-2xl bg-white/5 h-64 border border-white/10" />
+      <div className="space-y-4">
+        <div className="h-12 rounded-xl bg-white/10 w-3/4 max-w-xs" />
+        <div className="card p-5 space-y-4">
+          <div className="flex gap-4">
+            <div className="w-20 h-20 rounded-2xl bg-white/10" />
+            <div className="flex-1 space-y-2">
+              <div className="h-5 bg-white/10 rounded w-32" />
+              <div className="h-4 bg-white/10 rounded w-24" />
+              <div className="h-3 bg-white/10 rounded w-full mt-3" />
+            </div>
+          </div>
+          <div className="h-3 bg-white/10 rounded w-full" />
+          <div className="h-3 bg-white/10 rounded w-5/6" />
+        </div>
+        <div className="card p-4 space-y-2">
+          <div className="h-4 bg-white/10 rounded w-40" />
+          <div className="h-11 bg-white/10 rounded-xl" />
+          <div className="h-11 bg-white/10 rounded-xl" />
+        </div>
+      </div>
     );
   }
 
@@ -85,24 +110,44 @@ export function Dashboard() {
   return (
     <>
       <Header showLogout onLogout={handleLogout} />
-      <div className="space-y-6">
-        {/* Tabs — Figma-style pill switcher */}
-      <div className="flex rounded-2xl bg-white/10 border border-white/20 p-1.5 shadow-inner">
-        <button
-          type="button"
-          onClick={() => setTab("quad")}
-          className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all ${tab === "quad" ? "bg-uri-white text-uri-navy shadow-md" : "text-white/80 hover:text-white hover:bg-white/10"}`}
-        >
-          The Quad
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("me")}
-          className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all ${tab === "me" ? "bg-uri-white text-uri-navy shadow-md" : "text-white/80 hover:text-white hover:bg-white/10"}`}
-        >
-          My character
-        </button>
-      </div>
+      <div className="space-y-5 sm:space-y-6">
+        <nav className="flex rounded-2xl bg-white/10 border border-uri-keaney/20 p-1.5" aria-label="Main">
+          <button
+            type="button"
+            onClick={() => setTab("quad")}
+            className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all ${tab === "quad" ? "bg-uri-keaney text-white shadow-md" : "text-white/80 hover:text-uri-keaney hover:bg-uri-keaney/10"}`}
+          >
+            The Quad
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("friends")}
+            className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all ${tab === "friends" ? "bg-uri-keaney text-white shadow-md" : "text-white/80 hover:text-uri-keaney hover:bg-uri-keaney/10"}`}
+          >
+            Find Friends
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("leaderboards")}
+            className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all ${tab === "leaderboards" ? "bg-uri-keaney text-white shadow-md" : "text-white/80 hover:text-uri-keaney hover:bg-uri-keaney/10"}`}
+          >
+            Leaderboards
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("profile")}
+            className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all ${tab === "profile" ? "bg-uri-keaney text-white shadow-md" : "text-white/80 hover:text-uri-keaney hover:bg-uri-keaney/10"}`}
+          >
+            Profile
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("me")}
+            className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all ${tab === "me" ? "bg-uri-keaney text-white shadow-md" : "text-white/80 hover:text-uri-keaney hover:bg-uri-keaney/10"}`}
+          >
+            My character
+          </button>
+        </nav>
 
       {tab === "quad" && (
         <>
@@ -111,6 +156,18 @@ export function Dashboard() {
           <DailyQuests character={character} />
           <BossBattles character={character} onRefresh={refresh} />
         </>
+      )}
+
+      {tab === "friends" && (
+        <FindFriends character={character} onRefresh={refresh} />
+      )}
+
+      {tab === "leaderboards" && (
+        <Leaderboards character={character} />
+      )}
+
+      {tab === "profile" && (
+        <Profile character={character} />
       )}
 
       {tab === "me" && (

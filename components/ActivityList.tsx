@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ACTIVITIES, getActivityById } from "@/lib/activities";
 import type { StatKey } from "@/lib/types";
 import { STAT_ICONS } from "@/lib/types";
@@ -27,11 +27,29 @@ export function ActivityList({
   const [proof, setProof] = useState("");
   const [tags, setTags] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const proofFileRef = useRef<HTMLInputElement>(null);
 
   const activity = selected ? getActivityById(selected) : null;
   const needsMinutes = activity?.usesMinutes ?? false;
 
   const proofValid = proof.trim().length > 0;
+
+  function handleProofFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setSubmitError("Please choose an image file (e.g. JPEG, PNG).");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setProof(dataUrl);
+      setSubmitError(null);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,12 +76,12 @@ export function ActivityList({
   }
 
   return (
-    <section className="rounded-2xl bg-white/[0.08] border border-white/20 p-4 shadow-xl shadow-black/20">
+    <section className="card p-4 sm:p-5">
       <h2 className="font-display font-semibold text-white mb-1">
-        Log real actions → earn XP
+        Log activity · Earn XP
       </h2>
       <p className="text-sm text-white/50 mb-4">
-        Upload proof (photo URL, screenshot link, or notes) to level up your stats.
+        Add proof (photo URL, link, or note) to level up your stats.
       </p>
       <div className="grid gap-2">
         {ACTIVITIES.map((act) => (
@@ -72,7 +90,7 @@ export function ActivityList({
             type="button"
             onClick={() => setSelected(act.id)}
             disabled={disabled}
-            className={`flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all hover:scale-[1.01] ${STAT_COLORS[act.stat]}`}
+            className={`flex items-center gap-3 p-3.5 rounded-xl border text-left transition-colors ${STAT_COLORS[act.stat]}`}
           >
             <span className="text-2xl">{act.icon}</span>
             <div className="flex-1 min-w-0">
@@ -91,7 +109,7 @@ export function ActivityList({
       {selected && activity && (
         <form
           onSubmit={handleSubmit}
-          className="mt-4 p-4 rounded-xl border border-uri-keaney/30 bg-white/5 space-y-3"
+          className="mt-4 p-4 rounded-xl border border-uri-keaney/25 bg-uri-keaney/5 space-y-3"
         >
           <h3 className="font-medium text-white flex items-center gap-2">
             <span>{activity.icon}</span> {activity.label}
@@ -110,14 +128,39 @@ export function ActivityList({
             </div>
           )}
           <div>
-            <label className="block text-xs text-white/60 mb-1">Proof (required) — photo URL or notes</label>
+            <label className="block text-xs text-white/60 mb-1">Proof (required) — photo or notes</label>
             <input
               type="text"
-              value={proof}
+              value={proof.startsWith("data:") ? "" : proof}
               onChange={(e) => setProof(e.target.value)}
-              placeholder="Paste image URL, screenshot link, or short note"
+              placeholder="Paste image URL, link, or short note"
               className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:ring-2 focus:ring-uri-keaney/50"
             />
+            <input
+              ref={proofFileRef}
+              type="file"
+              accept="image/*"
+              onChange={handleProofFileChange}
+              className="hidden"
+              aria-label="Add photo from device"
+            />
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => proofFileRef.current?.click()}
+                className="text-xs font-medium text-uri-keaney hover:text-uri-keaney/80 px-3 py-2 rounded-lg border border-uri-keaney/40 hover:bg-uri-keaney/10 transition-colors"
+              >
+                📷 Add photo from device
+              </button>
+              {proof.startsWith("data:") && (
+                <span className="text-xs text-uri-keaney/90">Image attached</span>
+              )}
+            </div>
+            {proof.startsWith("data:") && (
+              <div className="mt-2 rounded-xl overflow-hidden border border-white/15 max-w-[200px]">
+                <img src={proof} alt="Proof" className="w-full h-24 object-cover" />
+              </div>
+            )}
             {!proofValid && proof.length > 0 && (
               <p className="text-xs text-amber-400 mt-1">Proof cannot be empty.</p>
             )}
@@ -145,7 +188,7 @@ export function ActivityList({
             </button>
             <button
               type="submit"
-              className="px-3 py-2 rounded-xl bg-uri-keaney text-uri-navy font-semibold hover:bg-uri-keaney/90 disabled:opacity-50 shadow-md"
+              className="px-3 py-2 rounded-xl bg-uri-keaney text-white font-semibold hover:bg-uri-keaney/90 disabled:opacity-50 shadow-md"
               disabled={!proofValid || (needsMinutes && (Number.isNaN(parseInt(minutes, 10)) || parseInt(minutes, 10) < 0))}
             >
               Log & earn XP
