@@ -6,6 +6,7 @@ import type { FieldNote } from "@/lib/types";
 import { STAT_KEYS, STAT_LABELS, STAT_ICONS } from "@/lib/types";
 import { getFeedByAuthorId, nodFieldNote, rallyFieldNote } from "@/lib/feedStore";
 import { getFriends, getOutgoingRequests } from "@/lib/friendsStore";
+import { getUserBosses } from "@/lib/store";
 import { FieldNoteCard } from "./FieldNoteCard";
 
 export function Profile({ character }: { character: Character }) {
@@ -32,6 +33,9 @@ export function Profile({ character }: { character: Character }) {
   const friends = getFriends(character.id);
   const following = getOutgoingRequests(character.id).length;
   const friendsCount = friends.length;
+  const bosses = getUserBosses();
+  const bossesDefeated = bosses.filter((b) => b.defeated).length;
+  const finalBossesDefeated = bosses.filter((b) => b.defeated && b.maxHp > 500).length;
 
   return (
     <div className="space-y-6">
@@ -82,6 +86,24 @@ export function Profile({ character }: { character: Character }) {
           <div className="px-3 py-1.5 rounded-xl bg-white/10 border border-white/20">
             <span className="text-white/70 text-xs">Total XP</span>
             <span className="font-bold text-white block text-lg">{character.totalXP}</span>
+          </div>
+          <div className="px-3 py-1.5 rounded-xl bg-uri-gold/15 border border-uri-gold/30">
+            <span className="text-white/70 text-xs">Bosses defeated</span>
+            <span className="font-bold text-uri-gold block text-lg">{bossesDefeated}</span>
+          </div>
+          <div
+            className="px-3 py-1.5 rounded-xl border shadow-[0_0_12px_rgba(197,165,40,0.15)]"
+            style={{
+              background: "linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(197, 165, 40, 0.15) 100%)",
+              borderColor: "rgba(197, 165, 40, 0.5)",
+            }}
+          >
+            <span className="text-white/80 text-xs flex items-center gap-1">
+              <span aria-hidden>👑</span> Final bosses defeated
+            </span>
+            <span className="font-bold block text-lg bg-clip-text text-transparent bg-gradient-to-r from-uri-gold to-amber-200">
+              {finalBossesDefeated}
+            </span>
           </div>
         </div>
         <div className="space-y-3">
