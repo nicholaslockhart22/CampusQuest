@@ -5,8 +5,7 @@ import type { Character, StatKey } from "@/lib/types";
 import { STAT_KEYS, STAT_LABELS, STAT_ICONS } from "@/lib/types";
 import { xpProgressInLevel } from "@/lib/level";
 import { updateCharacter } from "@/lib/store";
-
-const AVATARS = ["🎓", "🦉", "🐏", "⚡", "🌟", "🔥", "📚", "🏃", "🎯"];
+import { AVATARS } from "@/lib/avatars";
 
 /** Progress bar fill colors – Keaney/accent for cohesion with URI palette */
 const STAT_FILL_COLORS: Record<StatKey, string> = {
@@ -64,7 +63,7 @@ export function CharacterCard({
                 <p className="text-xs font-semibold text-white/80 uppercase tracking-wider mb-3">
                   Choose avatar
                 </p>
-                <div className="flex flex-wrap gap-2 justify-center">
+                <div className="flex flex-wrap gap-2 justify-center max-h-[50vh] overflow-y-auto">
                   {AVATARS.map((a) => (
                     <button
                       key={a}

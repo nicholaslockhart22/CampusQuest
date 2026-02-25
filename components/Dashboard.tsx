@@ -21,9 +21,14 @@ type Tab = "quad" | "me" | "friends" | "leaderboards" | "profile";
 function Header({ showLogout, onLogout }: { showLogout: boolean; onLogout: () => void }) {
   return (
     <header className="sticky top-0 z-10 -mx-4 -mt-4 px-4 pt-4 pb-3 mb-4 sm:mb-5 bg-uri-navy/98 backdrop-blur-md border-b border-uri-keaney/30">
-      <div className="max-w-2xl mx-auto flex items-center justify-between">
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="text-2xl sm:text-3xl flex-shrink-0" aria-hidden>🐏</span>
+          <img
+            src="/campusquest-logo.png"
+            alt=""
+            className="h-7 sm:h-8 w-auto flex-shrink-0 object-contain"
+            aria-hidden
+          />
           <div className="min-w-0">
             <h1 className="font-display font-bold text-lg sm:text-xl text-white tracking-tight truncate">
               CampusQuest

@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { createCharacter } from "@/lib/store";
-
-const AVATARS = ["🎓", "🦉", "🐏", "⚡", "🌟", "🔥", "📚", "🏃", "🎯"];
+import { AVATARS } from "@/lib/avatars";
 
 export function CharacterGate({ onReady }: { onReady: () => void }) {
   const [name, setName] = useState("");
@@ -24,6 +23,11 @@ export function CharacterGate({ onReady }: { onReady: () => void }) {
   return (
     <section className="card p-6 sm:p-8 max-w-md mx-auto mt-8 sm:mt-12">
       <div className="text-center mb-8">
+        <img
+          src="/campusquest-logo.png"
+          alt="CampusQuest RPG"
+          className="mx-auto w-full max-w-[160px] h-auto object-contain mb-4"
+        />
         <h2 className="font-display font-bold text-2xl text-white mb-2">
           Welcome to CampusQuest
         </h2>
@@ -63,7 +67,7 @@ export function CharacterGate({ onReady }: { onReady: () => void }) {
           <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider mb-2">
             Choose avatar
           </label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 max-h-[40vh] overflow-y-auto">
             {AVATARS.map((a) => (
               <button
                 key={a}

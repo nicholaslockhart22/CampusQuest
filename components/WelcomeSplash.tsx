@@ -41,18 +41,15 @@ export function WelcomeSplash({ onComplete }: { onComplete: () => void }) {
         }}
       />
 
-      <div className="relative flex flex-col items-center justify-center gap-6 px-4">
-        <span className="welcome-splash-emoji text-5xl sm:text-6xl" aria-hidden>
-          🐏
-        </span>
-        <h1 className="welcome-splash-title font-display font-bold text-center text-3xl sm:text-4xl md:text-5xl tracking-tight">
-          <span className="block text-transparent bg-clip-text bg-gradient-to-r from-uri-keaney via-white to-uri-keaney">
-            WELCOME TO
-          </span>
-          <span className="block mt-1 text-transparent bg-clip-text bg-gradient-to-r from-uri-gold via-amber-200 to-uri-gold welcome-splash-word">
-            CAMPUSQUEST
-          </span>
-        </h1>
+      <div className="relative flex flex-col items-center justify-center gap-5 px-4">
+        <p className="welcome-splash-title text-uri-keaney/95 text-sm sm:text-base font-semibold tracking-[0.3em] uppercase">
+          Welcome to
+        </p>
+        <img
+          src="/campusquest-logo.png"
+          alt="CampusQuest RPG — University of Rhode Island"
+          className="welcome-splash-word w-full max-w-[220px] sm:max-w-[260px] md:max-w-[280px] h-auto object-contain drop-shadow-[0_0_24px_rgba(104,171,232,0.25)]"
+        />
         <p className="welcome-splash-tagline text-uri-keaney/90 text-sm sm:text-base font-medium tracking-widest uppercase">
           URI · Level up for real
         </p>
