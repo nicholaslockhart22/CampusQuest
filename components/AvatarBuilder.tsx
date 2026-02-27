@@ -422,7 +422,6 @@ export function AvatarBuilder({
               />
             ))}
           </div>
-          <p className="text-xs text-white/40 mt-1">🐏 URI colors: Keaney blue, Gold</p>
         </div>
       </div>
     </div>
