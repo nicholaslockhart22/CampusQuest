@@ -8,20 +8,29 @@ import type { Friend } from "@/lib/types";
 import { STAT_KEYS, STAT_LABELS, STAT_ICONS } from "@/lib/types";
 import { AvatarDisplay } from "./AvatarDisplay";
 
-type SortBy = "level" | (typeof STAT_KEYS)[number];
+type SortBy = "level" | (typeof STAT_KEYS)[number] | "bossesDefeated" | "finalBossesDefeated";
 
 const SORT_OPTIONS: { value: SortBy; label: string; icon: string }[] = [
   { value: "level", label: "Level", icon: "⭐" },
   ...STAT_KEYS.map((key) => ({ value: key as SortBy, label: STAT_LABELS[key], icon: STAT_ICONS[key] })),
+  { value: "bossesDefeated", label: "Bosses defeated", icon: "⚔️" },
+  { value: "finalBossesDefeated", label: "Final bosses defeated", icon: "👑" },
 ];
 
 function getSortValueFriend(f: Friend, sortBy: SortBy): number {
   if (sortBy === "level") return f.level;
+  if (sortBy === "bossesDefeated") return f.bossesDefeatedCount ?? 0;
+  if (sortBy === "finalBossesDefeated") return f.finalBossesDefeatedCount ?? 0;
   return f.stats[sortBy] ?? 0;
 }
 
-function getSortValueCampus(e: { level: number; stats: Record<string, number> }, sortBy: SortBy): number {
+function getSortValueCampus(
+  e: { level: number; stats: Record<string, number>; bossesDefeatedCount?: number; finalBossesDefeatedCount?: number },
+  sortBy: SortBy
+): number {
   if (sortBy === "level") return e.level;
+  if (sortBy === "bossesDefeated") return e.bossesDefeatedCount ?? 0;
+  if (sortBy === "finalBossesDefeated") return e.finalBossesDefeatedCount ?? 0;
   return e.stats[sortBy] ?? 0;
 }
 
@@ -91,8 +100,24 @@ export function Leaderboards({ character }: { character: Character }) {
                 totalXP={friend.totalXP}
                 isCurrentUser={false}
                 sortBy={sortBy}
-                statValue={sortBy === "level" ? undefined : (friend.stats[sortBy] ?? 0)}
-                statLabel={sortBy === "level" ? undefined : STAT_LABELS[sortBy]}
+                statValue={
+                  sortBy === "level"
+                    ? undefined
+                    : sortBy === "bossesDefeated"
+                      ? (friend.bossesDefeatedCount ?? 0)
+                      : sortBy === "finalBossesDefeated"
+                        ? (friend.finalBossesDefeatedCount ?? 0)
+                        : (friend.stats[sortBy] ?? 0)
+                }
+                statLabel={
+                  sortBy === "level"
+                    ? undefined
+                    : sortBy === "bossesDefeated"
+                      ? "Bosses defeated"
+                      : sortBy === "finalBossesDefeated"
+                        ? "Final bosses defeated"
+                        : STAT_LABELS[sortBy]
+                }
               />
             ))}
           </ul>
@@ -108,21 +133,40 @@ export function Leaderboards({ character }: { character: Character }) {
           Top students by {sortLabel}. (Placeholder data.)
         </p>
         <ul className="space-y-2">
-          {campusSorted.map((entry, index) => (
-            <LeaderboardRow
-              key={entry.id}
-              rank={index + 1}
-              name={entry.name}
-              username={entry.username}
-              avatar={entry.avatar}
-              level={entry.level}
-              totalXP={entry.totalXP}
-              isCurrentUser={character.username.toLowerCase() === entry.username.toLowerCase()}
-              sortBy={sortBy}
-              statValue={sortBy === "level" ? undefined : (entry.stats[sortBy] ?? 0)}
-              statLabel={sortBy === "level" ? undefined : STAT_LABELS[sortBy]}
-            />
-          ))}
+          {campusSorted.map((entry, index) => {
+            const isCurrentUser = character.username.toLowerCase() === entry.username.toLowerCase();
+            const statValue =
+              sortBy === "level"
+                ? undefined
+                : sortBy === "bossesDefeated"
+                  ? (isCurrentUser ? (character.bossesDefeatedCount ?? 0) : (entry.bossesDefeatedCount ?? 0))
+                  : sortBy === "finalBossesDefeated"
+                    ? (isCurrentUser ? (character.finalBossesDefeatedCount ?? 0) : (entry.finalBossesDefeatedCount ?? 0))
+                    : (entry.stats[sortBy] ?? 0);
+            const statLabel =
+              sortBy === "level"
+                ? undefined
+                : sortBy === "bossesDefeated"
+                  ? "Bosses defeated"
+                  : sortBy === "finalBossesDefeated"
+                    ? "Final bosses defeated"
+                    : STAT_LABELS[sortBy];
+            return (
+              <LeaderboardRow
+                key={entry.id}
+                rank={index + 1}
+                name={entry.name}
+                username={entry.username}
+                avatar={entry.avatar}
+                level={entry.level}
+                totalXP={entry.totalXP}
+                isCurrentUser={isCurrentUser}
+                sortBy={sortBy}
+                statValue={statValue}
+                statLabel={statLabel}
+              />
+            );
+          })}
         </ul>
       </div>
     </section>

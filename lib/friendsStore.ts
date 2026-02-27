@@ -129,6 +129,8 @@ function characterToFriend(c: Character, addedAt: number): Friend {
     stats: c.stats ?? defaultStats(),
     streakDays: c.streakDays ?? 0,
     addedAt,
+    bossesDefeatedCount: c.bossesDefeatedCount ?? 0,
+    finalBossesDefeatedCount: c.finalBossesDefeatedCount ?? 0,
   };
 }
 
@@ -157,6 +159,8 @@ export function acceptRequest(requestId: string, currentUser: Character): void {
         stats: defaultStats(),
         streakDays: 0,
         addedAt: now,
+        bossesDefeatedCount: 0,
+        finalBossesDefeatedCount: 0,
       };
   entries.push({ ownerId: currentUser.id, friend: senderSnapshot, addedAt: now });
 

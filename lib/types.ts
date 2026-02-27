@@ -10,6 +10,9 @@ export const STAT_KEYS = [
 
 export type StatKey = (typeof STAT_KEYS)[number];
 
+/** Maximum value for any single stat. Bars show gold/fancy when at cap. */
+export const MAX_STAT = 1000;
+
 export const STAT_LABELS: Record<StatKey, string> = {
   strength: "Strength",
   stamina: "Stamina",
@@ -52,6 +55,12 @@ export interface Character {
   classId?: string;
   /** Starter weapon: textbook, dumbbell, laptop, coffee, guitar */
   starterWeapon?: string;
+  /** Total bosses defeated (incremented when a defeated boss is removed). */
+  bossesDefeatedCount?: number;
+  /** Total final bosses (HP > 500) defeated. */
+  finalBossesDefeatedCount?: number;
+  /** Prestige count per stat (reset to 0 when prestiging; this number is shown next to stat name). */
+  statPrestige?: Partial<Record<StatKey, number>>;
 }
 
 // —— Find Friends (social) ——
@@ -79,6 +88,8 @@ export interface Friend {
   stats: CharacterStats;
   streakDays: number;
   addedAt: number;
+  bossesDefeatedCount?: number;
+  finalBossesDefeatedCount?: number;
 }
 
 export interface ActivityDefinition {

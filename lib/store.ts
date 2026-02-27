@@ -1,7 +1,7 @@
 "use client";
 
 import type { Character, CharacterStats, ActivityLog, BossProgress as BossProgressType, CurrentBoss, UserBoss, StatKey } from "./types";
-import { STAT_KEYS } from "./types";
+import { STAT_KEYS, MAX_STAT } from "./types";
 import { xpToLevel, streakMultiplier, DAILY_MINIMUM_XP } from "./level";
 import { getActivityById, isStudyActivityForBoss } from "./activities";
 import { getSampleBosses } from "./bosses";
@@ -178,19 +178,19 @@ function applyStatIncrease(
   const def = getActivityById(activityId);
   if (def?.usesMinutes && minutes != null && minutes > 0) {
     if (stat === "knowledge") {
-      c.stats.knowledge = (c.stats.knowledge ?? 0) + Math.max(1, Math.floor(minutes / 20));
+      c.stats.knowledge = Math.min(MAX_STAT, (c.stats.knowledge ?? 0) + Math.max(1, Math.floor(minutes / 20)));
     } else if (stat === "focus") {
-      c.stats.focus = (c.stats.focus ?? 0) + Math.max(1, Math.floor(minutes / 25));
+      c.stats.focus = Math.min(MAX_STAT, (c.stats.focus ?? 0) + Math.max(1, Math.floor(minutes / 25)));
     } else {
-      c.stats[stat] = (c.stats[stat] ?? 0) + statGain;
+      c.stats[stat] = Math.min(MAX_STAT, (c.stats[stat] ?? 0) + statGain);
     }
   } else {
     if (activityId === "gym") {
-      c.stats.strength = (c.stats.strength ?? 0) + 2;
+      c.stats.strength = Math.min(MAX_STAT, (c.stats.strength ?? 0) + 2);
     } else if (stat === "social" && (activityId === "club" || activityId === "group-study")) {
-      c.stats.social = (c.stats.social ?? 0) + 1;
+      c.stats.social = Math.min(MAX_STAT, (c.stats.social ?? 0) + 1);
     } else {
-      c.stats[stat] = (c.stats[stat] ?? 0) + statGain;
+      c.stats[stat] = Math.min(MAX_STAT, (c.stats[stat] ?? 0) + statGain);
     }
   }
 }
@@ -269,6 +269,22 @@ export function updateCharacter(
   return c;
 }
 
+/** Prestige a stat: set it to 0 and increment its prestige count. Only allowed when stat >= MAX_STAT. */
+export function prestigeStat(characterId: string, stat: StatKey): Character | null {
+  const c = loadCharacter();
+  if (!c || c.id !== characterId) return null;
+  const value = c.stats[stat] ?? 0;
+  if (value < MAX_STAT) return null;
+  c.stats[stat] = 0;
+  if (!c.statPrestige) c.statPrestige = {};
+  c.statPrestige[stat] = (c.statPrestige[stat] ?? 0) + 1;
+  saveCharacter(c);
+  return c;
+}
+
+/** Max minutes allowed per activity log (e.g. 6 hours). */
+export const MAX_ACTIVITY_MINUTES = 360;
+
 export interface LogActivityOptions {
   minutes?: number;
   proofUrl?: string;
@@ -294,7 +310,11 @@ export function logActivity(
   if (!c || c.id !== characterId) return null;
 
   const baseXp = activity.baseXp ?? activity.xp;
-  const minutes = options?.minutes;
+  const rawMinutes = options?.minutes;
+  const minutes =
+    rawMinutes != null
+      ? Math.min(MAX_ACTIVITY_MINUTES, Math.max(0, rawMinutes))
+      : undefined;
   const xpEarned = calculateXp(baseXp, activityId, minutes, c.streakDays);
 
   const logs = loadLogs();
@@ -408,6 +428,13 @@ function applyActivityDamageToCurrentBoss(c: Character, activityId: string, minu
       ensureUnlockedCosmetic(c, loot.id);
       ensureAchievement(c, `Looted: ${loot.icon} ${loot.label}`);
     }
+    // Remove defeated boss after rewarding XP so it disappears from the list
+    const remaining = bosses.filter((b) => b.id !== boss.id);
+    saveUserBosses(remaining);
+    if (loadActiveBossId() === boss.id) saveActiveBossId(null);
+    c.bossesDefeatedCount = (c.bossesDefeatedCount ?? 0) + 1;
+    if (boss.maxHp > 500) c.finalBossesDefeatedCount = (c.finalBossesDefeatedCount ?? 0) + 1;
+    return;
   }
   saveUserBosses(bosses);
 }

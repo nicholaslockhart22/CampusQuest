@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import type { Character } from "@/lib/types";
 import type { FieldNote } from "@/lib/types";
-import { STAT_KEYS, STAT_LABELS, STAT_ICONS } from "@/lib/types";
+import { STAT_KEYS, STAT_LABELS, STAT_ICONS, MAX_STAT, type StatKey } from "@/lib/types";
 import { getFeedByAuthorId, nodFieldNote, rallyFieldNote } from "@/lib/feedStore";
 import { getFriends, getOutgoingRequests } from "@/lib/friendsStore";
 import { getUserBosses } from "@/lib/store";
@@ -36,8 +36,10 @@ export function Profile({ character }: { character: Character }) {
   const following = getOutgoingRequests(character.id).length;
   const friendsCount = friends.length;
   const bosses = getUserBosses();
-  const bossesDefeated = bosses.filter((b) => b.defeated).length;
-  const finalBossesDefeated = bosses.filter((b) => b.defeated && b.maxHp > 500).length;
+  const bossesDefeated =
+    character.bossesDefeatedCount ?? bosses.filter((b) => b.defeated).length;
+  const finalBossesDefeated =
+    character.finalBossesDefeatedCount ?? bosses.filter((b) => b.defeated && b.maxHp > 500).length;
 
   return (
     <div className="space-y-6">
@@ -123,22 +125,33 @@ export function Profile({ character }: { character: Character }) {
           </div>
         </div>
         <div className="space-y-3">
-          {STAT_KEYS.map((key) => (
-            <div key={key} className="flex items-center gap-3">
-              <span className="text-white/80 text-sm w-24 flex-shrink-0" title={STAT_LABELS[key]}>
-                {STAT_ICONS[key]} {STAT_LABELS[key]}
-              </span>
-              <div className="stat-bar flex-1 min-w-0">
+          {STAT_KEYS.map((key: StatKey) => {
+            const value = character.stats[key] ?? 0;
+            const pct = Math.min(100, (value / MAX_STAT) * 100);
+            const atMax = value >= MAX_STAT;
+            const prestigeCount = character.statPrestige?.[key] ?? 0;
+            return (
+              <div key={key} className="flex items-center gap-3">
+                <span className="text-white/80 text-sm w-24 flex-shrink-0 flex items-center gap-1" title={STAT_LABELS[key]}>
+                  {STAT_ICONS[key]} {STAT_LABELS[key]}
+                  {prestigeCount > 0 && (
+                    <span className="text-uri-gold/90 font-mono text-xs">{prestigeCount}</span>
+                  )}
+                </span>
                 <div
-                  className="stat-fill bg-uri-keaney"
-                  style={{ width: `${Math.min(100, character.stats[key])}%` }}
-                />
+                  className={`stat-bar flex-1 min-w-0 ${atMax ? "bg-uri-gold/20 border border-uri-gold/40 shadow-[0_0_10px_rgba(197,165,40,0.15)]" : ""}`}
+                >
+                  <div
+                    className={`stat-fill ${atMax ? "bg-gradient-to-r from-uri-gold via-amber-400 to-uri-gold shadow-[0_0_8px_rgba(197,165,40,0.4)] border border-uri-gold/50" : "bg-uri-keaney"}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <span className={`font-mono text-sm w-10 text-right ${atMax ? "text-uri-gold font-semibold" : "text-uri-keaney"}`}>
+                  {value}{atMax ? " ★" : ""}
+                </span>
               </div>
-              <span className="font-mono text-uri-keaney text-sm w-8 text-right">
-                {character.stats[key]}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

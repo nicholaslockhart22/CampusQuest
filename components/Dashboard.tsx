@@ -6,6 +6,7 @@ import type { Character } from "@/lib/types";
 import { CharacterCard } from "./CharacterCard";
 import { CharacterGate } from "./CharacterGate";
 import { WelcomeSplash } from "./WelcomeSplash";
+import { AuthScreen } from "./AuthScreen";
 import { ActivityList } from "./ActivityList";
 import { TheQuad } from "./TheQuad";
 import { DailyQuests } from "./DailyQuests";
@@ -34,8 +35,20 @@ function Header({
   onLogout: () => void;
 }) {
   const [questsOpen, setQuestsOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const questsButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  function handleLogoutClick() {
+    setShowLogoutConfirm(true);
+  }
+
+  function handleConfirmLogout() {
+    setShowLogoutConfirm(false);
+    onLogout();
+  }
+
   return (
+    <>
     <header className="sticky top-0 z-10 -mx-4 -mt-4 px-4 pt-4 pb-3 mb-4 sm:mb-5 bg-uri-navy/98 backdrop-blur-md border-b border-uri-keaney/30">
       <div className="max-w-2xl mx-auto relative flex items-center justify-between gap-2">
         <div className="min-w-0 flex-1 text-left">
@@ -94,7 +107,7 @@ function Header({
           {showLogout && (
             <button
               type="button"
-              onClick={onLogout}
+              onClick={handleLogoutClick}
               className="text-xs font-medium text-uri-keaney/90 hover:text-uri-keaney hover:bg-uri-keaney/10 px-3 py-2 rounded-xl border border-uri-keaney/30 transition-colors"
               aria-label="Log out"
             >
@@ -104,6 +117,46 @@ function Header({
         </div>
       </div>
     </header>
+
+      {showLogoutConfirm && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowLogoutConfirm(false)}
+            aria-hidden
+          />
+          <div
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[min(20rem,92vw)] rounded-2xl border border-white/15 bg-uri-navy shadow-xl shadow-black/40 p-6"
+            role="dialog"
+            aria-labelledby="logout-dialog-title"
+            aria-modal="true"
+          >
+            <h2 id="logout-dialog-title" className="font-display font-semibold text-lg text-white mb-2">
+              Leave CampusQuest?
+            </h2>
+            <p className="text-sm text-white/70 mb-6">
+              The Quad shall wait for your return.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2.5 rounded-xl text-sm font-medium text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/15 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmLogout}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-uri-keaney hover:bg-uri-keaney/90 border border-uri-keaney/40 transition-colors"
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </>
   );
 }
 
@@ -111,6 +164,7 @@ export function Dashboard() {
   const [character, setCharacter] = useState<Character | null>(null);
   const [mounted, setMounted] = useState(false);
   const [showWelcomeSplash, setShowWelcomeSplash] = useState(true);
+  const [showAuthScreen, setShowAuthScreen] = useState(true);
   const [tab, setTab] = useState<Tab>("quad");
   const [gainToast, setGainToast] = useState<null | { xp: number; stats: Partial<Record<keyof Character["stats"], number>>; title: string }>(null);
 
@@ -121,6 +175,7 @@ export function Dashboard() {
   const handleLogout = useCallback(() => {
     storeLogout();
     setCharacter(null);
+    setShowAuthScreen(true);
   }, []);
 
   useEffect(() => {
@@ -154,12 +209,18 @@ export function Dashboard() {
   }
 
   if (!character) {
-    return showWelcomeSplash ? (
-      <WelcomeSplash onComplete={() => setShowWelcomeSplash(false)} />
-    ) : (
+    if (showWelcomeSplash) {
+      return <WelcomeSplash onComplete={() => setShowWelcomeSplash(false)} />;
+    }
+    if (showAuthScreen) {
+      return (
+        <AuthScreen onComplete={() => setShowAuthScreen(false)} />
+      );
+    }
+    return (
       <>
         <Header username={null} character={null} showLogout={false} onLogout={handleLogout} />
-        <CharacterGate onReady={refresh} />
+        <CharacterGate onReady={() => { refresh(); setTab("quad"); }} />
       </>
     );
   }

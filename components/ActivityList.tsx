@@ -5,6 +5,7 @@ import { ACTIVITIES, getActivityById } from "@/lib/activities";
 import type { StatKey } from "@/lib/types";
 import { STAT_ICONS, STAT_LABELS } from "@/lib/types";
 import type { LogActivityOptions } from "@/lib/store";
+import { MAX_ACTIVITY_MINUTES } from "@/lib/store";
 import type { Character } from "@/lib/types";
 import type { ActivityDefinition } from "@/lib/types";
 
@@ -89,7 +90,10 @@ export function ActivityList({
       if (Number.isNaN(m) || m < 0) return;
     }
     const options: LogActivityOptions = {};
-    if (needsMinutes) options.minutes = Math.max(0, parseInt(minutes, 10) || 0);
+    if (needsMinutes) {
+      const raw = parseInt(minutes, 10) || 0;
+      options.minutes = Math.min(MAX_ACTIVITY_MINUTES, Math.max(0, raw));
+    }
     options.proofUrl = proof.trim();
     if (tags.trim()) options.tags = tags.split(",").map((t) => t.trim()).filter(Boolean);
     setSubmitError(null);
@@ -204,12 +208,22 @@ export function ActivityList({
                           </h3>
                           {needsMinutes && (
                             <div>
-                              <label className="block text-xs text-white/60 mb-1">Minutes</label>
+                              <label className="block text-xs text-white/60 mb-1">
+                                Minutes (max {MAX_ACTIVITY_MINUTES})
+                              </label>
                               <input
                                 type="number"
                                 min={0}
+                                max={MAX_ACTIVITY_MINUTES}
                                 value={minutes}
-                                onChange={(e) => setMinutes(e.target.value)}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  if (v === "") setMinutes("");
+                                  else {
+                                    const n = parseInt(v, 10);
+                                    if (!Number.isNaN(n)) setMinutes(String(Math.min(MAX_ACTIVITY_MINUTES, Math.max(0, n))));
+                                  }
+                                }}
                                 placeholder="e.g. 50"
                                 className="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 font-mono focus:ring-2 focus:ring-uri-keaney/50"
                               />
@@ -285,7 +299,7 @@ export function ActivityList({
                               className="px-3 py-2 rounded-xl bg-uri-keaney text-white font-semibold hover:bg-uri-keaney/90 disabled:opacity-50 shadow-md"
                               disabled={
                                 !proofValid ||
-                                (needsMinutes && (Number.isNaN(parseInt(minutes, 10)) || parseInt(minutes, 10) < 0))
+                                (needsMinutes && (Number.isNaN(parseInt(minutes, 10)) || parseInt(minutes, 10) < 0 || parseInt(minutes, 10) > MAX_ACTIVITY_MINUTES))
                               }
                             >
                               Log & earn XP

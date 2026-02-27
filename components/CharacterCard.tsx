@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import type { Character, StatKey } from "@/lib/types";
-import { STAT_KEYS, STAT_LABELS, STAT_ICONS } from "@/lib/types";
+import { STAT_KEYS, STAT_LABELS, STAT_ICONS, MAX_STAT } from "@/lib/types";
 import { xpProgressInLevel } from "@/lib/level";
-import { updateCharacter } from "@/lib/store";
+import { updateCharacter, prestigeStat } from "@/lib/store";
 import { getDefaultCustomAvatar, serializeAvatar } from "@/lib/avatarOptions";
 import { getClassTitle, getClassRealm } from "@/lib/characterClasses";
 import { AvatarDisplay } from "./AvatarDisplay";
@@ -18,6 +18,39 @@ const STAT_FILL_COLORS: Record<StatKey, string> = {
   social: "bg-uri-green",
   focus: "bg-uri-purple",
 };
+
+function AchievementsDropdown({ achievements }: { achievements: string[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-5 pt-4 border-t border-uri-keaney/20">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-2 text-left rounded-lg -mx-1 px-1 py-1 hover:text-uri-keaney transition-colors"
+        aria-expanded={open}
+      >
+        <span className="text-xs font-semibold text-uri-keaney/90 uppercase tracking-wider">
+          Achievements
+        </span>
+        <span className="text-uri-keaney/80 text-sm" aria-hidden>
+          {open ? "▼" : "▶"}
+        </span>
+      </button>
+      {open && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {achievements.map((a) => (
+            <span
+              key={a}
+              className="text-xs px-2.5 py-1 rounded-full bg-uri-gold/20 text-uri-gold border border-uri-gold/40"
+            >
+              {a}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function CharacterCard({
   character,
@@ -147,21 +180,46 @@ export function CharacterCard({
         <div className="grid gap-3">
           {STAT_KEYS.map((key) => {
             const value = character.stats[key] ?? 0;
-            const max = 100;
-            const pct = Math.min(100, (value / max) * 100);
+            const pct = Math.min(100, (value / MAX_STAT) * 100);
+            const atMax = value >= MAX_STAT;
+            const prestigeCount = character.statPrestige?.[key] ?? 0;
             return (
               <div key={key} className="flex items-center gap-3">
                 <span className="text-lg w-6" title={STAT_LABELS[key]}>
                   {STAT_ICONS[key]}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className="flex justify-between text-xs mb-0.5">
-                    <span className="text-white/70">{STAT_LABELS[key]}</span>
-                    <span className="font-mono text-white/90">{value}</span>
+                  <div className="flex justify-between items-center gap-2 text-xs mb-0.5 flex-wrap">
+                    <span className="text-white/70 flex items-center gap-1.5">
+                      {STAT_LABELS[key]}
+                      {prestigeCount > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-md bg-uri-gold/25 text-uri-gold border border-uri-gold/40 font-mono font-semibold">
+                          {prestigeCount}
+                        </span>
+                      )}
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className={`font-mono ${atMax ? "text-uri-gold" : "text-white/90"}`}>
+                        {value}{atMax && " ★"}
+                      </span>
+                      {atMax && onRefresh && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (prestigeStat(character.id, key)) onRefresh();
+                          }}
+                          className="text-[10px] font-semibold px-2 py-1 rounded-lg bg-uri-gold/20 text-uri-gold border border-uri-gold/50 hover:bg-uri-gold/30 transition-colors"
+                        >
+                          Prestige
+                        </button>
+                      )}
+                    </span>
                   </div>
-                  <div className="stat-bar">
+                  <div
+                    className={`stat-bar ${atMax ? "bg-uri-gold/20 border border-uri-gold/40 shadow-[0_0_10px_rgba(197,165,40,0.15)]" : ""}`}
+                  >
                     <div
-                      className={`stat-fill ${STAT_FILL_COLORS[key]}`}
+                      className={`stat-fill ${atMax ? "bg-gradient-to-r from-uri-gold via-amber-400 to-uri-gold shadow-[0_0_8px_rgba(197,165,40,0.4)] border border-uri-gold/50" : STAT_FILL_COLORS[key]}`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
@@ -173,21 +231,7 @@ export function CharacterCard({
       </div>
 
       {character.achievements && character.achievements.length > 0 && (
-        <div className="mt-5 pt-4 border-t border-uri-keaney/20">
-          <h3 className="text-xs font-semibold text-uri-keaney/90 uppercase tracking-wider mb-2">
-            Achievements
-          </h3>
-          <div className="flex flex-wrap gap-1.5">
-            {character.achievements.map((a) => (
-              <span
-                key={a}
-                className="text-xs px-2.5 py-1 rounded-full bg-uri-gold/20 text-uri-gold border border-uri-gold/40"
-              >
-                {a}
-              </span>
-            ))}
-          </div>
-        </div>
+        <AchievementsDropdown achievements={character.achievements} />
       )}
     </section>
   );
