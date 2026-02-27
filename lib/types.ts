@@ -45,7 +45,13 @@ export interface Character {
   streakDays: number;
   lastActivityDate: string | null; // YYYY-MM-DD
   achievements: string[]; // e.g. "First Quest Completed", "7-Day Streak"
+  /** Cosmetic item ids unlocked (hats, glasses, backpacks). */
+  unlockedCosmetics?: string[];
   createdAt: number;
+  /** CampusQuest class: knight, gym, mage, bard, rogue */
+  classId?: string;
+  /** Starter weapon: textbook, dumbbell, laptop, coffee, guitar */
+  starterWeapon?: string;
 }
 
 // —— Find Friends (social) ——
@@ -207,4 +213,8 @@ export interface UserBoss {
   createdAt: number;
   /** XP awarded on defeat (100 at 250 HP, +5 per 10 HP above 250) */
   xpReward: number;
+  /** Weakness: activities matching this stat deal extra damage. */
+  weaknessStat?: StatKey;
+  /** Loot cosmetic ids dropped when defeated. */
+  loot?: string[];
 }

@@ -6,6 +6,7 @@ import { CAMPUS_LEADERBOARD_PLACEHOLDERS } from "@/lib/campusLeaderboard";
 import type { Character } from "@/lib/types";
 import type { Friend } from "@/lib/types";
 import { STAT_KEYS, STAT_LABELS, STAT_ICONS } from "@/lib/types";
+import { AvatarDisplay } from "./AvatarDisplay";
 
 type SortBy = "level" | (typeof STAT_KEYS)[number];
 
@@ -159,8 +160,8 @@ function LeaderboardRow({
       }`}
     >
       <span className={`w-8 text-sm ${rankStyle}`}>#{rank}</span>
-      <span className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-xl flex-shrink-0 border border-white/15">
-        {avatar}
+      <span className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0 border border-white/15 overflow-hidden">
+        <AvatarDisplay avatar={avatar} size={40} />
       </span>
       <div className="flex-1 min-w-0">
         <p className="font-medium text-white truncate flex items-center gap-1.5">

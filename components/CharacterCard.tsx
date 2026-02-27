@@ -5,7 +5,10 @@ import type { Character, StatKey } from "@/lib/types";
 import { STAT_KEYS, STAT_LABELS, STAT_ICONS } from "@/lib/types";
 import { xpProgressInLevel } from "@/lib/level";
 import { updateCharacter } from "@/lib/store";
-import { AVATARS } from "@/lib/avatars";
+import { getDefaultCustomAvatar, serializeAvatar } from "@/lib/avatarOptions";
+import { getClassTitle, getClassRealm } from "@/lib/characterClasses";
+import { AvatarDisplay } from "./AvatarDisplay";
+import { AvatarBuilder } from "./AvatarBuilder";
 
 /** Progress bar fill colors – Keaney/accent for cohesion with URI palette */
 const STAT_FILL_COLORS: Record<StatKey, string> = {
@@ -24,11 +27,17 @@ export function CharacterCard({
   onRefresh?: () => void;
 }) {
   const [editingAvatar, setEditingAvatar] = useState(false);
+  const [editingAvatarValue, setEditingAvatarValue] = useState(character.avatar);
   const { current, needed } = xpProgressInLevel(character.totalXP);
   const xpPct = Math.min(100, (current / needed) * 100);
 
-  function handleAvatarSelect(avatar: string) {
-    updateCharacter({ avatar });
+  function openEditModal() {
+    setEditingAvatarValue(character.avatar.startsWith("{") ? character.avatar : serializeAvatar(getDefaultCustomAvatar()));
+    setEditingAvatar(true);
+  }
+
+  function handleAvatarSave() {
+    updateCharacter({ avatar: editingAvatarValue });
     setEditingAvatar(false);
     onRefresh?.();
   }
@@ -38,14 +47,19 @@ export function CharacterCard({
       <div className="flex items-start gap-4">
         <div className="relative flex-shrink-0">
           <div
-            className="w-20 h-20 rounded-2xl bg-gradient-to-br from-uri-keaney/25 to-uri-navy flex items-center justify-center text-4xl border border-uri-keaney/40"
+            className="w-20 h-20 rounded-2xl bg-gradient-to-br from-uri-keaney/25 to-uri-navy flex items-center justify-center overflow-hidden border border-uri-keaney/40"
             aria-hidden
           >
-            {character.avatar}
+            <AvatarDisplay
+            avatar={character.avatar}
+            size={80}
+            classId={character.classId}
+            starterWeapon={character.starterWeapon}
+          />
           </div>
           <button
             type="button"
-            onClick={() => setEditingAvatar(true)}
+            onClick={openEditModal}
             className="absolute -bottom-1 -right-1 w-8 h-8 rounded-lg bg-uri-keaney text-white border-2 border-uri-navy flex items-center justify-center text-sm shadow-md hover:bg-uri-keaney/90 focus:outline-none focus:ring-2 focus:ring-uri-keaney focus:ring-offset-2 focus:ring-offset-uri-navy"
             aria-label="Edit avatar"
             title="Edit avatar"
@@ -59,35 +73,38 @@ export function CharacterCard({
                 aria-hidden
                 onClick={() => setEditingAvatar(false)}
               />
-              <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30 w-[min(18rem,90vw)] p-4 rounded-2xl bg-uri-navy border border-uri-keaney/30 shadow-xl card">
+              <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30 w-[min(22rem,92vw)] max-h-[85vh] overflow-y-auto p-4 rounded-2xl bg-uri-navy border border-uri-keaney/30 shadow-xl card">
                 <p className="text-xs font-semibold text-white/80 uppercase tracking-wider mb-3">
-                  Choose avatar
+                  Edit your avatar
                 </p>
-                <div className="flex flex-wrap gap-2 justify-center max-h-[50vh] overflow-y-auto">
-                  {AVATARS.map((a) => (
-                    <button
-                      key={a}
-                      type="button"
-                      onClick={() => handleAvatarSelect(a)}
-                      className={`w-10 h-10 rounded-xl border text-xl flex items-center justify-center transition-all ${
-                        character.avatar === a
-                          ? "border-uri-keaney bg-uri-keaney/25 ring-2 ring-uri-keaney/40"
-                          : "border-white/25 bg-white/10 hover:border-uri-keaney/50 hover:bg-white/15"
-                      }`}
-                      aria-pressed={character.avatar === a}
-                      aria-label={`Select avatar ${a}`}
-                    >
-                      {a}
-                    </button>
-                  ))}
+                <div className="max-h-[60vh] overflow-y-auto pr-1">
+                  <AvatarBuilder
+                    value={editingAvatarValue}
+                    onChange={setEditingAvatarValue}
+                    compact
+                    unlockContext={{
+                      achievements: character.achievements ?? [],
+                      level: character.level ?? 1,
+                      unlockedCosmetics: character.unlockedCosmetics ?? [],
+                    }}
+                  />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setEditingAvatar(false)}
-                  className="mt-3 w-full py-2 text-sm text-white/70 hover:text-white rounded-xl hover:bg-white/10"
-                >
-                  Cancel
-                </button>
+                <div className="flex gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setEditingAvatar(false)}
+                    className="flex-1 py-2 text-sm text-white/70 hover:text-white rounded-xl hover:bg-white/10"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAvatarSave}
+                    className="flex-1 py-2 text-sm font-semibold bg-uri-keaney text-white rounded-xl hover:bg-uri-keaney/90"
+                  >
+                    Save
+                  </button>
+                </div>
               </div>
             </>
           )}
@@ -96,6 +113,14 @@ export function CharacterCard({
           <h2 className="font-display font-bold text-lg text-white truncate">
             {character.name}
           </h2>
+          {character.classId && (getClassTitle(character.classId) || getClassRealm(character.classId)) && (
+            <p className="text-uri-gold/90 text-xs font-medium mt-0.5 truncate">
+              {getClassTitle(character.classId)}
+              {getClassRealm(character.classId) && (
+                <span className="text-white/50 font-normal"> · {getClassRealm(character.classId)}</span>
+              )}
+            </p>
+          )}
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <span className="text-uri-keaney font-mono font-semibold text-sm bg-uri-keaney/15 px-2 py-0.5 rounded-lg">
               Lv.{character.level}

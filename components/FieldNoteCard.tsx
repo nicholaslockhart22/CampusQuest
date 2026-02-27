@@ -1,6 +1,7 @@
 "use client";
 
 import type { FieldNote } from "@/lib/types";
+import { AvatarDisplay } from "./AvatarDisplay";
 
 function formatTime(ts: number): string {
   const d = new Date(ts);
@@ -32,8 +33,8 @@ export function FieldNoteCard({
   return (
     <article className="p-4 hover:bg-white/[0.04] transition-colors">
       <div className="flex gap-3">
-        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-uri-keaney/25 to-uri-navy flex items-center justify-center text-xl flex-shrink-0 border border-uri-keaney/30">
-          {note.authorAvatar}
+        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-uri-keaney/25 to-uri-navy flex items-center justify-center flex-shrink-0 border border-uri-keaney/30 overflow-hidden">
+          <AvatarDisplay avatar={note.authorAvatar} size={44} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">

@@ -1,11 +1,13 @@
 "use client";
 
-import type { Character, CharacterStats, ActivityLog, BossProgress as BossProgressType, CurrentBoss, UserBoss } from "./types";
+import type { Character, CharacterStats, ActivityLog, BossProgress as BossProgressType, CurrentBoss, UserBoss, StatKey } from "./types";
 import { STAT_KEYS } from "./types";
 import { xpToLevel, streakMultiplier, DAILY_MINIMUM_XP } from "./level";
 import { getActivityById, isStudyActivityForBoss } from "./activities";
 import { getSampleBosses } from "./bosses";
 import { registerCharacter as registerCharacterInFriends } from "./friendsStore";
+import { applyClassStats, type CharacterClassId } from "./characterClasses";
+import { pickLootCosmetic } from "./cosmetics";
 
 const STORAGE_KEY_CHARACTER = "campusquest_character";
 const STORAGE_KEY_LOGS = "campusquest_activity_logs";
@@ -49,7 +51,10 @@ function loadCharacter(): Character | null {
     if (data.streakDays == null) data.streakDays = 0;
     if (data.lastActivityDate == null) data.lastActivityDate = null;
     if (!Array.isArray(data.achievements)) data.achievements = [];
+    if (!Array.isArray(data.unlockedCosmetics)) data.unlockedCosmetics = [];
     if (!data.username) data.username = (data.name || "student").toLowerCase().replace(/\s+/g, "_");
+    if (data.classId == null) data.classId = undefined;
+    if (data.starterWeapon == null) data.starterWeapon = undefined;
     return data;
   } catch {
     return null;
@@ -194,6 +199,11 @@ function ensureAchievement(c: Character, id: string): void {
   if (!c.achievements.includes(id)) c.achievements.push(id);
 }
 
+function ensureUnlockedCosmetic(c: Character, cosmeticId: string): void {
+  if (!Array.isArray(c.unlockedCosmetics)) c.unlockedCosmetics = [];
+  if (!c.unlockedCosmetics.includes(cosmeticId)) c.unlockedCosmetics.push(cosmeticId);
+}
+
 export function getCharacter(): Character | null {
   return loadCharacter();
 }
@@ -204,12 +214,27 @@ export function logout(): void {
   localStorage.removeItem(STORAGE_KEY_CHARACTER);
 }
 
-export function createCharacter(name: string, avatar: string, username?: string): Character {
+export interface CreateCharacterOptions {
+  username?: string;
+  classId?: CharacterClassId;
+  starterWeapon?: string;
+}
+
+export function createCharacter(
+  name: string,
+  avatar: string,
+  username?: string,
+  options?: CreateCharacterOptions
+): Character {
   const existing = loadCharacter();
   if (existing) return existing;
 
   const id = `char-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-  const un = (username || name || "student").trim().toLowerCase().replace(/\s+/g, "_") || "student";
+  const un = (options?.username ?? username ?? name ?? "student").trim().toLowerCase().replace(/\s+/g, "_") || "student";
+  const baseStats = defaultStats();
+  const classId = options?.classId;
+  const stats = classId ? applyClassStats(baseStats, classId) : baseStats;
+
   const character: Character = {
     id,
     name: name.trim() || "Student",
@@ -217,24 +242,29 @@ export function createCharacter(name: string, avatar: string, username?: string)
     avatar: avatar || "🎓",
     level: 1,
     totalXP: 0,
-    stats: defaultStats(),
+    stats,
     streakDays: 0,
     lastActivityDate: null,
     achievements: [],
+    unlockedCosmetics: [],
     createdAt: Date.now(),
+    classId,
+    starterWeapon: options?.starterWeapon,
   };
   saveCharacter(character);
   return character;
 }
 
 export function updateCharacter(
-  updates: Partial<Pick<Character, "name" | "avatar" | "username">>
+  updates: Partial<Pick<Character, "name" | "avatar" | "username" | "classId" | "starterWeapon">>
 ): Character | null {
   const c = loadCharacter();
   if (!c) return null;
   if (updates.name !== undefined) c.name = updates.name.trim() || c.name;
   if (updates.avatar !== undefined) c.avatar = updates.avatar || c.avatar;
   if (updates.username !== undefined) c.username = (updates.username || c.username).toLowerCase().replace(/\s+/g, "_");
+  if (updates.classId !== undefined) c.classId = updates.classId;
+  if (updates.starterWeapon !== undefined) c.starterWeapon = updates.starterWeapon;
   saveCharacter(c);
   return c;
 }
@@ -318,27 +348,45 @@ export function logActivity(
   if (c.streakDays >= 30) ensureAchievement(c, "30-Day Streak");
   if (c.level > prevLevel) ensureAchievement(c, `Reached Level ${c.level}`);
 
-  if (isStudyActivityForBoss(activityId)) {
-    applyStudyDamageToCurrentBoss(c, minutes ?? 30);
-  }
+  // Boss battles: any activity can deal damage; some types are stronger.
+  applyActivityDamageToCurrentBoss(c, activityId, minutes);
 
   saveCharacter(c);
   return c;
 }
 
-/** Python spec: damage = (knowledge*2) + (focus*2) + (studyMinutes/10)*5; defeat = +100 XP */
-function applyStudyDamageToCurrentBoss(c: Character, studyMinutes: number): void {
+function applyActivityDamageToCurrentBoss(c: Character, activityId: string, minutes: number | undefined): void {
   const activeId = loadActiveBossId();
   if (!activeId) return;
   const bosses = loadUserBosses();
   const boss = bosses.find((b) => b.id === activeId);
   if (!boss || boss.defeated) return;
 
-  const damage =
-    (c.stats.knowledge ?? 0) * 2 +
-    (c.stats.focus ?? 0) * 2 +
-    Math.floor(studyMinutes / 10) * 5;
-  const actualDamage = Math.max(1, damage);
+  const def = getActivityById(activityId);
+  if (!def) return;
+
+  const statKey = def.stat;
+  const statVal = (c.stats[statKey] ?? 0) as number;
+
+  // Base damage: scaled by stat and the activity itself.
+  let damage = 6 + statVal * 1.25 + def.statGain * 8;
+
+  // Minutes-based boost for focus/knowledge blocks.
+  if (def.usesMinutes && minutes != null && minutes > 0) {
+    damage += Math.floor(minutes / 10) * 3;
+  }
+
+  // Study activities get extra oomph (keeps old gameplay flavor).
+  if (isStudyActivityForBoss(activityId)) {
+    damage += (c.stats.knowledge ?? 0) * 0.9 + (c.stats.focus ?? 0) * 0.9;
+  }
+
+  // Weakness bonus
+  if (boss.weaknessStat && boss.weaknessStat === statKey) {
+    damage *= 1.6;
+  }
+
+  const actualDamage = Math.max(1, Math.floor(damage));
   boss.currentHp = Math.max(0, boss.currentHp - actualDamage);
 
   if (boss.currentHp <= 0) {
@@ -349,6 +397,17 @@ function applyStudyDamageToCurrentBoss(c: Character, studyMinutes: number): void
     c.totalXP += xp;
     c.level = xpToLevel(c.totalXP);
     ensureAchievement(c, `Defeated ${boss.name} Boss (+${xp} XP)`);
+    // Loot: unlock one cosmetic (if any remain locked)
+    const loot = pickLootCosmetic({
+      achievements: c.achievements,
+      level: c.level,
+      unlockedCosmetics: c.unlockedCosmetics,
+    });
+    if (loot) {
+      boss.loot = [...(boss.loot ?? []), loot.id];
+      ensureUnlockedCosmetic(c, loot.id);
+      ensureAchievement(c, `Looted: ${loot.icon} ${loot.label}`);
+    }
   }
   saveUserBosses(bosses);
 }
@@ -393,6 +452,7 @@ export function addUserBoss(name: string, hp: number, setAsActive = true): UserB
   const maxHp = Math.max(MIN_BOSS_HP, Math.floor(hp));
   const id = `ub-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   const xp = bossXpReward(maxHp);
+  const weakness: StatKey = STAT_KEYS[Math.floor(Math.random() * STAT_KEYS.length)] as StatKey;
   const boss: UserBoss = {
     id,
     name: name.trim() || "Boss",
@@ -401,6 +461,8 @@ export function addUserBoss(name: string, hp: number, setAsActive = true): UserB
     defeated: false,
     createdAt: Date.now(),
     xpReward: xp,
+    weaknessStat: weakness,
+    loot: [],
   };
   bosses.push(boss);
   saveUserBosses(bosses);

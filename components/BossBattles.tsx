@@ -11,8 +11,9 @@ import {
   MAX_BOSSES,
   MIN_BOSS_HP,
 } from "@/lib/store";
-import type { UserBoss } from "@/lib/types";
-import type { Character } from "@/lib/types";
+import type { UserBoss, Character, StatKey } from "@/lib/types";
+import { STAT_ICONS, STAT_LABELS } from "@/lib/types";
+import { getCosmeticById } from "@/lib/cosmetics";
 
 const DELETE_CONFIRM_DIALOGS: { message: string; fightOn: string; retreat: string }[] = [
   {
@@ -106,7 +107,7 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
           <div>
             <h3 className="font-display font-bold text-white text-lg">Boss Battles</h3>
             <p className="text-xs text-white/60">
-              Add up to {MAX_BOSSES} bosses (min 250 HP). Study sessions deal damage to the one you attack. XP on defeat: 100 + 5 per 10 HP above 250.
+              Add up to {MAX_BOSSES} bosses (min 250 HP). Any logged activity deals damage to the one you attack. Boss weakness boosts damage for matching stats. XP on defeat: 100 + 5 per 10 HP above 250.
             </p>
           </div>
         </div>
@@ -216,6 +217,8 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
               {finalBosses.map((boss) => {
                 const isActive = activeId === boss.id;
                 const hpPct = boss.defeated ? 0 : Math.min(100, (boss.currentHp / boss.maxHp) * 100);
+                const weakness = boss.weaknessStat as StatKey | undefined;
+                const loot = (boss.loot ?? []).map((id) => getCosmeticById(id)).filter(Boolean);
                 return (
                   <div
                     key={boss.id}
@@ -235,6 +238,16 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
                         {!boss.defeated && isActive && (
                           <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-uri-gold/30 text-uri-gold border border-uri-gold/50">
                             Attacking
+                          </span>
+                        )}
+                        {weakness && (
+                          <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-white/10 text-white/80 border border-white/15">
+                            Weak: {STAT_ICONS[weakness]} {STAT_LABELS[weakness]}
+                          </span>
+                        )}
+                        {loot.length > 0 && (
+                          <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-uri-keaney/15 text-uri-keaney border border-uri-keaney/30">
+                            Loot: {loot.slice(0, 2).map((l) => l!.icon).join(" ")}{loot.length > 2 ? ` +${loot.length - 2}` : ""}
                           </span>
                         )}
                       </div>
@@ -302,6 +315,8 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
             regularBosses.map((boss) => {
               const isActive = activeId === boss.id;
               const hpPct = boss.defeated ? 0 : Math.min(100, (boss.currentHp / boss.maxHp) * 100);
+              const weakness = boss.weaknessStat as StatKey | undefined;
+              const loot = (boss.loot ?? []).map((id) => getCosmeticById(id)).filter(Boolean);
               return (
                 <div
                   key={boss.id}
@@ -323,6 +338,16 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
                       {!boss.defeated && isActive && (
                         <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-uri-keaney/25 text-uri-keaney border border-uri-keaney/40">
                           Attacking
+                        </span>
+                      )}
+                      {weakness && (
+                        <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-white/10 text-white/80 border border-white/15">
+                          Weak: {STAT_ICONS[weakness]} {STAT_LABELS[weakness]}
+                        </span>
+                      )}
+                      {loot.length > 0 && (
+                        <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-uri-keaney/15 text-uri-keaney border border-uri-keaney/30">
+                          Loot: {loot.slice(0, 2).map((l) => l!.icon).join(" ")}{loot.length > 2 ? ` +${loot.length - 2}` : ""}
                         </span>
                       )}
                     </div>

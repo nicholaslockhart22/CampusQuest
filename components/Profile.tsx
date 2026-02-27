@@ -7,6 +7,8 @@ import { STAT_KEYS, STAT_LABELS, STAT_ICONS } from "@/lib/types";
 import { getFeedByAuthorId, nodFieldNote, rallyFieldNote } from "@/lib/feedStore";
 import { getFriends, getOutgoingRequests } from "@/lib/friendsStore";
 import { getUserBosses } from "@/lib/store";
+import { getClassTitle, getClassRealm } from "@/lib/characterClasses";
+import { AvatarDisplay } from "./AvatarDisplay";
 import { FieldNoteCard } from "./FieldNoteCard";
 
 export function Profile({ character }: { character: Character }) {
@@ -44,10 +46,16 @@ export function Profile({ character }: { character: Character }) {
         <div className="flex flex-col sm:flex-row sm:items-center gap-5">
           <div className="flex justify-center sm:justify-start">
             <div
-              className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-uri-keaney/30 to-uri-navy border-4 border-uri-keaney/40 flex items-center justify-center text-4xl sm:text-5xl shadow-lg"
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-uri-keaney/30 to-uri-navy border-4 border-uri-keaney/40 flex items-center justify-center overflow-hidden shadow-lg"
               aria-hidden
             >
-              {character.avatar}
+              <AvatarDisplay
+                avatar={character.avatar}
+                size={112}
+                className="rounded-full"
+                classId={character.classId}
+                starterWeapon={character.starterWeapon}
+              />
             </div>
           </div>
           <div className="flex-1 text-center sm:text-left min-w-0">
@@ -55,6 +63,14 @@ export function Profile({ character }: { character: Character }) {
               {character.name}
             </h2>
             <p className="text-uri-keaney/90 text-sm mt-0.5">@{character.username}</p>
+            {character.classId && (getClassTitle(character.classId) || getClassRealm(character.classId)) && (
+              <p className="text-uri-gold/90 text-sm mt-1 font-medium">
+                {getClassTitle(character.classId)}
+                {getClassRealm(character.classId) && (
+                  <span className="text-white/50 font-normal"> · {getClassRealm(character.classId)}</span>
+                )}
+              </p>
+            )}
             <div className="flex justify-center sm:justify-start gap-6 mt-4">
               <div className="flex flex-col items-center sm:items-start">
                 <span className="font-bold text-white text-lg">{posts.length}</span>

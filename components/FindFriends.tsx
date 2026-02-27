@@ -12,6 +12,7 @@ import {
 import type { Character } from "@/lib/types";
 import type { Friend, FriendRequest } from "@/lib/types";
 import { STAT_KEYS, STAT_LABELS, STAT_ICONS } from "@/lib/types";
+import { AvatarDisplay } from "./AvatarDisplay";
 
 export function FindFriends({
   character,
@@ -168,8 +169,8 @@ function FriendCard({ friend }: { friend: Friend }) {
   return (
     <li className="p-4 rounded-xl bg-white/5 border border-uri-keaney/20">
       <div className="flex items-start gap-3">
-        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-uri-keaney/25 to-uri-navy flex items-center justify-center text-2xl border border-uri-keaney/30 flex-shrink-0">
-          {friend.avatar}
+        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-uri-keaney/25 to-uri-navy flex items-center justify-center border border-uri-keaney/30 flex-shrink-0 overflow-hidden">
+          <AvatarDisplay avatar={friend.avatar} size={56} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-white truncate">{friend.name}</p>

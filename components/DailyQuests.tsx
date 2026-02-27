@@ -18,16 +18,16 @@ function getProgressForQuest(quest: DailyQuest, logsByActivity: Record<string, n
   return count;
 }
 
-export function DailyQuests({ character }: { character: Character }) {
+export function DailyQuests({ character, compact = false }: { character: Character; compact?: boolean }) {
   const quests = useMemo(() => getDailyQuests(), []);
   const logsByActivity = getLogsByActivity(character.id);
 
-  return (
-    <section className="card p-4 sm:p-5">
+  const content = (
+    <>
       <h3 className="font-display font-semibold text-white mb-2 flex items-center gap-2">
         <span aria-hidden>📋</span> Daily Quests
       </h3>
-      <p className="text-xs text-white/50 mb-3">Complete activities to earn bonus XP.</p>
+      <p className="text-xs text-white/80 mb-3">Complete activities to earn bonus XP.</p>
       <div className="space-y-2">
         {quests.map((q) => {
           const current = getProgressForQuest(q, logsByActivity);
@@ -35,15 +35,15 @@ export function DailyQuests({ character }: { character: Character }) {
           return (
             <div
               key={q.id}
-              className={`flex items-center gap-3 p-3 rounded-xl border ${done ? "bg-uri-keaney/10 border-uri-keaney/30" : "bg-white/5 border-white/10"}`}
+              className={`flex items-center gap-3 p-3 rounded-xl border ${done ? "bg-uri-keaney/25 border-uri-keaney/50" : "bg-white/15 border-white/25"}`}
             >
               <span className="text-2xl">{q.icon}</span>
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-white text-sm">{q.title}</div>
-                <div className="text-xs text-white/50 mt-0.5">
+                <div className="text-xs text-white/80 mt-0.5">
                   {current} / {q.targetCount} · +{q.xpReward} XP
                 </div>
-                <div className="mt-1.5 h-1.5 rounded-full bg-white/20 overflow-hidden">
+                <div className="mt-1.5 h-1.5 rounded-full bg-white/30 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-uri-keaney transition-all"
                     style={{ width: `${Math.min(100, (current / q.targetCount) * 100)}%` }}
@@ -55,6 +55,11 @@ export function DailyQuests({ character }: { character: Character }) {
           );
         })}
       </div>
-    </section>
+    </>
   );
+
+  if (compact) {
+    return <div className="p-3 sm:p-4">{content}</div>;
+  }
+  return <section className="card p-4 sm:p-5">{content}</section>;
 }
