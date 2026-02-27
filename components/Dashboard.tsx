@@ -135,7 +135,15 @@ function Header({
                       aria-hidden
                     />
                     <div className="absolute left-1/2 top-full mt-3 -translate-x-1/2 z-40 w-[min(34rem,92vw)]">
-                      <div className="rounded-2xl border border-uri-gold/40 bg-[#041E42] shadow-xl shadow-black/40">
+                      <div
+                        className="rounded-2xl overflow-hidden border-2 border-uri-gold/60 bg-[#041E42]"
+                        style={{
+                          boxShadow: "0 0 0 1px rgba(197, 165, 40, 0.25), 0 12px 40px -8px rgba(0,0,0,0.5), 0 0 40px rgba(197, 165, 40, 0.12)",
+                          background: "linear-gradient(175deg, rgba(197, 165, 40, 0.12) 0%, rgba(197, 165, 40, 0.04) 8%, #041E42 18%, #041E42 100%)",
+                        }}
+                      >
+                        <div className="h-1.5 bg-gradient-to-r from-transparent via-amber-400/70 to-transparent" aria-hidden />
+                        <div className="h-px bg-gradient-to-r from-transparent via-uri-gold/40 to-transparent" aria-hidden />
                         <SpecialQuests character={character} compact onClaim={onRefresh ?? undefined} />
                       </div>
                     </div>

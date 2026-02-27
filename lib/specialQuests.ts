@@ -14,7 +14,7 @@ export const SPECIAL_QUESTS: SpecialQuest[] = [
     title: "URI gear at a game",
     description: "Wear URI gear to a sports event",
     xpReward: 75,
-    icon: "🦌",
+    icon: "🐏",
   },
   {
     id: "sq-lecture-event",
