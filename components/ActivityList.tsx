@@ -49,8 +49,18 @@ export function ActivityList({
   const [tags, setTags] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const proofFileRef = useRef<HTMLInputElement>(null);
+  const [expandedStats, setExpandedStats] = useState<Set<StatKey>>(new Set());
 
   const byStat = useMemo(() => groupActivitiesByStat(ACTIVITIES), []);
+
+  function toggleStat(stat: StatKey) {
+    setExpandedStats((prev) => {
+      const next = new Set(prev);
+      if (next.has(stat)) next.delete(stat);
+      else next.add(stat);
+      return next;
+    });
+  }
 
   const proofValid = proof.trim().length > 0;
 
@@ -103,15 +113,26 @@ export function ActivityList({
         Add proof (photo URL, link, or note) to level up your stats.
       </p>
       <div className="grid gap-4">
-        {byStat.map(({ stat, items }) => (
+        {byStat.map(({ stat, items }) => {
+          const isExpanded = expandedStats.has(stat);
+          return (
           <div key={stat} className="space-y-2">
-            <div className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl border ${STAT_HEADER_BG[stat]}`}>
+            <button
+              type="button"
+              onClick={() => toggleStat(stat)}
+              className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-left transition-colors hover:opacity-90 ${STAT_HEADER_BG[stat]}`}
+              aria-expanded={isExpanded}
+            >
               <div className="flex items-center gap-2 text-sm font-semibold text-white/90">
                 <span className="text-base">{STAT_ICONS[stat]}</span>
                 <span>{STAT_LABELS[stat]}</span>
               </div>
-              <span className="text-[11px] text-white/50 font-mono">{items.length} activities</span>
-            </div>
+              <span className="flex items-center gap-2">
+                <span className="text-[11px] text-white/50 font-mono">{items.length} activities</span>
+                <span className="text-white/70 text-sm" aria-hidden>{isExpanded ? "▼" : "▶"}</span>
+              </span>
+            </button>
+            {isExpanded && (
             <div className="grid gap-2">
               {items.map((act) => {
                 const isSelected = selected === act.id;
@@ -277,8 +298,10 @@ export function ActivityList({
                 );
               })}
             </div>
+            )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

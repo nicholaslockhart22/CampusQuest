@@ -16,6 +16,7 @@ import { FindFriends } from "./FindFriends";
 import { Leaderboards } from "./Leaderboards";
 import { Profile } from "./Profile";
 import { WeeklyRecapCard } from "./WeeklyRecapCard";
+import { CollapsibleSection } from "./CollapsibleSection";
 import { STAT_KEYS, STAT_ICONS, STAT_LABELS } from "@/lib/types";
 import { getActivityById } from "@/lib/activities";
 
@@ -278,14 +279,32 @@ export function Dashboard() {
       )}
 
       {tab === "me" && (
-        <>
-          <CharacterCard character={character} onRefresh={refresh} />
-          <WeeklyRecapCard character={character} />
-          <ActivityList onLog={handleLog} />
-          <RecentActivities characterId={character.id} />
-          <StreakCard character={character} />
-          <BossBattles character={character} onRefresh={refresh} />
-        </>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+          <div className="md:col-span-2">
+            <CharacterCard character={character} onRefresh={refresh} />
+          </div>
+          <div className="flex flex-col gap-4 sm:gap-5 md:flex-row md:items-stretch md:col-span-2 md:gap-5">
+            <div className="flex-1 min-w-0">
+              <StreakCard character={character} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <CollapsibleSection title="Weekly recap" defaultCollapsed>
+                <WeeklyRecapCard character={character} />
+              </CollapsibleSection>
+            </div>
+          </div>
+          <div className="md:col-span-2">
+            <ActivityList onLog={handleLog} />
+          </div>
+          <div className="min-w-0">
+            <CollapsibleSection title="Recent activities" defaultCollapsed>
+              <RecentActivities characterId={character.id} />
+            </CollapsibleSection>
+          </div>
+          <div className="md:col-span-2">
+            <BossBattles character={character} onRefresh={refresh} />
+          </div>
+        </div>
       )}
       </div>
     </>
