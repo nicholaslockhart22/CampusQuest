@@ -108,7 +108,7 @@ export function CharacterGate({ onReady }: { onReady: () => void }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" aria-modal="true" role="dialog">
           <div className="card p-6 sm:p-8 max-w-sm w-full text-center space-y-6">
             <p className="font-display text-lg sm:text-xl text-white leading-relaxed">
-              Hark, brave Ram! Dost thou swear this likeness be thy true form upon the CampusQuest battlefield?
+              Brave Ram, shall this be thy avatar?
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button

@@ -1,10 +1,11 @@
 "use client";
 
-import type { FieldNote, RamMark, FieldNoteSerialized } from "./types";
-import { FIELD_NOTE_MAX_CHARS, RAMMARK_MAX_LENGTH, RAMMARK_MAX_PER_POST } from "./types";
+import type { FieldNote, RamMark, FieldNoteSerialized, QuadComment } from "./types";
+import { FIELD_NOTE_MAX_CHARS, RAMMARK_MAX_LENGTH, RAMMARK_MAX_PER_POST, QUAD_COMMENT_MAX_CHARS } from "./types";
 
 // In-memory feed (resets on refresh for MVP). Character-backed; author comes from store.
 let feed: FieldNote[] = [];
+let comments: QuadComment[] = [];
 
 function serialize(note: FieldNote): FieldNoteSerialized {
   return {
@@ -128,4 +129,40 @@ export function getAllRamMarks(): string[] {
   const set = new Set<string>();
   feed.forEach((n) => n.ramMarks.forEach((r) => set.add(r.tag)));
   return Array.from(set).sort();
+}
+
+// —— Comments on Quad posts ——
+
+export function getCommentsByNoteId(noteId: string): QuadComment[] {
+  return [...comments]
+    .filter((c) => c.noteId === noteId)
+    .sort((a, b) => a.createdAt - b.createdAt);
+}
+
+export interface AddCommentParams {
+  authorId: string;
+  authorName: string;
+  authorUsername: string;
+  authorAvatar: string;
+  body: string;
+}
+
+export function addComment(noteId: string, params: AddCommentParams): QuadComment | null {
+  const body = params.body.trim().slice(0, QUAD_COMMENT_MAX_CHARS);
+  if (!body) return null;
+  const note = feed.find((n) => n.id === noteId);
+  if (!note) return null;
+
+  const comment: QuadComment = {
+    id: `qc-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    noteId,
+    authorId: params.authorId,
+    authorName: params.authorName,
+    authorUsername: params.authorUsername,
+    authorAvatar: params.authorAvatar,
+    body,
+    createdAt: Date.now(),
+  };
+  comments.push(comment);
+  return comment;
 }

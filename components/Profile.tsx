@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import type { Character } from "@/lib/types";
 import type { FieldNote } from "@/lib/types";
 import { STAT_KEYS, STAT_LABELS, STAT_ICONS, MAX_STAT, type StatKey } from "@/lib/types";
-import { getFeedByAuthorId, nodFieldNote, rallyFieldNote } from "@/lib/feedStore";
+import { getFeedByAuthorId, nodFieldNote, rallyFieldNote, getCommentsByNoteId, addComment } from "@/lib/feedStore";
 import { getFriends, getOutgoingRequests } from "@/lib/friendsStore";
 import { getUserBosses } from "@/lib/store";
 import { getClassTitle, getClassRealm } from "@/lib/characterClasses";
@@ -29,6 +29,17 @@ export function Profile({ character }: { character: Character }) {
 
   function handleRally(noteId: string) {
     rallyFieldNote(noteId, character.id);
+    refresh();
+  }
+
+  function handleAddComment(noteId: string, body: string) {
+    addComment(noteId, {
+      authorId: character.id,
+      authorName: character.name,
+      authorUsername: character.username,
+      authorAvatar: character.avatar,
+      body,
+    });
     refresh();
   }
 
@@ -171,8 +182,16 @@ export function Profile({ character }: { character: Character }) {
                 key={note.id}
                 note={note}
                 currentUserId={character.id}
+                comments={getCommentsByNoteId(note.id)}
                 onNod={handleNod}
                 onRally={handleRally}
+                onAddComment={handleAddComment}
+                currentUser={{
+                  id: character.id,
+                  name: character.name,
+                  username: character.username,
+                  avatar: character.avatar,
+                }}
               />
             ))}
           </div>

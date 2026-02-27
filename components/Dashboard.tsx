@@ -10,6 +10,7 @@ import { AuthScreen } from "./AuthScreen";
 import { ActivityList } from "./ActivityList";
 import { TheQuad } from "./TheQuad";
 import { DailyQuests } from "./DailyQuests";
+import { SpecialQuests } from "./SpecialQuests";
 import { StreakCard } from "./StreakCard";
 import { BossBattles } from "./BossBattles";
 import { RecentActivities } from "./RecentActivities";
@@ -28,13 +29,16 @@ function Header({
   character,
   showLogout,
   onLogout,
+  onRefresh,
 }: {
   username: string | null;
   character: Character | null;
   showLogout: boolean;
   onLogout: () => void;
+  onRefresh?: () => void;
 }) {
   const [questsOpen, setQuestsOpen] = useState(false);
+  const [specialQuestsOpen, setSpecialQuestsOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const questsButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -70,36 +74,74 @@ function Header({
             </p>
           </div>
           {character && (
-            <div className="pointer-events-auto ml-2 sm:ml-4">
-              <button
-                ref={questsButtonRef}
-                type="button"
-                onClick={() => setQuestsOpen((v) => !v)}
-                className={`text-lg px-3 py-2 rounded-xl border transition-colors ${
-                  questsOpen
-                    ? "bg-uri-keaney/25 text-uri-keaney border-uri-keaney/50"
-                    : "bg-white/15 text-white border-white/25 hover:bg-white/20 hover:border-white/30"
-                }`}
-                aria-haspopup="dialog"
-                aria-expanded={questsOpen}
-                title="Daily quests"
-              >
-                📋 <span className="text-white/70">▾</span>
-              </button>
-              {questsOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-30"
-                    onClick={() => setQuestsOpen(false)}
-                    aria-hidden
-                  />
-                  <div className="absolute left-1/2 top-full mt-3 -translate-x-1/2 z-40 w-[min(34rem,92vw)]">
-                    <div className="rounded-2xl border border-uri-keaney/40 bg-[#041E42] shadow-xl shadow-black/40">
-                      <DailyQuests character={character} compact />
+            <div className="pointer-events-auto ml-2 sm:ml-4 flex items-center gap-2">
+              <div className="relative">
+                <button
+                  ref={questsButtonRef}
+                  type="button"
+                  onClick={() => {
+                    setSpecialQuestsOpen(false);
+                    setQuestsOpen((v) => !v);
+                  }}
+                  className={`text-lg px-3 py-2 rounded-xl border transition-colors ${
+                    questsOpen
+                      ? "bg-uri-keaney/25 text-uri-keaney border-uri-keaney/50"
+                      : "bg-white/15 text-white border-white/25 hover:bg-white/20 hover:border-white/30"
+                  }`}
+                  aria-haspopup="dialog"
+                  aria-expanded={questsOpen}
+                  title="Daily quests"
+                >
+                  📋 <span className="text-white/70">▾</span>
+                </button>
+                {questsOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-30"
+                      onClick={() => setQuestsOpen(false)}
+                      aria-hidden
+                    />
+                    <div className="absolute left-1/2 top-full mt-3 -translate-x-1/2 z-40 w-[min(34rem,92vw)]">
+                      <div className="rounded-2xl border border-uri-keaney/40 bg-[#041E42] shadow-xl shadow-black/40">
+                        <DailyQuests character={character} compact />
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
+                  </>
+                )}
+              </div>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuestsOpen(false);
+                    setSpecialQuestsOpen((v) => !v);
+                  }}
+                  className={`text-lg px-3 py-2 rounded-xl border transition-colors ${
+                    specialQuestsOpen
+                      ? "bg-uri-gold/20 text-uri-gold border-uri-gold/50"
+                      : "bg-white/15 text-white border-white/25 hover:bg-white/20 hover:border-white/30"
+                  }`}
+                  aria-haspopup="dialog"
+                  aria-expanded={specialQuestsOpen}
+                  title="Special quests"
+                >
+                  ⭐ <span className="text-white/70">▾</span>
+                </button>
+                {specialQuestsOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-30"
+                      onClick={() => setSpecialQuestsOpen(false)}
+                      aria-hidden
+                    />
+                    <div className="absolute left-1/2 top-full mt-3 -translate-x-1/2 z-40 w-[min(34rem,92vw)]">
+                      <div className="rounded-2xl border border-uri-gold/40 bg-[#041E42] shadow-xl shadow-black/40">
+                        <SpecialQuests character={character} compact onClaim={onRefresh ?? undefined} />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -219,7 +261,7 @@ export function Dashboard() {
     }
     return (
       <>
-        <Header username={null} character={null} showLogout={false} onLogout={handleLogout} />
+        <Header username={null} character={null} showLogout={false} onLogout={handleLogout} onRefresh={refresh} />
         <CharacterGate onReady={() => { refresh(); setTab("quad"); }} />
       </>
     );
@@ -250,7 +292,7 @@ export function Dashboard() {
 
   return (
     <>
-      <Header username={character?.username ?? null} character={character} showLogout onLogout={handleLogout} />
+      <Header username={character?.username ?? null} character={character} showLogout onLogout={handleLogout} onRefresh={refresh} />
       <div className="space-y-5 sm:space-y-6">
         {gainToast && (
           <div className="fixed left-1/2 top-20 -translate-x-1/2 z-40 w-[min(28rem,92vw)]">

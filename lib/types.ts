@@ -61,6 +61,35 @@ export interface Character {
   finalBossesDefeatedCount?: number;
   /** Prestige count per stat (reset to 0 when prestiging; this number is shown next to stat name). */
   statPrestige?: Partial<Record<StatKey, number>>;
+  /** IDs of completed special quests (one-time; claim grants XP). */
+  completedSpecialQuests?: string[];
+  /** Proof URL/text per completed special quest (questId -> proof). */
+  specialQuestProofs?: Record<string, string>;
+  /** Current guild id (one guild per character). */
+  guildId?: string;
+}
+
+// —— Guilds ——
+export type GuildInterest = "study" | "fitness" | "networking" | "clubs";
+
+export interface Guild {
+  id: string;
+  name: string;
+  crest: string; // emoji or icon
+  level: number;
+  memberIds: string[];
+  weeklyQuestGoal: string;
+  interest: GuildInterest;
+  createdAt: number;
+  createdByUserId: string;
+}
+
+export interface GuildInviteRequest {
+  id: string;
+  guildId: string;
+  userId: string;
+  status: "pending" | "approved" | "declined";
+  createdAt: number;
 }
 
 // —— Find Friends (social) ——
@@ -164,6 +193,20 @@ export interface FieldNoteSerialized {
   proofUrl?: string;
 }
 
+/** Comment on a Quad post (field note). */
+export const QUAD_COMMENT_MAX_CHARS = 200;
+
+export interface QuadComment {
+  id: string;
+  noteId: string;
+  authorId: string;
+  authorName: string;
+  authorUsername: string;
+  authorAvatar: string;
+  body: string;
+  createdAt: number;
+}
+
 // —— Daily quests ——
 export interface DailyQuest {
   id: string;
@@ -171,6 +214,15 @@ export interface DailyQuest {
   description: string;
   stat: StatKey;
   targetCount: number;
+  xpReward: number;
+  icon: string;
+}
+
+/** One-time special campus quests (higher XP than daily). */
+export interface SpecialQuest {
+  id: string;
+  title: string;
+  description: string;
   xpReward: number;
   icon: string;
 }

@@ -8,6 +8,7 @@ import { getSampleBosses } from "./bosses";
 import { registerCharacter as registerCharacterInFriends } from "./friendsStore";
 import { applyClassStats, type CharacterClassId } from "./characterClasses";
 import { pickLootCosmetic } from "./cosmetics";
+import { getSpecialQuestById } from "./specialQuests";
 
 const STORAGE_KEY_CHARACTER = "campusquest_character";
 const STORAGE_KEY_LOGS = "campusquest_activity_logs";
@@ -269,6 +270,14 @@ export function updateCharacter(
   return c;
 }
 
+/** Set or clear the character's guild. Used by guild store. */
+export function setCharacterGuild(characterId: string, guildId: string | null): void {
+  const c = loadCharacter();
+  if (!c || c.id !== characterId) return;
+  c.guildId = guildId ?? undefined;
+  saveCharacter(c);
+}
+
 /** Prestige a stat: set it to 0 and increment its prestige count. Only allowed when stat >= MAX_STAT. */
 export function prestigeStat(characterId: string, stat: StatKey): Character | null {
   const c = loadCharacter();
@@ -278,6 +287,25 @@ export function prestigeStat(characterId: string, stat: StatKey): Character | nu
   c.stats[stat] = 0;
   if (!c.statPrestige) c.statPrestige = {};
   c.statPrestige[stat] = (c.statPrestige[stat] ?? 0) + 1;
+  saveCharacter(c);
+  return c;
+}
+
+/** Claim a special quest (one-time). Requires proof; grants XP and marks quest complete. */
+export function completeSpecialQuest(characterId: string, questId: string, proof: string): Character | null {
+  const trimmed = typeof proof === "string" ? proof.trim() : "";
+  if (!trimmed) return null;
+  const c = loadCharacter();
+  if (!c || c.id !== characterId) return null;
+  const quest = getSpecialQuestById(questId);
+  if (!quest) return null;
+  const completed = c.completedSpecialQuests ?? [];
+  if (completed.includes(questId)) return null;
+  c.totalXP += quest.xpReward;
+  c.level = xpToLevel(c.totalXP);
+  c.completedSpecialQuests = [...completed, questId];
+  if (!c.specialQuestProofs) c.specialQuestProofs = {};
+  c.specialQuestProofs[questId] = trimmed;
   saveCharacter(c);
   return c;
 }

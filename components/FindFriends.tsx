@@ -9,10 +9,21 @@ import {
   acceptRequest,
   declineRequest,
 } from "@/lib/friendsStore";
+import {
+  getRecommendedGuilds,
+  joinGuild,
+  requestGuildInvite,
+  hasRequestedInvite,
+  GUILD_INTEREST_LABELS,
+  type GuildInterest,
+} from "@/lib/guildStore";
 import type { Character } from "@/lib/types";
-import type { Friend, FriendRequest } from "@/lib/types";
+import type { Friend, FriendRequest, Guild, GuildInterest } from "@/lib/types";
 import { STAT_KEYS, STAT_LABELS, STAT_ICONS } from "@/lib/types";
 import { AvatarDisplay } from "./AvatarDisplay";
+import { GuildCard } from "./GuildCard";
+import { CreateGuildModal } from "./CreateGuildModal";
+import { ViewGuildModal } from "./ViewGuildModal";
 
 export function FindFriends({
   character,
@@ -26,6 +37,8 @@ export function FindFriends({
   const [incoming, setIncoming] = useState<FriendRequest[]>([]);
   const [outgoing, setOutgoing] = useState<FriendRequest[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
+  const [showCreateGuild, setShowCreateGuild] = useState(false);
+  const [viewGuild, setViewGuild] = useState<Guild | null>(null);
 
   const refresh = useCallback(() => {
     setIncoming(getIncomingRequests(character.username));
@@ -60,8 +73,70 @@ export function FindFriends({
     refresh();
   }
 
+  function handleJoinGuild(guildId: string) {
+    joinGuild(character.id, guildId);
+    refresh();
+  }
+
+  function handleRequestGuildInvite(guildId: string) {
+    requestGuildInvite(character.id, guildId);
+    refresh();
+  }
+
+  const interests: GuildInterest[] = ["study", "fitness", "networking", "clubs"];
+  const recommendedByInterest = interests.map((interest) => ({
+    interest,
+    guilds: getRecommendedGuilds(interest),
+  }));
+
   return (
     <section className="space-y-5">
+      {/* Guilds banner + section */}
+      <div className="rounded-2xl border border-uri-keaney/25 bg-gradient-to-br from-uri-keaney/10 to-transparent p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="font-display font-semibold text-white mb-1 flex items-center gap-2">
+              <span aria-hidden>🛡️</span> Guilds
+            </h2>
+            <p className="text-sm text-white/80">Join a Guild, earn bonus XP together.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowCreateGuild(true)}
+            className="px-4 py-2.5 rounded-xl font-semibold bg-uri-keaney text-white hover:bg-uri-keaney/90 border border-uri-keaney/40 transition-colors shrink-0"
+          >
+            Create Guild
+          </button>
+        </div>
+
+        <p className="text-xs text-white/50 mt-4 mb-3">Recommended Guilds for You</p>
+        <div className="space-y-4">
+          {recommendedByInterest.map(({ interest, guilds }) =>
+            guilds.length > 0 ? (
+              <div key={interest}>
+                <h3 className="text-xs font-medium text-white/60 uppercase tracking-wider mb-2">
+                  {GUILD_INTEREST_LABELS[interest]}
+                </h3>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {guilds.map((guild) => (
+                    <GuildCard
+                      key={guild.id}
+                      guild={guild}
+                      currentUserId={character.id}
+                      userGuildId={character.guildId}
+                      hasRequestedInvite={hasRequestedInvite(character.id, guild.id)}
+                      onJoin={handleJoinGuild}
+                      onRequestInvite={handleRequestGuildInvite}
+                      onView={setViewGuild}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null
+          )}
+        </div>
+      </div>
+
       <div className="card p-4 sm:p-5">
         <h2 className="font-display font-semibold text-white mb-2 flex items-center gap-2">
           <span aria-hidden>👋</span> Find Friends
@@ -161,6 +236,15 @@ export function FindFriends({
           </ul>
         )}
       </div>
+
+      {showCreateGuild && (
+        <CreateGuildModal
+          characterId={character.id}
+          onClose={() => setShowCreateGuild(false)}
+          onCreated={refresh}
+        />
+      )}
+      {viewGuild && <ViewGuildModal guild={viewGuild} onClose={() => setViewGuild(null)} />}
     </section>
   );
 }

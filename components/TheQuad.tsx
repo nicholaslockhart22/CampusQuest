@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { getFeed, nodFieldNote, rallyFieldNote, getAllRamMarks } from "@/lib/feedStore";
+import { getFeed, nodFieldNote, rallyFieldNote, getAllRamMarks, getCommentsByNoteId, addComment } from "@/lib/feedStore";
 import type { FieldNote } from "@/lib/types";
 import type { Character } from "@/lib/types";
 import { FieldNoteComposer } from "@/components/FieldNoteComposer";
@@ -37,6 +37,17 @@ export function TheQuad({
     refresh();
   }
 
+  function handleAddComment(noteId: string, body: string) {
+    addComment(noteId, {
+      authorId: character.id,
+      authorName: character.name,
+      authorUsername: character.username,
+      authorAvatar: character.avatar,
+      body,
+    });
+    refresh();
+  }
+
   return (
     <section className="card overflow-hidden">
       <div className="px-4 py-3.5 border-b border-uri-keaney/20 flex items-center justify-between flex-wrap gap-2 bg-uri-keaney/5">
@@ -68,8 +79,16 @@ export function TheQuad({
               key={note.id}
               note={note}
               currentUserId={character.id}
+              comments={getCommentsByNoteId(note.id)}
               onNod={handleNod}
               onRally={handleRally}
+              onAddComment={handleAddComment}
+              currentUser={{
+                id: character.id,
+                name: character.name,
+                username: character.username,
+                avatar: character.avatar,
+              }}
             />
           ))
         )}
