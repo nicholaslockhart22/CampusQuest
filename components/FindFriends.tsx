@@ -335,6 +335,8 @@ export function FindFriends({
           currentUserId={character.id}
           onLeave={handleLeaveGuild}
           onClose={() => setViewGuild(null)}
+          onDeleted={refresh}
+          onUpdated={refresh}
         />
       )}
     </section>

@@ -49,33 +49,61 @@ export function TheQuad({
   }
 
   return (
-    <section className="card overflow-hidden">
-      <div className="px-4 py-3.5 border-b border-uri-keaney/20 flex items-center justify-between flex-wrap gap-2 bg-uri-keaney/5">
-        <h2 className="font-display font-bold text-lg text-white">
-          The Quad
-        </h2>
+    <section
+      className="overflow-hidden rounded-2xl border border-white/[0.08] shadow-[0_1px_0_0_rgba(104,171,232,0.12),0_4px_20px_-4px_rgba(0,0,0,0.35)]"
+      style={{
+        background: "linear-gradient(180deg, rgba(4, 30, 66, 0.97) 0%, rgba(3, 22, 48, 0.95) 100%)",
+      }}
+    >
+      {/* Header bar — matches top nav */}
+      <div
+        className="backdrop-blur-sm border-b border-white/[0.08] px-4 py-3.5 flex items-center justify-between flex-wrap gap-3"
+        style={{
+          background: "linear-gradient(180deg, rgba(4, 30, 66, 0.98) 0%, rgba(3, 22, 48, 0.97) 100%)",
+          boxShadow: "0 1px 0 0 rgba(104, 171, 232, 0.1)",
+        }}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-uri-keaney/25 to-uri-keaney/10 border border-uri-keaney/40 flex items-center justify-center flex-shrink-0 shadow-[0_0_10px_rgba(104,171,232,0.15)]">
+            <span className="text-lg leading-none" aria-hidden>📋</span>
+          </div>
+          <div className="min-w-0">
+            <h2 className="font-display font-bold text-white text-base sm:text-lg tracking-tight truncate">
+              The Quad
+            </h2>
+            <p className="text-[10px] sm:text-xs text-uri-keaney/80 font-medium truncate">
+              Field Notes · Rams share wins
+            </p>
+          </div>
+        </div>
         <RamMarkFilter
           selected={filter}
           onSelect={setFilter}
           options={getAllRamMarks()}
         />
       </div>
-      <div className="p-4 border-b border-uri-keaney/20 bg-uri-keaney/5">
+
+      {/* Composer */}
+      <div className="p-4 border-b border-white/[0.08] bg-white/[0.02]">
         <FieldNoteComposer
           character={character}
           onPosted={refresh}
         />
       </div>
-      <div className="divide-y divide-white/10 max-h-[60vh] overflow-y-auto">
+
+      {/* Feed */}
+      <div className="divide-y divide-white/[0.06] max-h-[60vh] overflow-y-auto bg-white/[0.02]">
         {notes.length === 0 ? (
-          <div className="p-10 sm:p-12 text-center">
-            <p className="text-5xl mb-4 opacity-70" aria-hidden>📝</p>
-            <p className="text-white font-semibold text-lg">No Field Notes yet</p>
-            <p className="text-sm text-white/60 mt-2 max-w-xs mx-auto">
+          <div className="py-14 px-6 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl mx-auto mb-4 shadow-inner" aria-hidden>
+              📝
+            </div>
+            <p className="font-display font-semibold text-white text-lg">No Field Notes yet</p>
+            <p className="text-sm text-white/50 mt-2 max-w-xs mx-auto leading-relaxed">
               Post a study sesh, workout, or campus moment. The Quad is where Rams share wins.
             </p>
-            <p className="text-xs text-uri-keaney/80 mt-4 font-medium">Be the first to post above ↑</p>
-            <p className="text-xs text-white/50 mt-2">Follow people in Find Friends to see their posts here.</p>
+            <p className="text-xs text-uri-keaney/80 mt-5 font-medium">Be the first to post above ↑</p>
+            <p className="text-xs text-white/40 mt-1.5">Follow people in Find Friends to see their posts here.</p>
           </div>
         ) : (
           notes.map((note) => (

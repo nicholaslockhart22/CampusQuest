@@ -1,33 +1,203 @@
 "use client";
 
 import type { Guild, GuildInviteRequest, GuildInterest } from "./types";
+import type { Character, CharacterStats } from "./types";
 import { addCharacterToGuild, removeCharacterFromGuild, registerOnStreakExtended } from "./store";
+import { registerCharacter, getCharacterById } from "./friendsStore";
 
 const STORAGE_KEY_GUILDS = "campusquest_guilds";
 const STORAGE_KEY_GUILD_INVITES = "campusquest_guild_invites";
 
-const SAMPLE_GUILDS: Guild[] = [
-  { id: "g-study-1", name: "Library Legends", crest: "📚", level: 4, memberIds: [], weeklyQuestGoal: "Log 20 study sessions as a guild", interest: "study", createdAt: Date.now() - 86400000 * 14, createdByUserId: "" },
-  { id: "g-study-2", name: "All-Nighter Squad", crest: "☕", level: 2, memberIds: [], weeklyQuestGoal: "10 group study activities", interest: "study", createdAt: Date.now() - 86400000 * 7, createdByUserId: "" },
-  { id: "g-fitness-1", name: "Ram Runners", crest: "🦌", level: 5, memberIds: [], weeklyQuestGoal: "30 gym or run logs combined", interest: "fitness", createdAt: Date.now() - 86400000 * 21, createdByUserId: "" },
-  { id: "g-fitness-2", name: "Keaney Fit", crest: "💪", level: 3, memberIds: [], weeklyQuestGoal: "Every member logs 1 workout", interest: "fitness", createdAt: Date.now() - 86400000 * 10, createdByUserId: "" },
-  { id: "g-networking-1", name: "Career Quest", crest: "💼", level: 3, memberIds: [], weeklyQuestGoal: "Attend 1 career event (any member)", interest: "networking", createdAt: Date.now() - 86400000 * 5, createdByUserId: "" },
-  { id: "g-networking-2", name: "LinkedIn Rams", crest: "🔗", level: 2, memberIds: [], weeklyQuestGoal: "5 networking activities", interest: "networking", createdAt: Date.now() - 86400000 * 3, createdByUserId: "" },
-  { id: "g-clubs-1", name: "Quad Squad", crest: "🎸", level: 6, memberIds: [], weeklyQuestGoal: "12 club or social activities", interest: "clubs", createdAt: Date.now() - 86400000 * 30, createdByUserId: "" },
-  { id: "g-clubs-2", name: "Campus Crew", crest: "🌟", level: 4, memberIds: [], weeklyQuestGoal: "Everyone posts 1 Field Note", interest: "clubs", createdAt: Date.now() - 86400000 * 12, createdByUserId: "" },
+const PLACEHOLDER_STATS: CharacterStats = { strength: 0, stamina: 0, knowledge: 0, social: 0, focus: 0 };
+
+/** Pool of placeholder students for guild member lists. Names/avatars for display. */
+const PLACEHOLDER_STUDENTS: { name: string; username: string; avatar: string }[] = [
+  { name: "Alex Rivera", username: "alex_rivera", avatar: "📚" },
+  { name: "Jordan Kim", username: "jordan_kim", avatar: "🎓" },
+  { name: "Sam Chen", username: "sam_chen", avatar: "💪" },
+  { name: "Riley Morgan", username: "riley_morgan", avatar: "☕" },
+  { name: "Casey Lee", username: "casey_lee", avatar: "🦌" },
+  { name: "Quinn Taylor", username: "quinn_taylor", avatar: "📖" },
+  { name: "Avery Jones", username: "avery_jones", avatar: "🏃" },
+  { name: "Morgan Blake", username: "morgan_blake", avatar: "💼" },
+  { name: "Drew Patel", username: "drew_patel", avatar: "🎸" },
+  { name: "Jamie Foster", username: "jamie_foster", avatar: "🌟" },
+  { name: "Skyler Hayes", username: "skyler_hayes", avatar: "📝" },
+  { name: "Cameron Ross", username: "cameron_ross", avatar: "🔬" },
+  { name: "Reese Collins", username: "reese_collins", avatar: "⚡" },
+  { name: "Parker Wright", username: "parker_wright", avatar: "🎯" },
+  { name: "Blake Martinez", username: "blake_martinez", avatar: "🛡️" },
+  { name: "Taylor Brooks", username: "taylor_brooks", avatar: "📱" },
+  { name: "Jordan Phillips", username: "jordan_phillips", avatar: "🏋️" },
+  { name: "Casey Nguyen", username: "casey_nguyen", avatar: "🎨" },
+  { name: "Riley Cooper", username: "riley_cooper", avatar: "☕" },
+  { name: "Avery Reed", username: "avery_reed", avatar: "📚" },
+  { name: "Quinn Sullivan", username: "quinn_sullivan", avatar: "💻" },
+  { name: "Morgan Griffin", username: "morgan_griffin", avatar: "🦉" },
+  { name: "Drew Hayes", username: "drew_hayes", avatar: "🌟" },
+  { name: "Jamie Flores", username: "jamie_flores", avatar: "🎭" },
+  { name: "Skyler Bennett", username: "skyler_bennett", avatar: "📊" },
+  { name: "Cameron Price", username: "cameron_price", avatar: "🔑" },
+  { name: "Reese Simmons", username: "reese_simmons", avatar: "📖" },
+  { name: "Parker Bryant", username: "parker_bryant", avatar: "🏆" },
+  { name: "Blake Alexander", username: "blake_alexander", avatar: "🎪" },
+  { name: "Taylor Russell", username: "taylor_russell", avatar: "🛡️" },
+  { name: "Jordan West", username: "jordan_west", avatar: "⚔️" },
+  { name: "Casey Jordan", username: "casey_jordan", avatar: "📚" },
+  { name: "Riley Morgan", username: "riley_m2", avatar: "🎯" },
+  { name: "Avery Clark", username: "avery_clark", avatar: "🌟" },
+  { name: "Quinn Lewis", username: "quinn_lewis", avatar: "💡" },
+  { name: "Morgan Walker", username: "morgan_walker", avatar: "🔬" },
+  { name: "Drew Hall", username: "drew_hall", avatar: "📝" },
+  { name: "Jamie Young", username: "jamie_young", avatar: "🎓" },
+  { name: "Skyler King", username: "skyler_king", avatar: "🦌" },
+  { name: "Cameron Scott", username: "cameron_scott", avatar: "☕" },
 ];
 
+const SAMPLE_GUILD_TEMPLATES: Omit<Guild, "memberIds" | "createdByUserId" | "cofounderUserId">[] = [
+  { id: "g-study-1", name: "Library Legends", crest: "📚", level: 4, weeklyQuestGoal: "Log 20 study sessions as a guild", interest: "study", createdAt: Date.now() - 86400000 * 14, xp: 300 },
+  { id: "g-study-2", name: "All-Nighter Squad", crest: "☕", level: 2, weeklyQuestGoal: "10 group study activities", interest: "study", createdAt: Date.now() - 86400000 * 7, xp: 50 },
+  { id: "g-fitness-1", name: "Ram Runners", crest: "🦌", level: 5, weeklyQuestGoal: "30 gym or run logs combined", interest: "fitness", createdAt: Date.now() - 86400000 * 21, xp: 450 },
+  { id: "g-fitness-2", name: "Keaney Fit", crest: "💪", level: 3, weeklyQuestGoal: "Every member logs 1 workout", interest: "fitness", createdAt: Date.now() - 86400000 * 10, xp: 150 },
+  { id: "g-networking-1", name: "Career Quest", crest: "💼", level: 3, weeklyQuestGoal: "Attend 1 career event (any member)", interest: "networking", createdAt: Date.now() - 86400000 * 5, xp: 120 },
+  { id: "g-networking-2", name: "LinkedIn Rams", crest: "🔗", level: 2, weeklyQuestGoal: "5 networking activities", interest: "networking", createdAt: Date.now() - 86400000 * 3, xp: 80 },
+  { id: "g-clubs-1", name: "Quad Squad", crest: "🎸", level: 6, weeklyQuestGoal: "12 club or social activities", interest: "clubs", createdAt: Date.now() - 86400000 * 30, xp: 550 },
+  { id: "g-clubs-2", name: "Campus Crew", crest: "🌟", level: 4, weeklyQuestGoal: "Everyone posts 1 Field Note", interest: "clubs", createdAt: Date.now() - 86400000 * 12, xp: 320 },
+];
+
+const PLACEHOLDER_ID_PREFIX = "ph-guild-";
+
+/** Deterministic "random" 1–15 from guild id so placeholder data is stable. */
+function placeholderMemberCount(guildId: string): number {
+  let h = 0;
+  for (let i = 0; i < guildId.length; i++) h = (h * 31 + guildId.charCodeAt(i)) >>> 0;
+  return (h % MAX_GUILD_MEMBERS) + 1;
+}
+
+/** Deterministic shuffle of indices [0..n-1] seeded by guild id. */
+function shuffledIndicesForGuild(guildId: string, n: number): number[] {
+  const indices = Array.from({ length: n }, (_, i) => i);
+  let seed = 0;
+  for (let i = 0; i < guildId.length; i++) seed = (seed * 31 + guildId.charCodeAt(i)) >>> 0;
+  for (let i = indices.length - 1; i > 0; i--) {
+    seed = (seed * 1103515245 + 12345) >>> 0;
+    const j = seed % (i + 1);
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  return indices;
+}
+
+function buildPlaceholderCharacter(index: number): Character {
+  const s = PLACEHOLDER_STUDENTS[index % PLACEHOLDER_STUDENTS.length];
+  const level = (index % 5) + 1;
+  return {
+    id: `${PLACEHOLDER_ID_PREFIX}${index}`,
+    name: s.name,
+    username: `${s.username}_${index}`,
+    avatar: s.avatar,
+    level,
+    totalXP: level * 50,
+    stats: PLACEHOLDER_STATS,
+    streakDays: 0,
+    lastActivityDate: null,
+    achievements: [],
+    createdAt: Date.now() - 86400000 * 30,
+  };
+}
+
+/** Get placeholder member ids for a guild (same deterministic list as generateSampleGuilds). */
+function getPlaceholderMemberIdsForGuild(guildId: string): string[] {
+  const poolSize = PLACEHOLDER_STUDENTS.length;
+  const count = placeholderMemberCount(guildId);
+  const shuffled = shuffledIndicesForGuild(guildId, poolSize);
+  return shuffled.slice(0, count).map((i) => `${PLACEHOLDER_ID_PREFIX}${i}`);
+}
+
+function generateSampleGuilds(): Guild[] {
+  const poolSize = PLACEHOLDER_STUDENTS.length;
+  const indicesByGuild = SAMPLE_GUILD_TEMPLATES.map((t) => {
+    const count = placeholderMemberCount(t.id);
+    const shuffled = shuffledIndicesForGuild(t.id, poolSize);
+    return shuffled.slice(0, count);
+  });
+  const usedIndices = new Set<number>();
+  indicesByGuild.forEach((indices) => indices.forEach((i) => usedIndices.add(i)));
+  usedIndices.forEach((i) => registerCharacter(buildPlaceholderCharacter(i)));
+
+  return SAMPLE_GUILD_TEMPLATES.map((t, guildIndex) => {
+    const indices = indicesByGuild[guildIndex];
+    const memberIds = indices.map((i) => `${PLACEHOLDER_ID_PREFIX}${i}`);
+    const createdByUserId = memberIds[0];
+    const cofounderUserId = memberIds.length > COFOUNDER_REQUIRED_AT_MEMBERS ? memberIds[1] : undefined;
+    return {
+      ...t,
+      memberIds,
+      createdByUserId,
+      cofounderUserId,
+    };
+  });
+}
+
+/** Fill sample guilds with placeholder members: empty, old-format ph-*, or missing ph-guild-* ids. */
+function migratePlaceholderMemberIds(guilds: Guild[]): { guilds: Guild[]; changed: boolean } {
+  const templateIds = new Set(SAMPLE_GUILD_TEMPLATES.map((t) => t.id));
+  let changed = false;
+  const out = guilds.map((g) => {
+    if (!templateIds.has(g.id)) return g;
+    const isEmpty = g.memberIds.length === 0;
+    const isOldPlaceholder = g.memberIds.length > 0 && g.memberIds.every((id) => id.startsWith("ph-") && !id.startsWith(PLACEHOLDER_ID_PREFIX));
+    const hasNoNewPlaceholders = g.memberIds.length > 0 && !g.memberIds.some((id) => id.startsWith(PLACEHOLDER_ID_PREFIX));
+    const shouldFill = isEmpty || isOldPlaceholder || hasNoNewPlaceholders;
+    if (!shouldFill) return g;
+    const memberIds = getPlaceholderMemberIdsForGuild(g.id);
+    changed = true;
+    return {
+      ...g,
+      memberIds,
+      createdByUserId: memberIds[0],
+      cofounderUserId: memberIds.length > COFOUNDER_REQUIRED_AT_MEMBERS ? memberIds[1] : undefined,
+    };
+  });
+  return { guilds: out, changed };
+}
+
+/** Register any ph-guild-* member that isn't in the character store so ViewGuild shows names/avatars. */
+function ensurePlaceholderMembersRegistered(guilds: Guild[]): void {
+  for (const g of guilds) {
+    for (const id of g.memberIds) {
+      if (!id.startsWith(PLACEHOLDER_ID_PREFIX)) continue;
+      const indexStr = id.slice(PLACEHOLDER_ID_PREFIX.length);
+      const index = parseInt(indexStr, 10);
+      if (!Number.isNaN(index) && getCharacterById(id) === null) {
+        registerCharacter(buildPlaceholderCharacter(index));
+      }
+    }
+  }
+}
+
 function loadGuilds(): Guild[] {
-  if (typeof window === "undefined") return [...SAMPLE_GUILDS];
+  if (typeof window === "undefined") return generateSampleGuilds();
   try {
     const raw = localStorage.getItem(STORAGE_KEY_GUILDS);
+    let guilds: Guild[];
     if (!raw) {
-      saveGuilds(SAMPLE_GUILDS);
-      return [...SAMPLE_GUILDS];
+      guilds = generateSampleGuilds();
+      saveGuilds(guilds);
+    } else {
+      guilds = JSON.parse(raw);
+      const { guilds: migrated, changed } = migratePlaceholderMemberIds(guilds);
+      guilds = migrated;
+      if (changed) saveGuilds(guilds);
+      const beforeRemove = guilds.length;
+      guilds = guilds.filter((g) => g.name.trim().toLowerCase() !== "super guild");
+      if (guilds.length < beforeRemove) saveGuilds(guilds);
+      ensurePlaceholderMembersRegistered(guilds);
     }
-    return JSON.parse(raw);
+    return guilds;
   } catch {
-    return [...SAMPLE_GUILDS];
+    const guilds = generateSampleGuilds();
+    saveGuilds(guilds);
+    return guilds;
   }
 }
 
@@ -81,6 +251,10 @@ export function getRecommendedGuilds(interest?: GuildInterest): Guild[] {
 }
 
 const GUILD_XP_PER_LEVEL = 100;
+/** Min 1 (founder), max 15. Guilds with 10+ members must have a cofounder. */
+export const MAX_GUILD_MEMBERS = 15;
+/** When member count would exceed this, a cofounder must be set before the next join. */
+export const COFOUNDER_REQUIRED_AT_MEMBERS = 9;
 
 function guildLevelFromXp(xp: number): number {
   return 1 + Math.floor(Math.max(0, xp) / GUILD_XP_PER_LEVEL);
@@ -119,24 +293,62 @@ export function joinGuild(characterId: string, guildId: string): boolean {
   const guilds = loadGuilds();
   const guild = guilds.find((g) => g.id === guildId);
   if (!guild || guild.memberIds.includes(characterId)) return false;
-  if (!addCharacterToGuild(characterId, guildId)) return false; // max 2 guilds
+  if (guild.memberIds.length >= MAX_GUILD_MEMBERS) return false;
+  if (guild.memberIds.length >= COFOUNDER_REQUIRED_AT_MEMBERS && !guild.cofounderUserId) return false;
+  if (!addCharacterToGuild(characterId, guildId)) return false;
   guild.memberIds.push(characterId);
   saveGuilds(guilds);
   return true;
 }
 
-/** Leave one guild. Pass guildId to leave that guild, or leave first found if character is in multiple. */
+/** Leave one guild. Cannot leave if you're the last member. Founder/cofounder reassigned when they leave. */
 export function leaveGuild(characterId: string, guildId?: string): void {
   const guilds = loadGuilds();
   const targetGuildId = guildId ?? guilds.find((g) => g.memberIds.includes(characterId))?.id;
-  if (targetGuildId) {
-    const guild = guilds.find((g) => g.id === targetGuildId);
-    if (guild) {
-      guild.memberIds = guild.memberIds.filter((id) => id !== characterId);
-      saveGuilds(guilds);
-    }
-    removeCharacterFromGuild(characterId, targetGuildId);
+  if (!targetGuildId) return;
+  const guild = guilds.find((g) => g.id === targetGuildId);
+  if (!guild || !guild.memberIds.includes(characterId)) return;
+  if (guild.memberIds.length <= 1) return;
+  const wasFounder = guild.createdByUserId === characterId;
+  const wasCofounder = guild.cofounderUserId === characterId;
+  guild.memberIds = guild.memberIds.filter((id) => id !== characterId);
+  if (wasFounder) {
+    guild.createdByUserId = guild.cofounderUserId && guild.memberIds.includes(guild.cofounderUserId)
+      ? guild.cofounderUserId
+      : guild.memberIds[0];
+    if (guild.cofounderUserId === characterId) guild.cofounderUserId = undefined;
+  } else if (wasCofounder) {
+    guild.cofounderUserId = undefined;
   }
+  saveGuilds(guilds);
+  removeCharacterFromGuild(characterId, targetGuildId);
+}
+
+/** Set co-founder. Only the founder can set; cofounder must be a current member and not the founder. Required for guilds with 10+ members. */
+export function setGuildCofounder(guildId: string, requestedByUserId: string, cofounderUserId: string): boolean {
+  const guilds = loadGuilds();
+  const guild = guilds.find((g) => g.id === guildId);
+  if (!guild || guild.createdByUserId !== requestedByUserId) return false;
+  if (cofounderUserId === guild.createdByUserId) return false;
+  if (!guild.memberIds.includes(cofounderUserId)) return false;
+  guild.cofounderUserId = cofounderUserId;
+  saveGuilds(guilds);
+  return true;
+}
+
+/** Delete a guild. Only the creator can delete. Removes the guild and updates current user's guild list if they were a member. Returns true if deleted. */
+export function deleteGuild(guildId: string, requestedByUserId: string): boolean {
+  const guilds = loadGuilds();
+  const guild = guilds.find((g) => g.id === guildId);
+  if (!guild || guild.createdByUserId !== requestedByUserId) return false;
+  const filtered = guilds.filter((g) => g.id !== guildId);
+  saveGuilds(filtered);
+  if (guild.memberIds.includes(requestedByUserId)) {
+    removeCharacterFromGuild(requestedByUserId, guildId);
+  }
+  const requests = loadInviteRequests().filter((r) => r.guildId !== guildId);
+  saveInviteRequests(requests);
+  return true;
 }
 
 /** Add XP to a guild (e.g. from member streaks). Updates guild level from xp. */

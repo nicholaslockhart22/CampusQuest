@@ -85,7 +85,10 @@ export interface Guild {
   weeklyQuestGoal: string;
   interest: GuildInterest;
   createdAt: number;
+  /** Exactly one founder per guild. */
   createdByUserId: string;
+  /** Required when guild has more than 9 members. Only founder can set; must be a member. */
+  cofounderUserId?: string;
 }
 
 export interface GuildInviteRequest {

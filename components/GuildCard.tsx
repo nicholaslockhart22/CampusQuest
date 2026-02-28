@@ -1,7 +1,7 @@
 "use client";
 
 import type { Guild, GuildInterest } from "@/lib/types";
-import { GUILD_INTEREST_LABELS } from "@/lib/guildStore";
+import { GUILD_INTEREST_LABELS, MAX_GUILD_MEMBERS } from "@/lib/guildStore";
 
 const MAX_GUILDS = 2;
 
@@ -27,6 +27,8 @@ export function GuildCard({
   const isMember = guild.memberIds.includes(currentUserId);
   const atMaxGuilds = userGuildIds.length >= MAX_GUILDS && !isMember;
   const memberCount = guild.memberIds.length;
+  const guildFull = memberCount >= MAX_GUILD_MEMBERS;
+  const needsCofounderToJoin = memberCount > 9 && !guild.cofounderUserId;
 
   return (
     <div className="p-4 rounded-xl border border-white/15 bg-white/[0.06] hover:bg-white/[0.08] transition-colors">
@@ -43,7 +45,7 @@ export function GuildCard({
           </div>
           <div className="flex items-center gap-3 mt-1 text-xs text-white/60">
             <span>Lv.{guild.level}</span>
-            <span>{memberCount} member{memberCount !== 1 ? "s" : ""}</span>
+            <span>{memberCount}/{MAX_GUILD_MEMBERS} members</span>
           </div>
           <p className="text-sm text-white/80 mt-2 line-clamp-2">{guild.weeklyQuestGoal}</p>
           <div className="flex flex-wrap gap-2 mt-3">
@@ -57,7 +59,7 @@ export function GuildCard({
             {isMember ? (
               <>
                 <span className="text-xs text-uri-gold/90 font-medium px-2.5 py-1.5">Member</span>
-                {onLeave && (
+                {onLeave && memberCount > 1 && (
                   <button
                     type="button"
                     onClick={() => onLeave(guild.id)}
@@ -69,6 +71,10 @@ export function GuildCard({
               </>
             ) : atMaxGuilds ? (
               <span className="text-xs text-white/50 px-2.5 py-1.5">Max guilds (2/2)</span>
+            ) : guildFull ? (
+              <span className="text-xs text-white/50 px-2.5 py-1.5">Full ({MAX_GUILD_MEMBERS}/{MAX_GUILD_MEMBERS})</span>
+            ) : needsCofounderToJoin ? (
+              <span className="text-xs text-amber-400/90 px-2.5 py-1.5">Co-founder required to join</span>
             ) : hasRequestedInvite ? (
               <span className="text-xs text-white/50 px-2.5 py-1.5">Request sent</span>
             ) : (

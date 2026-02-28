@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState, useCallback } from "react";
-import { getFriends, getCharacterByUsername, getOutgoingRequests, sendFriendRequest } from "@/lib/friendsStore";
+import { getFriends, getCharacterByUsername, getOutgoingRequests, sendFriendRequest, getCharacterById } from "@/lib/friendsStore";
 import { unfollow, isFollowing, follow, followByUsername } from "@/lib/followStore";
-import { getMaxGuildLevelForCharacter } from "@/lib/guildStore";
+import { getGuilds, getMaxGuildLevelForCharacter, GUILD_INTEREST_LABELS } from "@/lib/guildStore";
 import { CAMPUS_LEADERBOARD_PLACEHOLDERS } from "@/lib/campusLeaderboard";
 import type { Character } from "@/lib/types";
 import type { Friend } from "@/lib/types";
@@ -42,22 +42,41 @@ function getSortValueCampus(
 export function Leaderboards({ character }: { character: Character }) {
   const [sortBy, setSortBy] = useState<SortBy>("level");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [expandedGuildId, setExpandedGuildId] = useState<string | null>(null);
 
   const getGuildLevel = (userId: string) => getMaxGuildLevelForCharacter(userId);
   const currentUserGuildLevel = getMaxGuildLevelForCharacter(character.id);
 
   const friends = useMemo(() => {
     const list = getFriends(character.id);
-    return [...list].sort((a, b) => getSortValueFriend(b, sortBy, getGuildLevel) - getSortValueFriend(a, sortBy, getGuildLevel));
+    return [...list].sort((a, b) => {
+      const va = getSortValueFriend(a, sortBy, getGuildLevel);
+      const vb = getSortValueFriend(b, sortBy, getGuildLevel);
+      if (vb !== va) return vb - va;
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+    });
   }, [character.id, sortBy, refreshKey]);
 
   const campusSorted = useMemo(() => {
-    return [...CAMPUS_LEADERBOARD_PLACEHOLDERS].sort(
-      (a, b) => getSortValueCampus(b, sortBy) - getSortValueCampus(a, sortBy)
-    );
+    return [...CAMPUS_LEADERBOARD_PLACEHOLDERS].sort((a, b) => {
+      const va = getSortValueCampus(a, sortBy);
+      const vb = getSortValueCampus(b, sortBy);
+      if (vb !== va) return vb - va;
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+    });
   }, [sortBy]);
 
   const sortLabel = SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? "Level";
+
+  const guildsSorted = useMemo(() => {
+    const list = getGuilds();
+    return [...list].sort((a, b) => {
+      const levelA = a.xp != null ? 1 + Math.floor(a.xp / 100) : a.level;
+      const levelB = b.xp != null ? 1 + Math.floor(b.xp / 100) : b.level;
+      if (levelB !== levelA) return levelB - levelA;
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+    });
+  }, []);
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
@@ -68,7 +87,11 @@ export function Leaderboards({ character }: { character: Character }) {
         <h2 className="font-display font-semibold text-white mb-2 flex items-center gap-2">
           <span aria-hidden>🏆</span> Rank by
         </h2>
-        <p className="text-sm text-white/50 mb-3">Filter leaderboards by stat or level.</p>
+        <p className="text-sm text-white/50 mb-3">
+          {sortBy === "guildLevel"
+            ? "Guild level shows guilds only, sorted by highest level."
+            : "Filter leaderboards by stat or level."}
+        </p>
         <div className="flex flex-wrap gap-2">
           {SORT_OPTIONS.map((opt) => (
             <button
@@ -88,19 +111,107 @@ export function Leaderboards({ character }: { character: Character }) {
         </div>
       </div>
 
-      {/* Friends leaderboard */}
-      <div className="card p-4 sm:p-5">
-        <h2 className="font-display font-semibold text-white mb-2 flex items-center gap-2">
-          <span aria-hidden>🦌</span> Friends leaderboard
-        </h2>
-        <p className="text-sm text-white/50 mb-4">
-          Ranked by {sortLabel}. Only your accepted friends.
-        </p>
-        {friends.length === 0 ? (
-          <p className="text-sm text-white/50 py-4">No friends yet. Add friends in Find Friends to see them here.</p>
-        ) : (
-          <ul className="space-y-2">
-            {friends.map((friend, index) => {
+      {sortBy === "guildLevel" ? (
+        /* Guild leaderboard — guild names only, sorted by level */
+        <div className="card p-4 sm:p-5">
+          <h2 className="font-display font-semibold text-white mb-2 flex items-center gap-2">
+            <span aria-hidden>🛡️</span> Guild leaderboard
+          </h2>
+          <p className="text-sm text-white/50 mb-4">
+            Guilds ranked by level (highest first). Ties sorted by name.
+          </p>
+          {guildsSorted.length === 0 ? (
+            <p className="text-sm text-white/50 py-4">No guilds yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {guildsSorted.map((guild, index) => {
+                const level = guild.xp != null ? 1 + Math.floor(guild.xp / 100) : guild.level;
+                const rank = index + 1;
+                const podiumGlow = rank <= 3 ? RANK_GLOW[rank as 1 | 2 | 3] : "";
+                const rankStyle = rank === 1 ? "font-bold text-amber-300 drop-shadow-[0_0_10px_rgba(251,191,36,0.9)]" : rank === 2 ? "font-bold text-slate-200 drop-shadow-[0_0_8px_rgba(226,232,240,0.8)]" : rank === 3 ? "font-bold text-amber-600 drop-shadow-[0_0_10px_rgba(217,119,6,0.8)]" : "text-white/60 font-mono";
+                const isExpanded = expandedGuildId === guild.id;
+                return (
+                  <li
+                    key={guild.id}
+                    className={`rounded-xl border overflow-hidden ${rank <= 3 ? podiumGlow : "bg-white/5 border-white/10"}`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setExpandedGuildId(isExpanded ? null : guild.id)}
+                      className="w-full flex items-center gap-3 p-3 text-left hover:bg-white/5 transition-colors"
+                      aria-expanded={isExpanded}
+                    >
+                      <span className={`w-8 text-sm font-mono flex-shrink-0 ${rankStyle}`}>
+                        #{rank}
+                      </span>
+                      <span className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-2xl border border-uri-keaney/30 flex-shrink-0">
+                        {guild.crest}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-white truncate">{guild.name}</p>
+                        <p className="text-xs text-white/50">{GUILD_INTEREST_LABELS[guild.interest]}</p>
+                      </div>
+                      <div className="flex-shrink-0 text-right">
+                        <p className="text-uri-keaney font-semibold">Lv.{level}</p>
+                        <p className="text-xs text-white/50">{guild.memberIds.length} members</p>
+                      </div>
+                      <span className="text-white/50 text-sm flex-shrink-0" aria-hidden>
+                        {isExpanded ? "▼" : "▶"}
+                      </span>
+                    </button>
+                    {isExpanded && (
+                      <div className="border-t border-white/10 bg-black/20 px-3 py-3">
+                        <p className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-2">Members</p>
+                        <ul className="space-y-2">
+                          {guild.memberIds.length === 0 ? (
+                            <li className="text-sm text-white/50">No members yet.</li>
+                          ) : (
+                            guild.memberIds.map((memberId) => {
+                              const member = getCharacterById(memberId);
+                              const isCreator = memberId === guild.createdByUserId;
+                              return (
+                                <li
+                                  key={memberId}
+                                  className="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-white/10"
+                                >
+                                  <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 border border-uri-keaney/30">
+                                    {member ? <AvatarDisplay avatar={member.avatar} size={36} /> : <span className="text-lg opacity-60">👤</span>}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-medium text-white text-sm truncate">{member ? member.name : "Unknown"}</p>
+                                    <p className="text-xs text-white/50 truncate">{member ? `@${member.username}` : memberId}</p>
+                                  </div>
+                                  {isCreator && (
+                                    <span className="text-[10px] font-semibold text-uri-gold px-1.5 py-0.5 rounded bg-uri-gold/20 flex-shrink-0">Founder</span>
+                                  )}
+                                </li>
+                              );
+                            })
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Friends leaderboard */}
+          <div className="card p-4 sm:p-5">
+            <h2 className="font-display font-semibold text-white mb-2 flex items-center gap-2">
+              <span aria-hidden>🦌</span> Friends leaderboard
+            </h2>
+            <p className="text-sm text-white/50 mb-4">
+              Ranked by {sortLabel}. Only your accepted friends.
+            </p>
+            {friends.length === 0 ? (
+              <p className="text-sm text-white/50 py-4">No friends yet. Add friends in Find Friends to see them here.</p>
+            ) : (
+              <ul className="space-y-2">
+                {friends.map((friend, index) => {
               const following = isFollowing(character.id, friend.userId);
               return (
                 <LeaderboardRow
@@ -263,9 +374,17 @@ export function Leaderboards({ character }: { character: Character }) {
           })}
         </ul>
       </div>
+        </>
+      )}
     </section>
   );
 }
+
+const RANK_GLOW = {
+  1: "ring-2 ring-amber-300 shadow-[0_0_26px_rgba(251,191,36,0.55),0_0_14px_rgba(245,158,11,0.4)] border-amber-400/80 bg-gradient-to-br from-amber-400/20 to-amber-600/10",
+  2: "ring-2 ring-slate-200 shadow-[0_0_24px_rgba(226,232,240,0.6),0_0_12px_rgba(203,213,225,0.5)] border-slate-300/80 bg-gradient-to-br from-slate-400/15 to-slate-500/10",
+  3: "ring-2 ring-amber-600 shadow-[0_0_24px_rgba(217,119,6,0.5),0_0_12px_rgba(180,83,9,0.4)] border-amber-600/70 bg-gradient-to-br from-amber-700/15 to-amber-800/10",
+} as const;
 
 function LeaderboardRow({
   rank,
@@ -292,11 +411,12 @@ function LeaderboardRow({
   statLabel?: string;
   actions?: React.ReactNode;
 }) {
-  const rankStyle = rank <= 3 ? "font-bold text-uri-keaney" : "text-white/60 font-mono";
+  const rankStyle = rank === 1 ? "font-bold text-amber-300 drop-shadow-[0_0_10px_rgba(251,191,36,0.9)]" : rank === 2 ? "font-bold text-slate-200 drop-shadow-[0_0_8px_rgba(226,232,240,0.8)]" : rank === 3 ? "font-bold text-amber-600 drop-shadow-[0_0_10px_rgba(217,119,6,0.8)]" : "text-white/60 font-mono";
+  const podiumGlow = rank <= 3 ? RANK_GLOW[rank as 1 | 2 | 3] : "";
   return (
     <li
       className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
-        isCurrentUser ? "bg-uri-keaney/15 border-uri-keaney/40" : "bg-white/5 border-white/10"
+        rank <= 3 ? podiumGlow : isCurrentUser ? "bg-uri-keaney/15 border-uri-keaney/40" : "bg-white/5 border-white/10"
       }`}
     >
       <span className={`w-8 text-sm ${rankStyle}`}>#{rank}</span>
