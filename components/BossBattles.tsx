@@ -103,24 +103,27 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
   return (
     <section className="card overflow-hidden p-0">
       {/* Header */}
-      <div className="px-4 sm:px-5 pt-4 sm:pt-5 pb-3 bg-gradient-to-b from-uri-keaney/10 to-transparent border-b border-uri-keaney/20">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-uri-navy/80 border border-uri-keaney/30 flex items-center justify-center text-xl shadow-inner">
+      <div className="px-4 sm:px-5 pt-4 sm:pt-5 pb-4 sm:pb-3 bg-gradient-to-b from-uri-keaney/10 to-transparent border-b border-uri-keaney/20">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-uri-navy/80 border border-uri-keaney/30 flex items-center justify-center text-xl shadow-inner flex-shrink-0">
             ⚔️
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <h3 className="font-display font-bold text-white text-lg">Boss Battles</h3>
-            <p className="text-xs text-white/60">
+            <p className="text-xs text-white/60 mt-0.5 sm:mt-0 hidden sm:block">
               Add up to {MAX_BOSSES} bosses (min 250 HP). Any logged activity deals damage to the one you attack. Boss weakness boosts damage for matching stats. XP on defeat: 100 + 5 per 10 HP above 250.
+            </p>
+            <p className="text-xs text-white/60 mt-0.5 sm:hidden">
+              Add up to {MAX_BOSSES} bosses (min 250 HP). Log activities to deal damage. Defeat for XP.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="p-4 sm:p-5 space-y-4">
+      <div className="p-4 sm:p-5 space-y-4 sm:space-y-4">
         {/* Add new boss (only if under limit) */}
         {bosses.length < MAX_BOSSES && (
-          <div className="boss-card-default rounded-2xl p-4 space-y-3">
+          <div className="boss-card-default rounded-2xl p-4 sm:p-4 space-y-3">
             <div className="text-sm font-semibold text-white flex items-center gap-2">
               <span className="text-uri-keaney">+</span> Add new boss ({bosses.length}/{MAX_BOSSES})
             </div>
@@ -129,27 +132,27 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
               value={bossName}
               onChange={(e) => setBossName(e.target.value)}
               placeholder="e.g. MTH215 Midterm"
-              className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm focus:outline-none focus:ring-2 focus:ring-uri-keaney/50 focus:border-uri-keaney/40 transition-colors"
+              className="w-full px-4 py-3 sm:py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm focus:outline-none focus:ring-2 focus:ring-uri-keaney/50 focus:border-uri-keaney/40 transition-colors"
             />
-            <div className="flex gap-2 items-center">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="number"
                 min={MIN_BOSS_HP}
                 value={bossHp}
                 onChange={(e) => setBossHp(e.target.value)}
                 placeholder={`HP (min ${MIN_BOSS_HP})`}
-                className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-uri-keaney/50 focus:border-uri-keaney/40 transition-colors"
+                className="flex-1 min-w-0 px-4 py-3 sm:py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-uri-keaney/50 focus:border-uri-keaney/40 transition-colors"
               />
               <button
                 type="button"
                 onClick={handleAddBoss}
-                className="py-2.5 px-4 rounded-xl bg-gradient-to-b from-uri-keaney to-uri-keaney/80 text-white font-semibold hover:from-uri-keaney/95 hover:to-uri-keaney/70 border border-uri-keaney/50 shadow-lg shadow-uri-keaney/20 active:scale-[0.98] transition-all whitespace-nowrap"
+                className="py-3 sm:py-2.5 px-4 rounded-xl bg-gradient-to-b from-uri-keaney to-uri-keaney/80 text-white font-semibold hover:from-uri-keaney/95 hover:to-uri-keaney/70 border border-uri-keaney/50 shadow-lg shadow-uri-keaney/20 active:scale-[0.98] transition-all whitespace-nowrap"
               >
                 ⚔️ Add
               </button>
             </div>
             <div>
-              <p className="text-xs font-medium text-white/70 mb-2">Weakness (activities with this stat deal extra damage)</p>
+              <p className="text-xs font-medium text-white/70 mb-2">Weakness (matching stat = extra damage)</p>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -227,9 +230,9 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
 
         {/* Which boss is currently being attacked */}
         {activeBoss && !activeBoss.defeated && (
-          <div className="rounded-xl px-3 py-2 bg-uri-keaney/15 border border-uri-keaney/30 text-center">
+          <div className="rounded-xl px-4 py-3 sm:px-3 sm:py-2 bg-uri-keaney/15 border border-uri-keaney/30 text-center">
             <span className="text-xs text-white/70">Currently attacking: </span>
-            <span className="text-sm font-semibold text-uri-keaney">{activeBoss.name}</span>
+            <span className="text-sm font-semibold text-uri-keaney break-words">{activeBoss.name}</span>
           </div>
         )}
 
@@ -257,48 +260,50 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
                 return (
                   <div
                     key={boss.id}
-                    className={`final-boss-card rounded-xl p-4 flex items-center gap-4 ${boss.defeated ? "opacity-80" : ""}`}
+                    className={`final-boss-card rounded-xl p-4 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 ${boss.defeated ? "opacity-80" : ""}`}
                   >
-                    <div className="w-14 h-14 rounded-xl bg-black/40 border border-uri-gold/40 flex items-center justify-center text-3xl flex-shrink-0 shadow-lg">
-                      {boss.defeated ? "💀" : "👑"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-display font-bold text-white flex items-center gap-2 flex-wrap">
-                        {boss.name}
-                        {boss.defeated && (
-                          <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-500/50">
-                            ✓ Defeated
-                          </span>
-                        )}
-                        {!boss.defeated && isActive && (
-                          <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-uri-gold/30 text-uri-gold border border-uri-gold/50">
-                            Attacking
-                          </span>
-                        )}
-                        {weakness && (
-                          <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-white/10 text-white/80 border border-white/15">
-                            Weak: {STAT_ICONS[weakness]} {STAT_LABELS[weakness]}
-                          </span>
-                        )}
-                        {loot.length > 0 && (
-                          <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-uri-keaney/15 text-uri-keaney border border-uri-keaney/30">
-                            Loot: {loot.slice(0, 2).map((l) => l!.icon).join(" ")}{loot.length > 2 ? ` +${loot.length - 2}` : ""}
-                          </span>
+                    <div className="flex items-center gap-3 sm:flex-1 sm:min-w-0">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-black/40 border border-uri-gold/40 flex items-center justify-center text-2xl sm:text-3xl flex-shrink-0 shadow-lg">
+                        {boss.defeated ? "💀" : "👑"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-display font-bold text-white flex items-center gap-2 flex-wrap">
+                          {boss.name}
+                          {boss.defeated && (
+                            <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-500/50">
+                              ✓ Defeated
+                            </span>
+                          )}
+                          {!boss.defeated && isActive && (
+                            <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-uri-gold/30 text-uri-gold border border-uri-gold/50">
+                              Attacking
+                            </span>
+                          )}
+                          {weakness && (
+                            <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-white/10 text-white/80 border border-white/15">
+                              Weak: {STAT_ICONS[weakness]} {STAT_LABELS[weakness]}
+                            </span>
+                          )}
+                          {loot.length > 0 && (
+                            <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-uri-keaney/15 text-uri-keaney border border-uri-keaney/30">
+                              Loot: {loot.slice(0, 2).map((l) => l!.icon).join(" ")}{loot.length > 2 ? ` +${loot.length - 2}` : ""}
+                            </span>
+                          )}
+                        </div>
+                        {!boss.defeated && (
+                          <div className="mt-2">
+                            <div className="flex justify-between text-xs text-white/70 mb-1">
+                              <span>HP</span>
+                              <span className="font-mono font-semibold text-amber-200">{boss.currentHp} / {boss.maxHp}</span>
+                            </div>
+                            <div className="final-boss-hp-bar h-2.5 sm:h-3">
+                              <div className="final-boss-hp-fill" style={{ width: `${hpPct}%` }} />
+                            </div>
+                          </div>
                         )}
                       </div>
-                      {!boss.defeated && (
-                        <div className="mt-2">
-                          <div className="flex justify-between text-xs text-white/70 mb-1">
-                            <span>HP</span>
-                            <span className="font-mono font-semibold text-amber-200">{boss.currentHp} / {boss.maxHp}</span>
-                          </div>
-                          <div className="final-boss-hp-bar">
-                            <div className="final-boss-hp-fill" style={{ width: `${hpPct}%` }} />
-                          </div>
-                        </div>
-                      )}
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-2 flex-shrink-0 sm:flex-shrink-0">
                       <div className="px-2.5 py-1 rounded-lg bg-uri-gold/25 border border-uri-gold/50 text-right">
                         <span className="text-uri-gold font-mono font-bold text-sm">+{boss.xpReward}</span>
                         <span className="text-uri-gold/90 text-[10px] ml-0.5">XP</span>
@@ -355,48 +360,50 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
               return (
                 <div
                   key={boss.id}
-                  className={`rounded-2xl p-4 flex items-center gap-4 ${
+                  className={`rounded-2xl p-4 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 ${
                     boss.defeated ? "boss-card-defeated" : isActive ? "boss-card-active" : "boss-card-default"
                   }`}
                 >
-                  <div className="w-12 h-12 rounded-xl bg-black/20 border border-white/10 flex items-center justify-center text-2xl flex-shrink-0">
-                    {boss.defeated ? "💀" : "🧟"}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-display font-semibold text-white flex items-center gap-2 flex-wrap">
-                      {boss.name}
-                      {boss.defeated && (
-                        <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/40">
-                          ✓ Defeated
-                        </span>
-                      )}
-                      {!boss.defeated && isActive && (
-                        <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-uri-keaney/25 text-uri-keaney border border-uri-keaney/40">
-                          Attacking
-                        </span>
-                      )}
-                      {weakness && (
-                        <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-white/10 text-white/80 border border-white/15">
-                          Weak: {STAT_ICONS[weakness]} {STAT_LABELS[weakness]}
-                        </span>
-                      )}
-                      {loot.length > 0 && (
-                        <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-uri-keaney/15 text-uri-keaney border border-uri-keaney/30">
-                          Loot: {loot.slice(0, 2).map((l) => l!.icon).join(" ")}{loot.length > 2 ? ` +${loot.length - 2}` : ""}
-                        </span>
+                  <div className="flex items-center gap-3 sm:flex-1 sm:min-w-0">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-black/20 border border-white/10 flex items-center justify-center text-xl sm:text-2xl flex-shrink-0">
+                      {boss.defeated ? "💀" : "🧟"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-display font-semibold text-white flex items-center gap-2 flex-wrap">
+                        {boss.name}
+                        {boss.defeated && (
+                          <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/40">
+                            ✓ Defeated
+                          </span>
+                        )}
+                        {!boss.defeated && isActive && (
+                          <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-uri-keaney/25 text-uri-keaney border border-uri-keaney/40">
+                            Attacking
+                          </span>
+                        )}
+                        {weakness && (
+                          <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-white/10 text-white/80 border border-white/15">
+                            Weak: {STAT_ICONS[weakness]} {STAT_LABELS[weakness]}
+                          </span>
+                        )}
+                        {loot.length > 0 && (
+                          <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-uri-keaney/15 text-uri-keaney border border-uri-keaney/30">
+                            Loot: {loot.slice(0, 2).map((l) => l!.icon).join(" ")}{loot.length > 2 ? ` +${loot.length - 2}` : ""}
+                          </span>
+                        )}
+                      </div>
+                      {!boss.defeated && (
+                        <div className="mt-2">
+                          <div className="flex justify-between text-xs text-white/60 mb-1">
+                            <span>HP</span>
+                            <span className="font-mono text-red-200/90">{boss.currentHp} / {boss.maxHp}</span>
+                          </div>
+                          <div className="boss-hp-bar h-2.5 sm:h-2 min-h-[10px]">
+                            <div className="boss-hp-fill" style={{ width: `${hpPct}%` }} />
+                          </div>
+                        </div>
                       )}
                     </div>
-                    {!boss.defeated && (
-                      <div className="mt-2">
-                        <div className="flex justify-between text-xs text-white/60 mb-1">
-                          <span>HP</span>
-                          <span className="font-mono text-red-200/90">{boss.currentHp} / {boss.maxHp}</span>
-                        </div>
-                        <div className="boss-hp-bar h-2">
-                          <div className="boss-hp-fill" style={{ width: `${hpPct}%` }} />
-                        </div>
-                      </div>
-                    )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <div className="px-2.5 py-1 rounded-lg bg-uri-gold/20 border border-uri-gold/40 text-right">
