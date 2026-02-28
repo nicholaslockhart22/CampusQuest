@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import type { GuildInterest } from "@/lib/types";
 import { GUILD_INTEREST_LABELS, GUILD_INTEREST_ICONS, createGuild } from "@/lib/guildStore";
 
@@ -39,15 +40,10 @@ export function CreateGuildModal({
     }
   }
 
-  return (
-    <>
-      <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden />
-      <div
-        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[min(22rem,92vw)] rounded-2xl border border-white/15 bg-uri-navy shadow-xl shadow-black/40 p-6"
-        role="dialog"
-        aria-labelledby="create-guild-title"
-        aria-modal="true"
-      >
+  const content = (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-labelledby="create-guild-title" aria-modal="true" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden />
+      <div className="relative z-10 w-[min(22rem,92vw)] rounded-2xl border border-white/15 bg-uri-navy shadow-xl shadow-black/40 p-6">
         <h2 id="create-guild-title" className="font-display font-semibold text-lg text-white mb-4">
           Create a Guild
         </h2>
@@ -123,6 +119,9 @@ export function CreateGuildModal({
           </div>
         </form>
       </div>
-    </>
+    </div>
   );
+
+  if (typeof document === "undefined") return null;
+  return createPortal(content, document.body);
 }

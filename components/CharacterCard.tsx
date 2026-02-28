@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import type { Character, StatKey } from "@/lib/types";
 import { STAT_KEYS, STAT_LABELS, STAT_ICONS, MAX_STAT } from "@/lib/types";
 import { xpProgressInLevel } from "@/lib/level";
@@ -100,14 +101,10 @@ export function CharacterCard({
           >
             ✏️
           </button>
-          {editingAvatar && (
-            <>
-              <div
-                className="fixed inset-0 z-20 bg-black/60"
-                aria-hidden
-                onClick={() => setEditingAvatar(false)}
-              />
-              <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30 w-[min(22rem,92vw)] max-h-[85vh] overflow-y-auto p-4 rounded-2xl bg-uri-navy border border-uri-keaney/30 shadow-xl card">
+          {editingAvatar && typeof document !== "undefined" && createPortal(
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && setEditingAvatar(false)} role="dialog" aria-modal="true" aria-label="Edit your avatar">
+              <div className="absolute inset-0 bg-black/60" aria-hidden onClick={() => setEditingAvatar(false)} />
+              <div className="relative z-10 w-[min(22rem,92vw)] max-h-[85vh] overflow-y-auto p-4 rounded-2xl bg-uri-navy border border-uri-keaney/30 shadow-xl card">
                 <p className="text-xs font-semibold text-white/80 uppercase tracking-wider mb-3">
                   Edit your avatar
                 </p>
@@ -140,7 +137,8 @@ export function CharacterCard({
                   </button>
                 </div>
               </div>
-            </>
+            </div>,
+            document.body
           )}
         </div>
         <div className="flex-1 min-w-0">

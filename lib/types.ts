@@ -127,6 +127,16 @@ export interface Friend {
   finalBossesDefeatedCount?: number;
 }
 
+/** A single direct message between two friends. */
+export interface DirectMessage {
+  id: string;
+  conversationId: string;
+  fromUserId: string;
+  toUserId: string;
+  text: string;
+  createdAt: number;
+}
+
 export interface ActivityDefinition {
   id: string;
   label: string;

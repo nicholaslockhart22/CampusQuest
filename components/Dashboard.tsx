@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { getCharacter, logActivity, logout as storeLogout } from "@/lib/store";
 import type { Character } from "@/lib/types";
 import { CharacterCard } from "./CharacterCard";
@@ -19,8 +20,11 @@ import { Leaderboards } from "./Leaderboards";
 import { Profile } from "./Profile";
 import { WeeklyRecapCard } from "./WeeklyRecapCard";
 import { CollapsibleSection } from "./CollapsibleSection";
+import { DirectMessageThread } from "./DirectMessageThread";
 import { STAT_KEYS, STAT_ICONS, STAT_LABELS } from "@/lib/types";
 import { getActivityById } from "@/lib/activities";
+import { getConversationsForUser } from "@/lib/dmStore";
+import { AvatarDisplay } from "./AvatarDisplay";
 
 type Tab = "quad" | "me" | "friends" | "leaderboards" | "profile";
 
@@ -30,17 +34,21 @@ function Header({
   showLogout,
   onLogout,
   onRefresh,
+  onOpenDm,
 }: {
   username: string | null;
   character: Character | null;
   showLogout: boolean;
   onLogout: () => void;
   onRefresh?: () => void;
+  onOpenDm?: (other: { userId: string; username: string; name: string; avatar: string }) => void;
 }) {
   const [questsOpen, setQuestsOpen] = useState(false);
   const [specialQuestsOpen, setSpecialQuestsOpen] = useState(false);
+  const [dmOpen, setDmOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const questsButtonRef = useRef<HTMLButtonElement | null>(null);
+  const conversations = character ? getConversationsForUser(character.id) : [];
 
   function handleLogoutClick() {
     setShowLogoutConfirm(true);
@@ -53,134 +61,215 @@ function Header({
 
   return (
     <>
-    <header className="sticky top-0 z-10 -mx-4 -mt-4 px-4 pt-4 pb-3 mb-4 sm:mb-5 bg-uri-navy/98 backdrop-blur-md border-b border-uri-keaney/30">
-      <div className="max-w-2xl mx-auto relative flex items-center justify-between gap-2">
-        <div className="min-w-0 flex-1 text-left">
-          {username ? (
-            <p className="font-medium text-white truncate text-sm sm:text-base" title={username}>
-              @{username}
-            </p>
-          ) : (
-            <span className="text-white/40 text-sm">@username</span>
-          )}
-        </div>
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-4 pointer-events-none">
-          <div className="flex flex-col items-center text-center pointer-events-none">
-            <h1 className="font-display font-bold text-lg sm:text-xl text-white tracking-tight">
-              CampusQuest
-            </h1>
-            <p className="text-[10px] sm:text-xs text-uri-keaney font-medium">
-              URI · Level up for real
-            </p>
-          </div>
-          {character && (
-            <div className="pointer-events-auto ml-2 sm:ml-4 flex items-center gap-2">
-              <div className="relative">
-                <button
-                  ref={questsButtonRef}
-                  type="button"
-                  onClick={() => {
-                    setSpecialQuestsOpen(false);
-                    setQuestsOpen((v) => !v);
-                  }}
-                  className={`text-lg px-3 py-2 rounded-xl border transition-colors ${
-                    questsOpen
-                      ? "bg-uri-keaney/25 text-uri-keaney border-uri-keaney/50"
-                      : "bg-white/15 text-white border-white/25 hover:bg-white/20 hover:border-white/30"
-                  }`}
-                  aria-haspopup="dialog"
-                  aria-expanded={questsOpen}
-                  title="Daily quests"
-                >
-                  📋 <span className="text-white/70">▾</span>
-                </button>
-                {questsOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-30 bg-black/30 cursor-default"
-                      onClick={() => setQuestsOpen(false)}
-                      aria-hidden
-                    />
-                    <div className="absolute left-1/2 top-full mt-3 -translate-x-1/2 z-40 w-[min(34rem,92vw)]">
-                      <div className="rounded-2xl border border-uri-keaney/40 bg-[#041E42] shadow-xl shadow-black/40">
-                        <DailyQuests character={character} compact />
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuestsOpen(false);
-                    setSpecialQuestsOpen((v) => !v);
-                  }}
-                  className={`text-lg px-3 py-2 rounded-xl border transition-colors ${
-                    specialQuestsOpen
-                      ? "bg-uri-gold/20 text-uri-gold border-uri-gold/50"
-                      : "bg-white/15 text-white border-white/25 hover:bg-white/20 hover:border-white/30"
-                  }`}
-                  aria-haspopup="dialog"
-                  aria-expanded={specialQuestsOpen}
-                  title="Special quests"
-                >
-                  ⭐ <span className="text-white/70">▾</span>
-                </button>
-                {specialQuestsOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-30 bg-black/30 cursor-default"
-                      onClick={() => setSpecialQuestsOpen(false)}
-                      aria-hidden
-                    />
-                    <div className="absolute left-1/2 top-full mt-3 -translate-x-1/2 z-40 w-[min(34rem,92vw)]">
-                      <div
-                        className="rounded-2xl overflow-hidden border-2 border-uri-gold/60 bg-[#041E42]"
-                        style={{
-                          boxShadow: "0 0 0 1px rgba(197, 165, 40, 0.25), 0 12px 40px -8px rgba(0,0,0,0.5), 0 0 40px rgba(197, 165, 40, 0.12)",
-                          background: "linear-gradient(175deg, rgba(197, 165, 40, 0.12) 0%, rgba(197, 165, 40, 0.04) 8%, #041E42 18%, #041E42 100%)",
-                        }}
-                      >
-                        <div className="h-1.5 bg-gradient-to-r from-transparent via-amber-400/70 to-transparent" aria-hidden />
-                        <div className="h-px bg-gradient-to-r from-transparent via-uri-gold/40 to-transparent" aria-hidden />
-                        <SpecialQuests character={character} compact onClaim={onRefresh ?? undefined} />
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
+    <header
+      className={`sticky top-0 -mx-4 -mt-4 mb-4 sm:mb-5 transition-z-index ${dmOpen || questsOpen || specialQuestsOpen ? "z-[110]" : "z-10"}`}
+      style={{
+        background: "linear-gradient(180deg, rgba(4, 30, 66, 0.98) 0%, rgba(3, 22, 48, 0.97) 100%)",
+        boxShadow: "0 1px 0 0 rgba(104, 171, 232, 0.15), 0 4px 20px -4px rgba(0,0,0,0.4)",
+      }}
+    >
+      <div className="backdrop-blur-sm border-b border-white/[0.08]">
+        <div className="max-w-2xl mx-auto px-4 py-3 sm:py-3.5 flex items-center justify-between gap-3">
+          {/* Left: Brand + user */}
+          <div className="min-w-0 flex items-center gap-3 flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-uri-keaney/30 to-uri-keaney/10 border border-uri-keaney/40 flex items-center justify-center flex-shrink-0 shadow-[0_0_12px_rgba(104,171,232,0.2)]">
+              <span className="text-base font-bold text-uri-keaney leading-none">CQ</span>
             </div>
-          )}
-        </div>
-        <div className="min-w-0 flex-1 flex justify-end">
-          {showLogout && (
-            <button
-              type="button"
-              onClick={handleLogoutClick}
-              className="text-xs font-medium text-uri-keaney/90 hover:text-uri-keaney hover:bg-uri-keaney/10 px-3 py-2 rounded-xl border border-uri-keaney/30 transition-colors"
-              aria-label="Log out"
-            >
-              Log out
-            </button>
-          )}
+            <div className="min-w-0">
+              <h1 className="font-display font-bold text-white text-sm sm:text-base tracking-tight truncate">
+                CampusQuest
+              </h1>
+              <p className="text-[10px] sm:text-xs text-uri-keaney/80 font-medium truncate">
+                {username ? `@${username}` : "URI · Level up for real"}
+              </p>
+            </div>
+          </div>
+
+          {/* Right: Quick actions + logout */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            {character && (
+              <div
+                className="flex items-center rounded-xl border border-white/15 bg-white/5 p-1 gap-0.5 shadow-inner"
+                role="group"
+                aria-label="Quick actions"
+              >
+                {onOpenDm && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuestsOpen(false);
+                        setSpecialQuestsOpen(false);
+                        setDmOpen((v) => !v);
+                      }}
+                      className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                        dmOpen
+                          ? "bg-uri-keaney/25 text-uri-keaney border border-uri-keaney/40 shadow-sm"
+                          : "text-white/90 hover:bg-white/10 hover:text-white border border-transparent"
+                      }`}
+                      aria-haspopup="dialog"
+                      aria-expanded={dmOpen}
+                      title="Direct messages"
+                    >
+                      <span aria-hidden>💬</span>
+                      <span className="hidden sm:inline">Messages</span>
+                      <span className="text-[10px] opacity-70" aria-hidden>{dmOpen ? "▴" : "▾"}</span>
+                    </button>
+                    {dmOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-[100] bg-black/30 cursor-default"
+                          onClick={() => setDmOpen(false)}
+                          aria-hidden
+                        />
+                        <div className="absolute right-0 top-full mt-2 z-[101] w-[min(20rem,92vw)]">
+                          <div className="rounded-2xl border border-uri-keaney/40 bg-[#041E42] shadow-xl shadow-black/40 overflow-hidden ring-1 ring-black/20">
+                            <div className="px-3 py-2.5 border-b border-white/10 bg-white/5">
+                              <p className="text-xs font-semibold text-white/80 uppercase tracking-wider">Direct messages</p>
+                            </div>
+                            <ul className="max-h-[70vh] overflow-y-auto p-2">
+                              {conversations.length === 0 ? (
+                                <li className="text-sm text-white/50 py-6 text-center">No conversations yet.</li>
+                              ) : (
+                                conversations.map((conv) => (
+                                  <li key={conv.conversationId}>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        onOpenDm({
+                                          userId: conv.otherUserId,
+                                          username: conv.otherUsername,
+                                          name: conv.otherName,
+                                          avatar: conv.otherAvatar,
+                                        });
+                                        setDmOpen(false);
+                                      }}
+                                      className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/10 text-left transition-colors"
+                                    >
+                                      <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 border border-uri-keaney/30">
+                                        <AvatarDisplay avatar={conv.otherAvatar} size={36} />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-medium text-white text-sm truncate">{conv.otherName}</p>
+                                        <p className="text-xs text-white/50 truncate">{conv.lastMessage}</p>
+                                      </div>
+                                    </button>
+                                  </li>
+                                ))
+                              )}
+                            </ul>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+                <div className="relative">
+                  <button
+                    ref={questsButtonRef}
+                    type="button"
+                    onClick={() => {
+                      setSpecialQuestsOpen(false);
+                      setDmOpen(false);
+                      setQuestsOpen((v) => !v);
+                    }}
+                    className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                      questsOpen
+                        ? "bg-uri-keaney/25 text-uri-keaney border border-uri-keaney/40 shadow-sm"
+                        : "text-white/90 hover:bg-white/10 hover:text-white border border-transparent"
+                    }`}
+                    aria-haspopup="dialog"
+                    aria-expanded={questsOpen}
+                    title="Daily quests"
+                  >
+                    <span aria-hidden>📋</span>
+                    <span className="hidden sm:inline">Daily</span>
+                    <span className="text-[10px] opacity-70" aria-hidden>{questsOpen ? "▴" : "▾"}</span>
+                  </button>
+                  {questsOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-[100] bg-black/30 cursor-default"
+                        onClick={() => setQuestsOpen(false)}
+                        aria-hidden
+                      />
+                      <div className="absolute right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 top-full mt-2 z-[101] w-[min(34rem,92vw)]">
+                        <div className="rounded-2xl border border-uri-keaney/40 bg-[#041E42] shadow-xl shadow-black/40 ring-1 ring-black/20">
+                          <DailyQuests character={character} compact />
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuestsOpen(false);
+                      setDmOpen(false);
+                      setSpecialQuestsOpen((v) => !v);
+                    }}
+                    className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                      specialQuestsOpen
+                        ? "bg-uri-gold/20 text-uri-gold border border-uri-gold/50 shadow-sm"
+                        : "text-white/90 hover:bg-white/10 hover:text-white border border-transparent"
+                    }`}
+                    aria-haspopup="dialog"
+                    aria-expanded={specialQuestsOpen}
+                    title="Special quests"
+                  >
+                    <span aria-hidden>⭐</span>
+                    <span className="hidden sm:inline">Special</span>
+                    <span className="text-[10px] opacity-70" aria-hidden>{specialQuestsOpen ? "▴" : "▾"}</span>
+                  </button>
+                  {specialQuestsOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-[100] bg-black/30 cursor-default"
+                        onClick={() => setSpecialQuestsOpen(false)}
+                        aria-hidden
+                      />
+                      <div className="absolute right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 top-full mt-2 z-[101] w-[min(34rem,92vw)]">
+                        <div
+                          className="rounded-2xl overflow-hidden border-2 border-uri-gold/60 bg-[#041E42] ring-1 ring-black/20"
+                          style={{
+                            boxShadow: "0 0 0 1px rgba(197, 165, 40, 0.25), 0 12px 40px -8px rgba(0,0,0,0.5), 0 0 40px rgba(197, 165, 40, 0.12)",
+                            background: "linear-gradient(175deg, rgba(197, 165, 40, 0.12) 0%, rgba(197, 165, 40, 0.04) 8%, #041E42 18%, #041E42 100%)",
+                          }}
+                        >
+                          <div className="h-1.5 bg-gradient-to-r from-transparent via-amber-400/70 to-transparent" aria-hidden />
+                          <div className="h-px bg-gradient-to-r from-transparent via-uri-gold/40 to-transparent" aria-hidden />
+                          <SpecialQuests character={character} compact onClaim={onRefresh ?? undefined} />
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+            {showLogout && (
+              <button
+                type="button"
+                onClick={handleLogoutClick}
+                className="px-3 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 border border-white/10 transition-colors"
+                aria-label="Log out"
+              >
+                Log out
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </header>
 
-      {showLogoutConfirm && (
-        <>
+      {showLogoutConfirm && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="logout-dialog-title">
           <div
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setShowLogoutConfirm(false)}
             aria-hidden
           />
-          <div
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[min(20rem,92vw)] rounded-2xl border border-white/15 bg-uri-navy shadow-xl shadow-black/40 p-6"
-            role="dialog"
-            aria-labelledby="logout-dialog-title"
-            aria-modal="true"
-          >
+          <div className="relative z-10 w-full max-w-[20rem] rounded-2xl border border-white/15 bg-uri-navy shadow-xl shadow-black/40 p-6">
             <h2 id="logout-dialog-title" className="font-display font-semibold text-lg text-white mb-2">
               Leave CampusQuest?
             </h2>
@@ -204,7 +293,8 @@ function Header({
               </button>
             </div>
           </div>
-        </>
+        </div>,
+        document.body
       )}
     </>
   );
@@ -217,6 +307,10 @@ export function Dashboard() {
   const [showAuthScreen, setShowAuthScreen] = useState(true);
   const [tab, setTab] = useState<Tab>("quad");
   const [gainToast, setGainToast] = useState<null | { xp: number; stats: Partial<Record<keyof Character["stats"], number>>; title: string }>(null);
+  const [showLevel3Popup, setShowLevel3Popup] = useState(false);
+  const [dmWithOther, setDmWithOther] = useState<{ userId: string; username: string; name: string; avatar: string } | null>(null);
+
+  const XP300_POPUP_KEY = "campusquest_300xp_celebrated";
 
   const refresh = useCallback(() => {
     setCharacter(getCharacter());
@@ -232,6 +326,24 @@ export function Dashboard() {
     setMounted(true);
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (!character || character.totalXP < 300) return;
+    try {
+      if (typeof window !== "undefined" && !localStorage.getItem(XP300_POPUP_KEY)) {
+        setShowLevel3Popup(true);
+      }
+    } catch {
+      setShowLevel3Popup(true);
+    }
+  }, [character?.id, character?.totalXP]);
+
+  function dismissLevel3Popup() {
+    try {
+      if (typeof window !== "undefined") localStorage.setItem(XP300_POPUP_KEY, "1");
+    } catch {}
+    setShowLevel3Popup(false);
+  }
 
   if (!mounted) {
     return (
@@ -294,6 +406,16 @@ export function Dashboard() {
         title: def ? `${def.icon} ${def.label}` : "Activity logged",
       });
       window.setTimeout(() => setGainToast(null), 3200);
+      // Show 300 XP celebration when they just reached 300 total XP
+      if (before.totalXP < 300 && updated.totalXP >= 300) {
+        try {
+          if (typeof window !== "undefined" && !localStorage.getItem(XP300_POPUP_KEY)) {
+            setShowLevel3Popup(true);
+          }
+        } catch {
+          setShowLevel3Popup(true);
+        }
+      }
     }
     return updated;
   }
@@ -301,14 +423,14 @@ export function Dashboard() {
   const navItems: { tab: Tab; icon: string; label: string }[] = [
     { tab: "quad", icon: "📋", label: "Quad" },
     { tab: "friends", icon: "👋", label: "Friends" },
-    { tab: "leaderboards", icon: "🏆", label: "Rank" },
     { tab: "me", icon: "⚔️", label: "Character" },
+    { tab: "leaderboards", icon: "🏆", label: "Rank" },
     { tab: "profile", icon: "👤", label: "Profile" },
   ];
 
   return (
     <>
-      <Header username={character?.username ?? null} character={character} showLogout onLogout={handleLogout} onRefresh={refresh} />
+      <Header username={character?.username ?? null} character={character} showLogout onLogout={handleLogout} onRefresh={refresh} onOpenDm={setDmWithOther} />
       <div style={{ paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))" }}>
         {gainToast && (
           <div className="fixed left-1/2 top-20 -translate-x-1/2 z-40 w-[min(28rem,92vw)] toast-enter">
@@ -340,6 +462,34 @@ export function Dashboard() {
           </div>
         )}
 
+      {showLevel3Popup && character && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="xp300-title">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={dismissLevel3Popup} aria-hidden />
+          <div
+            className="relative z-10 w-full max-w-sm rounded-3xl border-2 border-uri-gold/60 bg-uri-navy p-8 text-center level3-popup-enter level3-popup-glow"
+            style={{
+              background: "linear-gradient(180deg, rgba(197, 165, 40, 0.12) 0%, rgba(4, 30, 66, 0.98) 30%, #041E42 100%)",
+              boxShadow: "0 0 40px rgba(197, 165, 40, 0.4), 0 0 80px rgba(104, 171, 232, 0.2), inset 0 1px 0 rgba(255,255,255,0.08)",
+            }}
+          >
+            <div className="text-5xl mb-3" aria-hidden>🎉</div>
+            <p className="text-uri-gold font-bold text-2xl mb-1" id="xp300-title">300 XP!</p>
+            <p className="text-white font-semibold text-lg mb-2">Congratulations!</p>
+            <p className="text-white/80 text-sm mb-6">
+              You&apos;ve reached 300 total XP and unlocked <strong className="text-uri-keaney">Create Guild</strong>. Head to Find Friends to start or join a guild and earn bonus XP with other Rams.
+            </p>
+            <button
+              type="button"
+              onClick={dismissLevel3Popup}
+              className="w-full py-3.5 rounded-xl bg-uri-keaney text-white font-bold text-sm hover:bg-uri-keaney/90 focus:outline-none focus:ring-2 focus:ring-uri-keaney focus:ring-offset-2 focus:ring-offset-uri-navy transition-colors shadow-lg"
+            >
+              Let&apos;s go!
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
       <div key={tab} className="tab-content-enter space-y-5 sm:space-y-6">
         {tab === "quad" && (
           <>
@@ -349,7 +499,7 @@ export function Dashboard() {
         )}
 
         {tab === "friends" && (
-          <FindFriends character={character} onRefresh={refresh} />
+          <FindFriends character={character} onRefresh={refresh} onOpenDm={setDmWithOther} />
         )}
 
         {tab === "leaderboards" && (
@@ -415,6 +565,15 @@ export function Dashboard() {
         ))}
         </nav>
       </div>
+
+      {dmWithOther && character && (
+        <DirectMessageThread
+          currentUser={character}
+          otherUser={dmWithOther}
+          onClose={() => setDmWithOther(null)}
+          onMessageSent={refresh}
+        />
+      )}
     </>
   );
 }

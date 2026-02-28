@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import type { Character } from "@/lib/types";
 import type { FieldNote } from "@/lib/types";
 import { STAT_KEYS, STAT_LABELS, STAT_ICONS, MAX_STAT, type StatKey } from "@/lib/types";
 import { getFeedByAuthorId, nodFieldNote, rallyFieldNote, getCommentsByNoteId, addComment } from "@/lib/feedStore";
-import { getFriends, getOutgoingRequests } from "@/lib/friendsStore";
+import { getFriends, getCharacterById, removeFriend } from "@/lib/friendsStore";
+import { getFollowing, unfollow } from "@/lib/followStore";
 import { getGuildById } from "@/lib/guildStore";
 import { getUserBosses } from "@/lib/store";
 import { getClassTitle, getClassRealm } from "@/lib/characterClasses";
@@ -45,8 +47,11 @@ export function Profile({ character }: { character: Character }) {
   }
 
   const friends = getFriends(character.id);
-  const following = getOutgoingRequests(character.id).length;
+  const followingIds = getFollowing(character.id);
   const friendsCount = friends.length;
+  const followingCount = followingIds.length;
+  const [listModal, setListModal] = useState<"friends" | "following" | null>(null);
+  const [listRefreshKey, setListRefreshKey] = useState(0);
   const bosses = getUserBosses();
   const bossesDefeated =
     character.bossesDefeatedCount ?? bosses.filter((b) => b.defeated).length;
@@ -103,14 +108,22 @@ export function Profile({ character }: { character: Character }) {
                 <span className="font-bold text-white text-lg">{posts.length}</span>
                 <span className="text-white/60 text-xs">Posts</span>
               </div>
-              <div className="flex flex-col items-center sm:items-start">
+              <button
+                type="button"
+                onClick={() => setListModal("friends")}
+                className="flex flex-col items-center sm:items-start text-left hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-uri-keaney/50 focus:ring-offset-2 focus:ring-offset-uri-navy rounded-lg"
+              >
                 <span className="font-bold text-white text-lg">{friendsCount}</span>
                 <span className="text-white/60 text-xs">Friends</span>
-              </div>
-              <div className="flex flex-col items-center sm:items-start">
-                <span className="font-bold text-white text-lg">{following}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setListModal("following")}
+                className="flex flex-col items-center sm:items-start text-left hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-uri-keaney/50 focus:ring-offset-2 focus:ring-offset-uri-navy rounded-lg"
+              >
+                <span className="font-bold text-white text-lg">{followingCount}</span>
                 <span className="text-white/60 text-xs">Following</span>
-              </div>
+              </button>
             </div>
           </div>
         </div>
@@ -211,6 +224,67 @@ export function Profile({ character }: { character: Character }) {
           </div>
         )}
       </div>
+
+      {listModal && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label={listModal === "friends" ? "Friends list" : "Following list"} onClick={(e) => e.target === e.currentTarget && setListModal(null)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setListModal(null)} aria-hidden />
+          <div className="relative z-10 w-full max-w-[22rem] max-h-[85vh] overflow-hidden flex flex-col rounded-2xl border border-white/15 bg-uri-navy shadow-xl shadow-black/40">
+            <div className="flex items-center justify-between p-4 border-b border-white/10 flex-shrink-0">
+              <h3 className="font-display font-semibold text-white">
+                {listModal === "friends" ? "Friends" : "Following"}
+              </h3>
+              <button type="button" onClick={() => setListModal(null)} className="p-2 rounded-xl text-white/70 hover:text-white hover:bg-white/10" aria-label="Close">✕</button>
+            </div>
+            <ul className="overflow-y-auto p-3 space-y-2 flex-1 min-h-0">
+              {listModal === "friends"
+                ? friends.length === 0
+                  ? <li className="text-sm text-white/50 py-4 text-center">No friends yet.</li>
+                  : friends.map((f) => (
+                      <li key={f.userId} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                        <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 border border-uri-keaney/30">
+                          <AvatarDisplay avatar={f.avatar} size={40} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-white truncate">{f.name}</p>
+                          <p className="text-xs text-uri-keaney/90 truncate">@{f.username}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { removeFriend(character.id, f.userId); setListRefreshKey((k) => k + 1); }}
+                          className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium text-amber-400/90 border border-amber-400/40 hover:bg-amber-400/10"
+                        >
+                          Unfriend
+                        </button>
+                      </li>
+                    ))
+                : followingIds.length === 0
+                  ? <li className="text-sm text-white/50 py-4 text-center">Not following anyone yet.</li>
+                  : followingIds.map((id) => {
+                      const c = getCharacterById(id);
+                      return (
+                        <li key={id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                          <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 border border-uri-keaney/30">
+                            {c ? <AvatarDisplay avatar={c.avatar} size={40} /> : <span className="text-lg opacity-60">👤</span>}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-white truncate">{c ? c.name : "Unknown"}</p>
+                            <p className="text-xs text-uri-keaney/90 truncate">{c ? `@${c.username}` : id}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => { unfollow(character.id, id); setListRefreshKey((k) => k + 1); }}
+                            className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium text-white/70 border border-white/20 hover:bg-white/10"
+                          >
+                            Unfollow
+                          </button>
+                        </li>
+                      );
+                    })}
+            </ul>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

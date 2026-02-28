@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import type { Guild } from "@/lib/types";
 import { GUILD_INTEREST_LABELS } from "@/lib/guildStore";
 import { getCharacterById } from "@/lib/friendsStore";
@@ -25,17 +26,10 @@ export function ViewGuildModal({
   const memberChars = guild.memberIds.map((id) => getCharacterById(id)).filter(Boolean) as NonNullable<ReturnType<typeof getCharacterById>>[];
   const level = guildDisplayLevel(guild);
 
-  return (
-    <>
-      <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden />
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        role="dialog"
-        aria-labelledby="view-guild-title"
-        aria-modal="true"
-        onClick={(e) => e.target === e.currentTarget && onClose()}
-      >
-        <div className="w-full max-w-[22rem] max-h-[85vh] overflow-y-auto rounded-2xl border border-white/15 bg-uri-navy shadow-xl shadow-black/40 p-6">
+  const content = (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-labelledby="view-guild-title" aria-modal="true" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden />
+      <div className="relative z-10 w-full max-w-[22rem] max-h-[85vh] overflow-y-auto rounded-2xl border border-white/15 bg-uri-navy shadow-xl shadow-black/40 p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-uri-keaney/20 to-uri-navy flex items-center justify-center text-3xl border border-uri-keaney/30">
               {guild.crest}
@@ -106,7 +100,9 @@ export function ViewGuildModal({
             </button>
           </div>
         </div>
-      </div>
-    </>
+    </div>
   );
+
+  if (typeof document === "undefined") return null;
+  return createPortal(content, document.body);
 }

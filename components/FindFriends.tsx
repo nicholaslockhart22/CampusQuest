@@ -9,6 +9,7 @@ import {
   getCharacterByUsername,
   acceptRequest,
   declineRequest,
+  unsendFriendRequest,
 } from "@/lib/friendsStore";
 import { follow, unfollow, isFollowing, followByUsername } from "@/lib/followStore";
 import {
@@ -31,9 +32,11 @@ import { ViewGuildModal } from "./ViewGuildModal";
 export function FindFriends({
   character,
   onRefresh,
+  onOpenDm,
 }: {
   character: Character;
   onRefresh?: () => void;
+  onOpenDm?: (other: { userId: string; username: string; name: string; avatar: string }) => void;
 }) {
   const [usernameInput, setUsernameInput] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
@@ -42,6 +45,8 @@ export function FindFriends({
   const [friends, setFriends] = useState<Friend[]>([]);
   const [showCreateGuild, setShowCreateGuild] = useState(false);
   const [viewGuild, setViewGuild] = useState<Guild | null>(null);
+  const [guildSearchQuery, setGuildSearchQuery] = useState("");
+  const [pendingOpen, setPendingOpen] = useState(false);
 
   const refresh = useCallback(() => {
     setIncoming(getIncomingRequests(character.username));
@@ -93,10 +98,18 @@ export function FindFriends({
   }
 
   const interests: GuildInterest[] = ["study", "fitness", "networking", "clubs"];
-  const recommendedByInterest = interests.map((interest) => ({
-    interest,
-    guilds: getRecommendedGuilds(interest),
-  }));
+  const recommendedByInterest = interests.map((interest) => {
+    let guilds = getRecommendedGuilds(interest);
+    const q = guildSearchQuery.trim().toLowerCase();
+    if (q) {
+      guilds = guilds.filter(
+        (g) =>
+          g.name.toLowerCase().includes(q) ||
+          GUILD_INTEREST_LABELS[interest].toLowerCase().includes(q)
+      );
+    }
+    return { interest, guilds };
+  });
 
   return (
     <section className="space-y-5">
@@ -141,6 +154,60 @@ export function FindFriends({
         {sendError && <p className="text-sm text-amber-400 mt-2">{sendError}</p>}
       </div>
 
+      {/* Pending (sent) friend requests — dropdown with usernames */}
+      {outgoing.length > 0 && (
+        <div className="card p-4 sm:p-5">
+          <button
+            type="button"
+            onClick={() => setPendingOpen((o) => !o)}
+            className="w-full flex items-center justify-between gap-2 text-left rounded-lg -mx-1 px-1 py-1 hover:bg-white/5 transition-colors"
+            aria-expanded={pendingOpen}
+          >
+            <span className="font-display font-semibold text-white flex items-center gap-2">
+              <span aria-hidden>📤</span> Pending requests ({outgoing.length})
+            </span>
+            <span className="text-white/60 text-sm" aria-hidden>{pendingOpen ? "▼" : "▶"}</span>
+          </button>
+          {pendingOpen && (
+            <ul className="space-y-2 mt-3 pt-3 border-t border-white/10">
+              {outgoing.map((req) => (
+                <li
+                  key={req.id}
+                  className="flex items-center gap-3 p-2.5 rounded-xl bg-white/5 border border-white/10"
+                >
+                  <span className="text-white/90 truncate min-w-0">@{req.toUsername}</span>
+                  <button
+                    type="button"
+                    onClick={() => { unsendFriendRequest(req.id); refresh(); }}
+                    className="flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium text-amber-400/90 border border-amber-400/40 hover:bg-amber-400/10"
+                  >
+                    Unsend
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* Find Guilds */}
+      <div className="card p-4 sm:p-5">
+        <h2 className="font-display font-semibold text-white mb-2 flex items-center gap-2">
+          <span aria-hidden>🛡️</span> Find Guilds
+        </h2>
+        <p className="text-sm text-white/50 mb-4">
+          Search by guild name or interest. Browse recommended guilds below.
+        </p>
+        <input
+          type="text"
+          value={guildSearchQuery}
+          onChange={(e) => setGuildSearchQuery(e.target.value)}
+          placeholder="e.g. Library, Fitness, Study..."
+          className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-uri-keaney/60"
+          aria-label="Search guilds"
+        />
+      </div>
+
       {/* Guilds banner + section */}
       <div className="rounded-2xl border border-uri-keaney/25 bg-gradient-to-br from-uri-keaney/10 to-transparent p-4 sm:p-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -152,10 +219,16 @@ export function FindFriends({
           </div>
           <button
             type="button"
-            onClick={() => setShowCreateGuild(true)}
-            className="px-4 py-2.5 rounded-xl font-semibold bg-uri-keaney text-white hover:bg-uri-keaney/90 border border-uri-keaney/40 transition-colors shrink-0"
+            onClick={() => character.totalXP >= 300 && setShowCreateGuild(true)}
+            disabled={character.totalXP < 300}
+            title={character.totalXP < 300 ? "Reach 300 total XP to create a guild" : undefined}
+            className={`px-4 py-2.5 rounded-xl font-semibold border shrink-0 transition-colors ${
+              character.totalXP >= 300
+                ? "bg-uri-keaney text-white hover:bg-uri-keaney/90 border-uri-keaney/40 cursor-pointer"
+                : "bg-white/10 text-white/50 border-white/20 cursor-not-allowed"
+            }`}
           >
-            Create Guild
+            {character.totalXP < 300 ? "🔒 Create guild (Unlock at 300 XP)" : "Create Guild"}
           </button>
         </div>
 
@@ -226,28 +299,6 @@ export function FindFriends({
         </div>
       )}
 
-      {outgoing.length > 0 && (
-        <div className="card p-4 sm:p-5">
-          <h3 className="font-display font-semibold text-white mb-3 flex items-center gap-2">
-            <span aria-hidden>📤</span> Pending ({outgoing.length})
-          </h3>
-          <ul className="space-y-2">
-            {outgoing.map((req) => (
-              <li
-                key={req.id}
-                className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10"
-              >
-                <span className="text-xl">{req.fromAvatar}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-white/90 truncate">Request sent to @{req.toUsername}</p>
-                </div>
-                <span className="text-xs text-white/50 font-medium">Pending</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       <div className="card p-4 sm:p-5">
         <h3 className="font-display font-semibold text-white mb-3 flex items-center gap-2">
           <span aria-hidden>🦌</span> Friends ({friends.length})
@@ -264,6 +315,7 @@ export function FindFriends({
                 onFollow={() => { follow(character.id, friend.userId); refresh(); }}
                 onUnfollow={() => { unfollow(character.id, friend.userId); refresh(); }}
                 isFollowing={isFollowing(character.id, friend.userId)}
+                onMessage={onOpenDm ? () => onOpenDm({ userId: friend.userId, username: friend.username, name: friend.name, avatar: friend.avatar }) : undefined}
               />
             ))}
           </ul>
@@ -294,12 +346,14 @@ function FriendCard({
   currentUserId,
   onFollow,
   onUnfollow,
+  onMessage,
   isFollowing: following,
 }: {
   friend: Friend;
   currentUserId: string;
   onFollow: () => void;
   onUnfollow: () => void;
+  onMessage?: () => void;
   isFollowing: boolean;
 }) {
   return (
@@ -326,7 +380,16 @@ function FriendCard({
               <span className="text-amber-400/90 text-xs">🔥 {friend.streakDays}d streak</span>
             )}
           </div>
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-2 mt-2 flex-wrap">
+            {onMessage && (
+              <button
+                type="button"
+                onClick={onMessage}
+                className="text-xs font-medium text-white bg-uri-keaney/20 hover:bg-uri-keaney/30 text-uri-keaney px-2.5 py-1.5 rounded-lg border border-uri-keaney/40"
+              >
+                💬 Message
+              </button>
+            )}
             {following ? (
               <button
                 type="button"

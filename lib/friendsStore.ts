@@ -144,6 +144,14 @@ export function getOutgoingRequests(userId: string): FriendRequest[] {
   return loadRequests().filter((r) => r.fromUserId === userId && r.status === "pending");
 }
 
+/** Cancel an outgoing friend request (unsend). Only removes the request; recipient will no longer see it. */
+export function unsendFriendRequest(requestId: string): void {
+  const requests = loadRequests();
+  const filtered = requests.filter((r) => r.id !== requestId);
+  if (filtered.length === requests.length) return;
+  saveRequests(filtered);
+}
+
 function characterToFriend(c: Character, addedAt: number): Friend {
   return {
     userId: c.id,

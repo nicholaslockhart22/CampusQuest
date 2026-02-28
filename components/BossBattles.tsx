@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   getUserBosses,
   getActiveBossId,
@@ -12,7 +13,7 @@ import {
   MIN_BOSS_HP,
 } from "@/lib/store";
 import type { UserBoss, Character, StatKey } from "@/lib/types";
-import { STAT_ICONS, STAT_LABELS } from "@/lib/types";
+import { STAT_KEYS, STAT_ICONS, STAT_LABELS } from "@/lib/types";
 import { getCosmeticById } from "@/lib/cosmetics";
 
 const DELETE_CONFIRM_DIALOGS: { message: string; fightOn: string; retreat: string }[] = [
@@ -57,6 +58,7 @@ const FINAL_BOSS_HP = 500; // Any boss with maxHp > 500 is a Final Boss
 export function BossBattles({ character, onRefresh }: { character: Character; onRefresh?: () => void }) {
   const [bossName, setBossName] = useState("");
   const [bossHp, setBossHp] = useState("250");
+  const [bossWeakness, setBossWeakness] = useState<StatKey | "random">("random");
   const [bossToDelete, setBossToDelete] = useState<UserBoss | null>(null);
   const deleteDialog = useMemo(() => (bossToDelete ? getRandomDeleteDialog() : null), [bossToDelete]);
 
@@ -70,13 +72,15 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
     if (bosses.length >= MAX_BOSSES) return;
     const name = bossName.trim() || "Boss";
     const hp = Math.max(MIN_BOSS_HP, parseInt(bossHp, 10) || MIN_BOSS_HP);
-    const added = addUserBoss(name, hp, true);
+    const weakness = bossWeakness === "random" ? undefined : bossWeakness;
+    const added = addUserBoss(name, hp, true, weakness);
     if (added) {
       setBossName("");
       setBossHp(String(MIN_BOSS_HP));
+      setBossWeakness("random");
       onRefresh?.();
     }
-  }, [bossName, bossHp, onRefresh, bosses.length]);
+  }, [bossName, bossHp, bossWeakness, onRefresh, bosses.length]);
 
   const handleSwitchTarget = useCallback(
     (boss: UserBoss) => {
@@ -144,6 +148,36 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
                 ⚔️ Add
               </button>
             </div>
+            <div>
+              <p className="text-xs font-medium text-white/70 mb-2">Weakness (activities with this stat deal extra damage)</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBossWeakness("random")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    bossWeakness === "random"
+                      ? "bg-uri-keaney/30 text-uri-keaney border border-uri-keaney/50"
+                      : "bg-white/10 text-white/70 border border-white/20 hover:bg-white/15"
+                  }`}
+                >
+                  Random
+                </button>
+                {STAT_KEYS.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setBossWeakness(key)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      bossWeakness === key
+                        ? "bg-uri-keaney/30 text-uri-keaney border border-uri-keaney/50"
+                        : "bg-white/10 text-white/70 border border-white/20 hover:bg-white/15"
+                    }`}
+                  >
+                    {STAT_ICONS[key]} {STAT_LABELS[key]}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
         {bosses.length >= MAX_BOSSES && (
@@ -152,16 +186,16 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
           </div>
         )}
 
-        {/* Delete confirmation modal — random medieval message */}
-        {bossToDelete && deleteDialog && (
-          <>
+        {/* Delete confirmation modal — portaled to body so always visible on screen */}
+        {bossToDelete && deleteDialog && typeof document !== "undefined" && createPortal(
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="delete-boss-title">
             <div
-              className="fixed inset-0 z-40 bg-black/70"
+              className="absolute inset-0 bg-black/70"
               aria-hidden
               onClick={() => setBossToDelete(null)}
             />
-            <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[min(22rem,92vw)] p-5 rounded-2xl bg-uri-navy border-2 border-uri-gold/50 shadow-2xl shadow-black/40">
-              <p className="text-uri-gold font-semibold text-sm uppercase tracking-wider mb-2">
+            <div className="relative z-10 w-full max-w-[22rem] p-5 rounded-2xl bg-uri-navy border-2 border-uri-gold/50 shadow-2xl shadow-black/40">
+              <p id="delete-boss-title" className="text-uri-gold font-semibold text-sm uppercase tracking-wider mb-2">
                 ⚔️ Abandon boss?
               </p>
               <p className="text-white/95 text-sm leading-relaxed mb-5">
@@ -187,7 +221,8 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
                 </button>
               </div>
             </div>
-          </>
+          </div>,
+          document.body
         )}
 
         {/* Which boss is currently being attacked */}

@@ -527,14 +527,17 @@ export function setActiveBossId(bossId: string | null): void {
   saveActiveBossId(bossId);
 }
 
-/** Add a new boss (custom name + HP). Max 4 bosses; min HP 250. Returns null if at limit. */
-export function addUserBoss(name: string, hp: number, setAsActive = true): UserBoss | null {
+/** Add a new boss (custom name + HP + optional weakness). Max 4 bosses; min HP 250. Returns null if at limit. */
+export function addUserBoss(name: string, hp: number, setAsActive = true, weaknessStat?: StatKey | null): UserBoss | null {
   const bosses = loadUserBosses();
   if (bosses.length >= MAX_USER_BOSSES) return null;
   const maxHp = Math.max(MIN_BOSS_HP, Math.floor(hp));
   const id = `ub-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   const xp = bossXpReward(maxHp);
-  const weakness: StatKey = STAT_KEYS[Math.floor(Math.random() * STAT_KEYS.length)] as StatKey;
+  const weakness: StatKey | undefined =
+    weaknessStat != null && STAT_KEYS.includes(weaknessStat)
+      ? weaknessStat
+      : (STAT_KEYS[Math.floor(Math.random() * STAT_KEYS.length)] as StatKey);
   const boss: UserBoss = {
     id,
     name: name.trim() || "Boss",

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { getFriends } from "@/lib/friendsStore";
+import { useMemo, useState, useCallback } from "react";
+import { getFriends, getCharacterByUsername, getOutgoingRequests, sendFriendRequest } from "@/lib/friendsStore";
+import { unfollow, isFollowing, follow, followByUsername } from "@/lib/followStore";
 import { getMaxGuildLevelForCharacter } from "@/lib/guildStore";
 import { CAMPUS_LEADERBOARD_PLACEHOLDERS } from "@/lib/campusLeaderboard";
 import type { Character } from "@/lib/types";
@@ -40,6 +41,7 @@ function getSortValueCampus(
 
 export function Leaderboards({ character }: { character: Character }) {
   const [sortBy, setSortBy] = useState<SortBy>("level");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const getGuildLevel = (userId: string) => getMaxGuildLevelForCharacter(userId);
   const currentUserGuildLevel = getMaxGuildLevelForCharacter(character.id);
@@ -47,7 +49,7 @@ export function Leaderboards({ character }: { character: Character }) {
   const friends = useMemo(() => {
     const list = getFriends(character.id);
     return [...list].sort((a, b) => getSortValueFriend(b, sortBy, getGuildLevel) - getSortValueFriend(a, sortBy, getGuildLevel));
-  }, [character.id, sortBy]);
+  }, [character.id, sortBy, refreshKey]);
 
   const campusSorted = useMemo(() => {
     return [...CAMPUS_LEADERBOARD_PLACEHOLDERS].sort(
@@ -56,6 +58,8 @@ export function Leaderboards({ character }: { character: Character }) {
   }, [sortBy]);
 
   const sortLabel = SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? "Level";
+
+  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
   return (
     <section className="space-y-6">
@@ -96,41 +100,65 @@ export function Leaderboards({ character }: { character: Character }) {
           <p className="text-sm text-white/50 py-4">No friends yet. Add friends in Find Friends to see them here.</p>
         ) : (
           <ul className="space-y-2">
-            {friends.map((friend, index) => (
-              <LeaderboardRow
-                key={friend.userId}
-                rank={index + 1}
-                name={friend.name}
-                username={friend.username}
-                avatar={friend.avatar}
-                level={friend.level}
-                totalXP={friend.totalXP}
-                isCurrentUser={false}
-                sortBy={sortBy}
-                statValue={
-                  sortBy === "level"
-                    ? undefined
-                    : sortBy === "bossesDefeated"
-                      ? (friend.bossesDefeatedCount ?? 0)
-                      : sortBy === "finalBossesDefeated"
-                        ? (friend.finalBossesDefeatedCount ?? 0)
-                        : sortBy === "guildLevel"
-                          ? getGuildLevel(friend.userId)
-                          : (friend.stats[sortBy] ?? 0)
-                }
-                statLabel={
-                  sortBy === "level"
-                    ? undefined
-                    : sortBy === "bossesDefeated"
-                      ? "Bosses defeated"
-                      : sortBy === "finalBossesDefeated"
-                        ? "Final bosses defeated"
-                        : sortBy === "guildLevel"
-                          ? "Guild level"
-                          : STAT_LABELS[sortBy]
-                }
-              />
-            ))}
+            {friends.map((friend, index) => {
+              const following = isFollowing(character.id, friend.userId);
+              return (
+                <LeaderboardRow
+                  key={friend.userId}
+                  rank={index + 1}
+                  name={friend.name}
+                  username={friend.username}
+                  avatar={friend.avatar}
+                  level={friend.level}
+                  totalXP={friend.totalXP}
+                  isCurrentUser={false}
+                  sortBy={sortBy}
+                  statValue={
+                    sortBy === "level"
+                      ? undefined
+                      : sortBy === "bossesDefeated"
+                        ? (friend.bossesDefeatedCount ?? 0)
+                        : sortBy === "finalBossesDefeated"
+                          ? (friend.finalBossesDefeatedCount ?? 0)
+                          : sortBy === "guildLevel"
+                            ? getGuildLevel(friend.userId)
+                            : (friend.stats[sortBy] ?? 0)
+                  }
+                  statLabel={
+                    sortBy === "level"
+                      ? undefined
+                      : sortBy === "bossesDefeated"
+                        ? "Bosses defeated"
+                        : sortBy === "finalBossesDefeated"
+                          ? "Final bosses defeated"
+                          : sortBy === "guildLevel"
+                            ? "Guild level"
+                            : STAT_LABELS[sortBy]
+                  }
+                  actions={
+                    <div className="flex flex-col items-end gap-1">
+                      {following ? (
+                        <button
+                          type="button"
+                          onClick={() => { unfollow(character.id, friend.userId); refresh(); }}
+                          className="text-xs font-medium text-white/70 hover:text-white px-2.5 py-1 rounded-lg border border-white/20 hover:bg-white/10"
+                        >
+                          Unfollow
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => { follow(character.id, friend.userId); refresh(); }}
+                          className="text-xs font-medium text-uri-keaney hover:bg-uri-keaney/15 px-2.5 py-1 rounded-lg border border-uri-keaney/30"
+                        >
+                          Follow
+                        </button>
+                      )}
+                    </div>
+                  }
+                />
+              );
+            })}
           </ul>
         )}
       </div>
@@ -146,6 +174,13 @@ export function Leaderboards({ character }: { character: Character }) {
         <ul className="space-y-2">
           {campusSorted.map((entry, index) => {
             const isCurrentUser = character.username.toLowerCase() === entry.username.toLowerCase();
+            const friendsList = getFriends(character.id);
+            const targetChar = getCharacterByUsername(entry.username);
+            const targetId = targetChar?.id;
+            const isFriend = friendsList.some((f) => f.username.toLowerCase() === entry.username.toLowerCase());
+            const outgoingRequests = getOutgoingRequests(character.id);
+            const hasOutgoingRequest = outgoingRequests.some((r) => r.toUsername === entry.username.toLowerCase());
+            const following = targetId != null && isFollowing(character.id, targetId);
             const statValue =
               sortBy === "level"
                 ? undefined
@@ -179,6 +214,50 @@ export function Leaderboards({ character }: { character: Character }) {
                 sortBy={sortBy}
                 statValue={statValue}
                 statLabel={statLabel}
+                actions={
+                  isCurrentUser ? undefined : (
+                    <div className="flex flex-col items-end gap-1">
+                      {!isFriend && (
+                        hasOutgoingRequest ? (
+                          <span className="text-xs text-white/50">Pending</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              sendFriendRequest(character, entry.username);
+                              refresh();
+                            }}
+                            className="text-xs font-medium text-uri-keaney hover:bg-uri-keaney/15 px-2.5 py-1 rounded-lg border border-uri-keaney/30"
+                          >
+                            Add friend
+                          </button>
+                        )
+                      )}
+                      {targetId != null ? (
+                        following ? (
+                          <button
+                            type="button"
+                            onClick={() => { unfollow(character.id, targetId); refresh(); }}
+                            className="text-xs font-medium text-white/70 hover:text-white px-2.5 py-1 rounded-lg border border-white/20 hover:bg-white/10"
+                          >
+                            Unfollow
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              followByUsername(character.id, entry.username, getCharacterByUsername);
+                              refresh();
+                            }}
+                            className="text-xs font-medium text-uri-keaney hover:bg-uri-keaney/15 px-2.5 py-1 rounded-lg border border-uri-keaney/30"
+                          >
+                            Follow
+                          </button>
+                        )
+                      ) : null}
+                    </div>
+                  )
+                }
               />
             );
           })}
@@ -199,6 +278,7 @@ function LeaderboardRow({
   sortBy,
   statValue,
   statLabel,
+  actions,
 }: {
   rank: number;
   name: string;
@@ -210,6 +290,7 @@ function LeaderboardRow({
   sortBy?: SortBy;
   statValue?: number;
   statLabel?: string;
+  actions?: React.ReactNode;
 }) {
   const rankStyle = rank <= 3 ? "font-bold text-uri-keaney" : "text-white/60 font-mono";
   return (
@@ -242,6 +323,7 @@ function LeaderboardRow({
           </>
         )}
       </div>
+      {actions != null && <div className="flex-shrink-0">{actions}</div>}
     </li>
   );
 }
