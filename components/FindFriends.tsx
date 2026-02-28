@@ -19,10 +19,8 @@ import {
   requestGuildInvite,
   hasRequestedInvite,
   GUILD_INTEREST_LABELS,
-  type GuildInterest,
 } from "@/lib/guildStore";
-import type { Character } from "@/lib/types";
-import type { Friend, FriendRequest, Guild, GuildInterest } from "@/lib/types";
+import type { Character, Friend, FriendRequest, Guild, GuildInterest } from "@/lib/types";
 import { STAT_KEYS, STAT_LABELS, STAT_ICONS } from "@/lib/types";
 import { AvatarDisplay } from "./AvatarDisplay";
 import { GuildCard } from "./GuildCard";

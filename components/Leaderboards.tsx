@@ -28,6 +28,14 @@ function getSortValueFriend(f: Friend, sortBy: SortBy, getGuildLevel: (userId: s
   return f.stats[sortBy] ?? 0;
 }
 
+function getSortLabel(sortBy: SortBy): string {
+  if (sortBy === "level") return "Level";
+  if (sortBy === "bossesDefeated") return "Bosses defeated";
+  if (sortBy === "finalBossesDefeated") return "Final bosses defeated";
+  if (sortBy === "guildLevel") return "Guild level";
+  return STAT_LABELS[sortBy];
+}
+
 function getSortValueCampus(
   e: { level: number; stats: Record<string, number>; bossesDefeatedCount?: number; finalBossesDefeatedCount?: number; highestGuildLevel?: number },
   sortBy: SortBy
@@ -227,25 +235,9 @@ export function Leaderboards({ character }: { character: Character }) {
                   statValue={
                     sortBy === "level"
                       ? undefined
-                      : sortBy === "bossesDefeated"
-                        ? (friend.bossesDefeatedCount ?? 0)
-                        : sortBy === "finalBossesDefeated"
-                          ? (friend.finalBossesDefeatedCount ?? 0)
-                          : sortBy === "guildLevel"
-                            ? getGuildLevel(friend.userId)
-                            : (friend.stats[sortBy] ?? 0)
+                      : getSortValueFriend(friend, sortBy, getGuildLevel)
                   }
-                  statLabel={
-                    sortBy === "level"
-                      ? undefined
-                      : sortBy === "bossesDefeated"
-                        ? "Bosses defeated"
-                        : sortBy === "finalBossesDefeated"
-                          ? "Final bosses defeated"
-                          : sortBy === "guildLevel"
-                            ? "Guild level"
-                            : STAT_LABELS[sortBy]
-                  }
+                  statLabel={sortBy === "level" ? undefined : getSortLabel(sortBy)}
                   actions={
                     <div className="flex flex-col items-end gap-1">
                       {following ? (
@@ -292,26 +284,11 @@ export function Leaderboards({ character }: { character: Character }) {
             const outgoingRequests = getOutgoingRequests(character.id);
             const hasOutgoingRequest = outgoingRequests.some((r) => r.toUsername === entry.username.toLowerCase());
             const following = targetId != null && isFollowing(character.id, targetId);
-            const statValue =
-              sortBy === "level"
-                ? undefined
-                : sortBy === "bossesDefeated"
-                  ? (isCurrentUser ? (character.bossesDefeatedCount ?? 0) : (entry.bossesDefeatedCount ?? 0))
-                  : sortBy === "finalBossesDefeated"
-                    ? (isCurrentUser ? (character.finalBossesDefeatedCount ?? 0) : (entry.finalBossesDefeatedCount ?? 0))
-                    : sortBy === "guildLevel"
-                      ? (isCurrentUser ? currentUserGuildLevel : (entry.highestGuildLevel ?? 0))
-                      : (entry.stats[sortBy] ?? 0);
-            const statLabel =
-              sortBy === "level"
-                ? undefined
-                : sortBy === "bossesDefeated"
-                  ? "Bosses defeated"
-                  : sortBy === "finalBossesDefeated"
-                    ? "Final bosses defeated"
-                    : sortBy === "guildLevel"
-                      ? "Guild level"
-                      : STAT_LABELS[sortBy];
+            const campusEntryForSort: Parameters<typeof getSortValueCampus>[0] = isCurrentUser
+              ? { level: character.level, stats: { ...character.stats }, bossesDefeatedCount: character.bossesDefeatedCount, finalBossesDefeatedCount: character.finalBossesDefeatedCount, highestGuildLevel: currentUserGuildLevel }
+              : entry;
+            const statValue = sortBy === "level" ? undefined : getSortValueCampus(campusEntryForSort, sortBy);
+            const statLabel = sortBy === "level" ? undefined : getSortLabel(sortBy);
             return (
               <LeaderboardRow
                 key={entry.id}
