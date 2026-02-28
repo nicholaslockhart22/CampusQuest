@@ -305,7 +305,7 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
           </h4>
           {bosses.length === 0 ? (
             <div className="boss-card-default rounded-2xl p-6 text-center">
-              <p className="text-white/50 text-sm">No bosses yet. Add one above and start attacking with study sessions.</p>
+              <p className="text-white/50 text-sm">No bosses yet. Add one above and start attacking by logging activities.</p>
             </div>
           ) : regularBosses.length === 0 ? (
             <div className="boss-card-default rounded-2xl p-4 text-center">

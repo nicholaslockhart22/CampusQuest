@@ -6,6 +6,7 @@ import type { FieldNote } from "@/lib/types";
 import { STAT_KEYS, STAT_LABELS, STAT_ICONS, MAX_STAT, type StatKey } from "@/lib/types";
 import { getFeedByAuthorId, nodFieldNote, rallyFieldNote, getCommentsByNoteId, addComment } from "@/lib/feedStore";
 import { getFriends, getOutgoingRequests } from "@/lib/friendsStore";
+import { getGuildById } from "@/lib/guildStore";
 import { getUserBosses } from "@/lib/store";
 import { getClassTitle, getClassRealm } from "@/lib/characterClasses";
 import { AvatarDisplay } from "./AvatarDisplay";
@@ -82,6 +83,19 @@ export function Profile({ character }: { character: Character }) {
                 {getClassRealm(character.classId) && (
                   <span className="text-white/50 font-normal"> · {getClassRealm(character.classId)}</span>
                 )}
+              </p>
+            )}
+            {(character.guildIds ?? []).length > 0 && (
+              <p className="text-sm text-white/80 mt-1.5 flex items-center gap-1.5 flex-wrap justify-center sm:justify-start">
+                <span className="text-white/50">Guilds:</span>
+                {(character.guildIds ?? []).map((gid) => {
+                  const g = getGuildById(gid);
+                  return g ? (
+                    <span key={gid} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-uri-keaney/15 text-uri-keaney border border-uri-keaney/30 text-xs font-medium">
+                      {g.crest} {g.name} <span className="text-white/60">Lv.{g.xp != null ? 1 + Math.floor(g.xp / 100) : g.level}</span>
+                    </span>
+                  ) : null;
+                })}
               </p>
             )}
             <div className="flex justify-center sm:justify-start gap-6 mt-4">

@@ -97,7 +97,7 @@ function Header({
                 {questsOpen && (
                   <>
                     <div
-                      className="fixed inset-0 z-30"
+                      className="fixed inset-0 z-30 bg-black/30 cursor-default"
                       onClick={() => setQuestsOpen(false)}
                       aria-hidden
                     />
@@ -130,7 +130,7 @@ function Header({
                 {specialQuestsOpen && (
                   <>
                     <div
-                      className="fixed inset-0 z-30"
+                      className="fixed inset-0 z-30 bg-black/30 cursor-default"
                       onClick={() => setSpecialQuestsOpen(false)}
                       aria-hidden
                     />
@@ -298,13 +298,21 @@ export function Dashboard() {
     return updated;
   }
 
+  const navItems: { tab: Tab; icon: string; label: string }[] = [
+    { tab: "quad", icon: "📋", label: "Quad" },
+    { tab: "friends", icon: "👋", label: "Friends" },
+    { tab: "leaderboards", icon: "🏆", label: "Rank" },
+    { tab: "me", icon: "⚔️", label: "Character" },
+    { tab: "profile", icon: "👤", label: "Profile" },
+  ];
+
   return (
     <>
       <Header username={character?.username ?? null} character={character} showLogout onLogout={handleLogout} onRefresh={refresh} />
-      <div className="space-y-5 sm:space-y-6">
+      <div style={{ paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))" }}>
         {gainToast && (
-          <div className="fixed left-1/2 top-20 -translate-x-1/2 z-40 w-[min(28rem,92vw)]">
-            <div className="card px-4 py-3 border border-uri-keaney/35 bg-uri-navy/95 backdrop-blur">
+          <div className="fixed left-1/2 top-20 -translate-x-1/2 z-40 w-[min(28rem,92vw)] toast-enter">
+            <div className="card px-4 py-3 border border-uri-keaney/40 bg-uri-navy shadow-keaney">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-white font-semibold truncate">{gainToast.title}</div>
@@ -331,92 +339,81 @@ export function Dashboard() {
             </div>
           </div>
         )}
-        <nav className="flex rounded-2xl bg-white/10 border border-uri-keaney/20 p-1.5" aria-label="Main">
-          <button
-            type="button"
-            onClick={() => setTab("quad")}
-            className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all ${tab === "quad" ? "bg-uri-keaney text-white shadow-md" : "text-white/80 hover:text-uri-keaney hover:bg-uri-keaney/10"}`}
-          >
-            The Quad
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("friends")}
-            className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all ${tab === "friends" ? "bg-uri-keaney text-white shadow-md" : "text-white/80 hover:text-uri-keaney hover:bg-uri-keaney/10"}`}
-          >
-            Find Friends
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("leaderboards")}
-            className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all ${tab === "leaderboards" ? "bg-uri-keaney text-white shadow-md" : "text-white/80 hover:text-uri-keaney hover:bg-uri-keaney/10"}`}
-          >
-            Leaderboards
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("me")}
-            className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all ${tab === "me" ? "bg-uri-keaney text-white shadow-md" : "text-white/80 hover:text-uri-keaney hover:bg-uri-keaney/10"}`}
-          >
-            My character
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("profile")}
-            className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all ${tab === "profile" ? "bg-uri-keaney text-white shadow-md" : "text-white/80 hover:text-uri-keaney hover:bg-uri-keaney/10"}`}
-          >
-            Profile
-          </button>
-        </nav>
 
-      {tab === "quad" && (
-        <>
-          <TheQuad character={character} onRefresh={refresh} />
-          <StreakCard character={character} />
-          <BossBattles character={character} onRefresh={refresh} />
-        </>
-      )}
+      <div key={tab} className="tab-content-enter space-y-5 sm:space-y-6">
+        {tab === "quad" && (
+          <>
+            <TheQuad character={character} onRefresh={refresh} />
+            <BossBattles character={character} onRefresh={refresh} />
+          </>
+        )}
 
-      {tab === "friends" && (
-        <FindFriends character={character} onRefresh={refresh} />
-      )}
+        {tab === "friends" && (
+          <FindFriends character={character} onRefresh={refresh} />
+        )}
 
-      {tab === "leaderboards" && (
-        <Leaderboards character={character} />
-      )}
+        {tab === "leaderboards" && (
+          <Leaderboards character={character} />
+        )}
 
-      {tab === "profile" && (
-        <Profile character={character} />
-      )}
+        {tab === "profile" && (
+          <Profile character={character} />
+        )}
 
-      {tab === "me" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-          <div className="md:col-span-2">
-            <CharacterCard character={character} onRefresh={refresh} />
-          </div>
-          <div className="flex flex-col gap-4 sm:gap-5 md:flex-row md:items-stretch md:col-span-2 md:gap-5">
-            <div className="flex-1 min-w-0">
+        {tab === "me" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+            <div className="md:col-span-2">
+              <CharacterCard character={character} onRefresh={refresh} />
+            </div>
+            <div className="md:col-span-2">
               <StreakCard character={character} />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="md:col-span-2">
               <CollapsibleSection title="Weekly recap" defaultCollapsed>
                 <WeeklyRecapCard character={character} />
               </CollapsibleSection>
             </div>
+            <div className="md:col-span-2">
+              <ActivityList onLog={handleLog} />
+            </div>
+            <div className="min-w-0">
+              <CollapsibleSection title="Recent activities" defaultCollapsed>
+                <RecentActivities characterId={character.id} />
+              </CollapsibleSection>
+            </div>
+            <div className="md:col-span-2">
+              <BossBattles character={character} onRefresh={refresh} />
+            </div>
           </div>
-          <div className="md:col-span-2">
-            <ActivityList onLog={handleLog} />
-          </div>
-          <div className="min-w-0">
-            <CollapsibleSection title="Recent activities" defaultCollapsed>
-              <RecentActivities characterId={character.id} />
-            </CollapsibleSection>
-          </div>
-          <div className="md:col-span-2">
-            <BossBattles character={character} onRefresh={refresh} />
-          </div>
-        </div>
-      )}
+        )}
+      </div>
+      </div>
+
+      {/* Bottom nav — width aligned with main content */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-20 px-4 flex justify-center"
+        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+      >
+        <nav
+          className="w-full max-w-2xl mx-auto flex items-center justify-around rounded-t-xl bg-uri-navy border border-b-0 border-uri-keaney/20 shadow-[0_-4px_24px_-4px_rgba(0,0,0,0.35),0_-1px_0_0_rgba(104,171,232,0.08)]"
+          style={{ paddingTop: "0.5rem", paddingBottom: "0.75rem" }}
+          aria-label="Main navigation"
+        >
+        {navItems.map(({ tab: t, icon, label }) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className={`flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-2.5 px-1 rounded-xl transition-colors touch-manipulation ${
+              tab === t ? "text-uri-keaney bg-uri-keaney/15" : "text-white/60 active:text-white/80 active:bg-white/5"
+            }`}
+            aria-current={tab === t ? "page" : undefined}
+          >
+            <span className="text-xl leading-none" aria-hidden>{icon}</span>
+            <span className={`text-xs font-bold truncate w-full text-center ${tab === t ? "text-uri-keaney" : "text-white/90"}`}>{label}</span>
+          </button>
+        ))}
+        </nav>
       </div>
     </>
   );

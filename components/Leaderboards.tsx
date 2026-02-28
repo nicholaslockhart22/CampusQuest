@@ -2,44 +2,51 @@
 
 import { useMemo, useState } from "react";
 import { getFriends } from "@/lib/friendsStore";
+import { getMaxGuildLevelForCharacter } from "@/lib/guildStore";
 import { CAMPUS_LEADERBOARD_PLACEHOLDERS } from "@/lib/campusLeaderboard";
 import type { Character } from "@/lib/types";
 import type { Friend } from "@/lib/types";
 import { STAT_KEYS, STAT_LABELS, STAT_ICONS } from "@/lib/types";
 import { AvatarDisplay } from "./AvatarDisplay";
 
-type SortBy = "level" | (typeof STAT_KEYS)[number] | "bossesDefeated" | "finalBossesDefeated";
+type SortBy = "level" | (typeof STAT_KEYS)[number] | "bossesDefeated" | "finalBossesDefeated" | "guildLevel";
 
 const SORT_OPTIONS: { value: SortBy; label: string; icon: string }[] = [
   { value: "level", label: "Level", icon: "⭐" },
   ...STAT_KEYS.map((key) => ({ value: key as SortBy, label: STAT_LABELS[key], icon: STAT_ICONS[key] })),
   { value: "bossesDefeated", label: "Bosses defeated", icon: "⚔️" },
   { value: "finalBossesDefeated", label: "Final bosses defeated", icon: "👑" },
+  { value: "guildLevel", label: "Guild level", icon: "🛡️" },
 ];
 
-function getSortValueFriend(f: Friend, sortBy: SortBy): number {
+function getSortValueFriend(f: Friend, sortBy: SortBy, getGuildLevel: (userId: string) => number): number {
   if (sortBy === "level") return f.level;
   if (sortBy === "bossesDefeated") return f.bossesDefeatedCount ?? 0;
   if (sortBy === "finalBossesDefeated") return f.finalBossesDefeatedCount ?? 0;
+  if (sortBy === "guildLevel") return getGuildLevel(f.userId);
   return f.stats[sortBy] ?? 0;
 }
 
 function getSortValueCampus(
-  e: { level: number; stats: Record<string, number>; bossesDefeatedCount?: number; finalBossesDefeatedCount?: number },
+  e: { level: number; stats: Record<string, number>; bossesDefeatedCount?: number; finalBossesDefeatedCount?: number; highestGuildLevel?: number },
   sortBy: SortBy
 ): number {
   if (sortBy === "level") return e.level;
   if (sortBy === "bossesDefeated") return e.bossesDefeatedCount ?? 0;
   if (sortBy === "finalBossesDefeated") return e.finalBossesDefeatedCount ?? 0;
+  if (sortBy === "guildLevel") return e.highestGuildLevel ?? 0;
   return e.stats[sortBy] ?? 0;
 }
 
 export function Leaderboards({ character }: { character: Character }) {
   const [sortBy, setSortBy] = useState<SortBy>("level");
 
+  const getGuildLevel = (userId: string) => getMaxGuildLevelForCharacter(userId);
+  const currentUserGuildLevel = getMaxGuildLevelForCharacter(character.id);
+
   const friends = useMemo(() => {
     const list = getFriends(character.id);
-    return [...list].sort((a, b) => getSortValueFriend(b, sortBy) - getSortValueFriend(a, sortBy));
+    return [...list].sort((a, b) => getSortValueFriend(b, sortBy, getGuildLevel) - getSortValueFriend(a, sortBy, getGuildLevel));
   }, [character.id, sortBy]);
 
   const campusSorted = useMemo(() => {
@@ -107,7 +114,9 @@ export function Leaderboards({ character }: { character: Character }) {
                       ? (friend.bossesDefeatedCount ?? 0)
                       : sortBy === "finalBossesDefeated"
                         ? (friend.finalBossesDefeatedCount ?? 0)
-                        : (friend.stats[sortBy] ?? 0)
+                        : sortBy === "guildLevel"
+                          ? getGuildLevel(friend.userId)
+                          : (friend.stats[sortBy] ?? 0)
                 }
                 statLabel={
                   sortBy === "level"
@@ -116,7 +125,9 @@ export function Leaderboards({ character }: { character: Character }) {
                       ? "Bosses defeated"
                       : sortBy === "finalBossesDefeated"
                         ? "Final bosses defeated"
-                        : STAT_LABELS[sortBy]
+                        : sortBy === "guildLevel"
+                          ? "Guild level"
+                          : STAT_LABELS[sortBy]
                 }
               />
             ))}
@@ -142,7 +153,9 @@ export function Leaderboards({ character }: { character: Character }) {
                   ? (isCurrentUser ? (character.bossesDefeatedCount ?? 0) : (entry.bossesDefeatedCount ?? 0))
                   : sortBy === "finalBossesDefeated"
                     ? (isCurrentUser ? (character.finalBossesDefeatedCount ?? 0) : (entry.finalBossesDefeatedCount ?? 0))
-                    : (entry.stats[sortBy] ?? 0);
+                    : sortBy === "guildLevel"
+                      ? (isCurrentUser ? currentUserGuildLevel : (entry.highestGuildLevel ?? 0))
+                      : (entry.stats[sortBy] ?? 0);
             const statLabel =
               sortBy === "level"
                 ? undefined
@@ -150,7 +163,9 @@ export function Leaderboards({ character }: { character: Character }) {
                   ? "Bosses defeated"
                   : sortBy === "finalBossesDefeated"
                     ? "Final bosses defeated"
-                    : STAT_LABELS[sortBy];
+                    : sortBy === "guildLevel"
+                      ? "Guild level"
+                      : STAT_LABELS[sortBy];
             return (
               <LeaderboardRow
                 key={entry.id}

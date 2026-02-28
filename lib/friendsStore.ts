@@ -6,6 +6,7 @@ import { xpToLevel } from "./level";
 const STORAGE_KEY_REQUESTS = "campusquest_friend_requests";
 const STORAGE_KEY_FRIENDS = "campusquest_friends";
 const STORAGE_KEY_CHARACTERS_BY_USERNAME = "campusquest_characters_by_username";
+const STORAGE_KEY_CHARACTERS_BY_ID = "campusquest_characters_by_id";
 
 interface FriendEntry {
   ownerId: string;
@@ -65,11 +66,36 @@ function saveCharactersByUsername(map: Record<string, Character>): void {
   localStorage.setItem(STORAGE_KEY_CHARACTERS_BY_USERNAME, JSON.stringify(map));
 }
 
+function loadCharactersById(): Record<string, Character> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CHARACTERS_BY_ID);
+    if (!raw) return {};
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function saveCharactersById(map: Record<string, Character>): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(STORAGE_KEY_CHARACTERS_BY_ID, JSON.stringify(map));
+}
+
 /** Register a character so they can be found and their stats shown to friends. */
 export function registerCharacter(c: Character): void {
   const map = loadCharactersByUsername();
   map[c.username.toLowerCase()] = { ...c };
   saveCharactersByUsername(map);
+  const byId = loadCharactersById();
+  byId[c.id] = { ...c };
+  saveCharactersById(byId);
+}
+
+/** Get a character by id (for ViewGuild members, etc.). Only available for characters registered on this device. */
+export function getCharacterById(id: string): Character | null {
+  const byId = loadCharactersById();
+  return byId[id] ?? null;
 }
 
 /** Get a character snapshot by username (for same-device stats). */

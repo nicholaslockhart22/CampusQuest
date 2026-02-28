@@ -1,7 +1,7 @@
 "use client";
 
 import type { Guild, GuildInviteRequest, GuildInterest } from "./types";
-import { setCharacterGuild } from "./store";
+import { addCharacterToGuild, removeCharacterFromGuild, registerOnStreakExtended } from "./store";
 
 const STORAGE_KEY_GUILDS = "campusquest_guilds";
 const STORAGE_KEY_GUILD_INVITES = "campusquest_guild_invites";
@@ -80,6 +80,12 @@ export function getRecommendedGuilds(interest?: GuildInterest): Guild[] {
   return [...guilds].sort((a, b) => b.level - a.level);
 }
 
+const GUILD_XP_PER_LEVEL = 100;
+
+function guildLevelFromXp(xp: number): number {
+  return 1 + Math.floor(Math.max(0, xp) / GUILD_XP_PER_LEVEL);
+}
+
 export function createGuild(params: {
   name: string;
   crest: string;
@@ -96,6 +102,7 @@ export function createGuild(params: {
     name,
     crest: params.crest || "🛡️",
     level: 1,
+    xp: 0,
     memberIds: [params.createdByUserId],
     weeklyQuestGoal: params.weeklyQuestGoal.trim().slice(0, 80) || "Complete activities together",
     interest: params.interest,
@@ -104,7 +111,7 @@ export function createGuild(params: {
   };
   guilds.push(guild);
   saveGuilds(guilds);
-  setCharacterGuild(params.createdByUserId, id);
+  addCharacterToGuild(params.createdByUserId, id);
   return guild;
 }
 
@@ -112,21 +119,50 @@ export function joinGuild(characterId: string, guildId: string): boolean {
   const guilds = loadGuilds();
   const guild = guilds.find((g) => g.id === guildId);
   if (!guild || guild.memberIds.includes(characterId)) return false;
-  leaveGuild(characterId);
+  if (!addCharacterToGuild(characterId, guildId)) return false; // max 2 guilds
   guild.memberIds.push(characterId);
   saveGuilds(guilds);
-  setCharacterGuild(characterId, guildId);
   return true;
 }
 
-export function leaveGuild(characterId: string): void {
+/** Leave one guild. Pass guildId to leave that guild, or leave first found if character is in multiple. */
+export function leaveGuild(characterId: string, guildId?: string): void {
   const guilds = loadGuilds();
-  const guild = guilds.find((g) => g.memberIds.includes(characterId));
-  if (guild) {
-    guild.memberIds = guild.memberIds.filter((id) => id !== characterId);
-    saveGuilds(guilds);
+  const targetGuildId = guildId ?? guilds.find((g) => g.memberIds.includes(characterId))?.id;
+  if (targetGuildId) {
+    const guild = guilds.find((g) => g.id === targetGuildId);
+    if (guild) {
+      guild.memberIds = guild.memberIds.filter((id) => id !== characterId);
+      saveGuilds(guilds);
+    }
+    removeCharacterFromGuild(characterId, targetGuildId);
   }
-  setCharacterGuild(characterId, null);
+}
+
+/** Add XP to a guild (e.g. from member streaks). Updates guild level from xp. */
+export function addGuildXp(guildId: string, amount: number): void {
+  const guilds = loadGuilds();
+  const guild = guilds.find((g) => g.id === guildId);
+  if (!guild) return;
+  guild.xp = (guild.xp ?? 0) + amount;
+  guild.level = guildLevelFromXp(guild.xp);
+  saveGuilds(guilds);
+}
+
+/** Get max guild level among the character's guilds. */
+export function getMaxGuildLevelForCharacter(characterId: string): number {
+  const guilds = loadGuilds();
+  const memberGuilds = guilds.filter((g) => g.memberIds.includes(characterId));
+  if (memberGuilds.length === 0) return 0;
+  return Math.max(...memberGuilds.map((g) => (g.xp != null ? guildLevelFromXp(g.xp) : g.level)));
+}
+
+/** Contribute one day's streak XP to all guilds the character is in. Call when the user extends their streak (e.g. after logActivity). */
+export function contributeStreakXpForDay(characterId: string): void {
+  const guilds = loadGuilds();
+  const memberGuilds = guilds.filter((g) => g.memberIds.includes(characterId));
+  const xpPerDay = 5;
+  memberGuilds.forEach((g) => addGuildXp(g.id, xpPerDay));
 }
 
 export function requestGuildInvite(characterId: string, guildId: string): GuildInviteRequest | null {
@@ -157,3 +193,5 @@ export function getPendingInviteRequestsForGuild(guildId: string): GuildInviteRe
 export function hasRequestedInvite(characterId: string, guildId: string): boolean {
   return loadInviteRequests().some((r) => r.userId === characterId && r.guildId === guildId && r.status === "pending");
 }
+
+registerOnStreakExtended(contributeStreakXpForDay);

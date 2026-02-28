@@ -1,6 +1,7 @@
 "use client";
 
 import type { FieldNote, RamMark, FieldNoteSerialized, QuadComment } from "./types";
+import { getFollowing } from "./followStore";
 import { FIELD_NOTE_MAX_CHARS, RAMMARK_MAX_LENGTH, RAMMARK_MAX_PER_POST, QUAD_COMMENT_MAX_CHARS } from "./types";
 
 // In-memory feed (resets on refresh for MVP). Character-backed; author comes from store.
@@ -46,8 +47,15 @@ export function parseRamMarksFromText(text: string): RamMark[] {
   return list;
 }
 
-export function getFeed(filterRamMark?: string): FieldNote[] {
+/** Optional viewerId: show only own posts + posts from people the viewer follows. Omit for unfiltered feed. */
+export function getFeed(filterRamMark?: string, viewerId?: string): FieldNote[] {
   let list = [...feed].sort((a, b) => b.createdAt - a.createdAt);
+  if (viewerId != null) {
+    const followingIds = new Set(getFollowing(viewerId));
+    list = list.filter(
+      (n) => n.authorId === viewerId || followingIds.has(n.authorId)
+    );
+  }
   if (filterRamMark) {
     const tag = filterRamMark.toLowerCase();
     list = list.filter((n) => n.ramMarks.some((r) => r.tag === tag));

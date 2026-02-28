@@ -3,24 +3,29 @@
 import type { Guild, GuildInterest } from "@/lib/types";
 import { GUILD_INTEREST_LABELS } from "@/lib/guildStore";
 
+const MAX_GUILDS = 2;
+
 export function GuildCard({
   guild,
   currentUserId,
-  userGuildId,
+  userGuildIds = [],
   hasRequestedInvite,
   onJoin,
   onRequestInvite,
+  onLeave,
   onView,
 }: {
   guild: Guild;
   currentUserId: string;
-  userGuildId: string | undefined;
+  userGuildIds?: string[];
   hasRequestedInvite: boolean;
   onJoin: (guildId: string) => void;
   onRequestInvite: (guildId: string) => void;
+  onLeave?: (guildId: string) => void;
   onView: (guild: Guild) => void;
 }) {
   const isMember = guild.memberIds.includes(currentUserId);
+  const atMaxGuilds = userGuildIds.length >= MAX_GUILDS && !isMember;
   const memberCount = guild.memberIds.length;
 
   return (
@@ -50,7 +55,20 @@ export function GuildCard({
               View Guild
             </button>
             {isMember ? (
-              <span className="text-xs text-uri-gold/90 font-medium px-2.5 py-1.5">Member</span>
+              <>
+                <span className="text-xs text-uri-gold/90 font-medium px-2.5 py-1.5">Member</span>
+                {onLeave && (
+                  <button
+                    type="button"
+                    onClick={() => onLeave(guild.id)}
+                    className="text-xs font-medium text-white/70 hover:text-amber-400 px-2.5 py-1.5 rounded-lg border border-white/20 hover:border-amber-400/40 hover:bg-amber-400/10 transition-colors"
+                  >
+                    Leave
+                  </button>
+                )}
+              </>
+            ) : atMaxGuilds ? (
+              <span className="text-xs text-white/50 px-2.5 py-1.5">Max guilds (2/2)</span>
             ) : hasRequestedInvite ? (
               <span className="text-xs text-white/50 px-2.5 py-1.5">Request sent</span>
             ) : (

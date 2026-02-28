@@ -21,7 +21,7 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
     const u = username.trim();
     const p = password.trim();
     if (!u || !p) {
-      setError("Enter your username and password.");
+      setError("Enter your student email or username and password.");
       return;
     }
     onComplete();
@@ -111,15 +111,15 @@ export function AuthScreen({ onComplete }: { onComplete: () => void }) {
               <form onSubmit={handleSignIn} className="space-y-5">
                 <div>
                   <label htmlFor="auth-username" className={labelClass}>
-                    Student username
+                    Student Email or username
                   </label>
                   <input
                     id="auth-username"
                     type="text"
-                    autoComplete="username"
+                    autoComplete="username email"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="e.g. jsmith"
+                    placeholder="e.g. you@uri.edu or jsmith"
                     className={inputClass}
                   />
                 </div>

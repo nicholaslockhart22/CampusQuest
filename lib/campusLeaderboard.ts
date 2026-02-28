@@ -18,15 +18,16 @@ export interface CampusLeaderboardEntry {
   };
   bossesDefeatedCount?: number;
   finalBossesDefeatedCount?: number;
+  highestGuildLevel?: number;
 }
 
 const AVATARS = ["🎓", "🦉", "🐏", "⚡", "🌟", "🔥", "📚", "🏃", "🎯", "💪", "🧠", "👟"];
 
 /** Deterministic placeholder data for campus leaderboard. */
 export const CAMPUS_LEADERBOARD_PLACEHOLDERS: CampusLeaderboardEntry[] = [
-  { id: "campus-1", name: "Jordan Blake", username: "jordan_blake", avatar: AVATARS[0], level: 24, totalXP: 8520, stats: { strength: 72, stamina: 68, knowledge: 88, social: 65, focus: 81 }, bossesDefeatedCount: 12, finalBossesDefeatedCount: 3 },
-  { id: "campus-2", name: "Sam Rivera", username: "sam_rivera", avatar: AVATARS[1], level: 22, totalXP: 7200, stats: { strength: 55, stamina: 90, knowledge: 75, social: 82, focus: 70 }, bossesDefeatedCount: 8, finalBossesDefeatedCount: 1 },
-  { id: "campus-3", name: "Alex Chen", username: "alex_chen", avatar: AVATARS[2], level: 21, totalXP: 6800, stats: { strength: 62, stamina: 58, knowledge: 95, social: 60, focus: 88 }, bossesDefeatedCount: 15, finalBossesDefeatedCount: 4 },
+  { id: "campus-1", name: "Jordan Blake", username: "jordan_blake", avatar: AVATARS[0], level: 24, totalXP: 8520, stats: { strength: 72, stamina: 68, knowledge: 88, social: 65, focus: 81 }, bossesDefeatedCount: 12, finalBossesDefeatedCount: 3, highestGuildLevel: 6 },
+  { id: "campus-2", name: "Sam Rivera", username: "sam_rivera", avatar: AVATARS[1], level: 22, totalXP: 7200, stats: { strength: 55, stamina: 90, knowledge: 75, social: 82, focus: 70 }, bossesDefeatedCount: 8, finalBossesDefeatedCount: 1, highestGuildLevel: 5 },
+  { id: "campus-3", name: "Alex Chen", username: "alex_chen", avatar: AVATARS[2], level: 21, totalXP: 6800, stats: { strength: 62, stamina: 58, knowledge: 95, social: 60, focus: 88 }, bossesDefeatedCount: 15, finalBossesDefeatedCount: 4, highestGuildLevel: 4 },
   { id: "campus-4", name: "Morgan Taylor", username: "morgan_t", avatar: AVATARS[3], level: 19, totalXP: 5900, stats: { strength: 78, stamina: 72, knowledge: 70, social: 85, focus: 65 }, bossesDefeatedCount: 6, finalBossesDefeatedCount: 2 },
   { id: "campus-5", name: "Riley Foster", username: "riley_foster", avatar: AVATARS[4], level: 18, totalXP: 5400, stats: { strength: 65, stamina: 80, knowledge: 82, social: 78, focus: 72 }, bossesDefeatedCount: 10, finalBossesDefeatedCount: 2 },
   { id: "campus-6", name: "Casey Kim", username: "casey_kim", avatar: AVATARS[5], level: 17, totalXP: 4950, stats: { strength: 70, stamina: 65, knowledge: 88, social: 62, focus: 85 }, bossesDefeatedCount: 9, finalBossesDefeatedCount: 1 },

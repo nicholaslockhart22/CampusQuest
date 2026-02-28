@@ -10,6 +10,12 @@ import { applyClassStats, type CharacterClassId } from "./characterClasses";
 import { pickLootCosmetic } from "./cosmetics";
 import { getSpecialQuestById } from "./specialQuests";
 
+/** Called when a character extends their streak (so guilds can add XP). Set by guildStore. */
+let onStreakExtended: ((characterId: string) => void) | null = null;
+export function registerOnStreakExtended(fn: (characterId: string) => void): void {
+  onStreakExtended = fn;
+}
+
 const STORAGE_KEY_CHARACTER = "campusquest_character";
 const STORAGE_KEY_LOGS = "campusquest_activity_logs";
 const STORAGE_KEY_BOSS_PROGRESS = "campusquest_boss_progress";
@@ -56,6 +62,10 @@ function loadCharacter(): Character | null {
     if (!data.username) data.username = (data.name || "student").toLowerCase().replace(/\s+/g, "_");
     if (data.classId == null) data.classId = undefined;
     if (data.starterWeapon == null) data.starterWeapon = undefined;
+    if (!Array.isArray(data.guildIds)) {
+      data.guildIds = data.guildId ? [data.guildId] : [];
+      data.guildId = undefined;
+    }
     return data;
   } catch {
     return null;
@@ -270,11 +280,26 @@ export function updateCharacter(
   return c;
 }
 
-/** Set or clear the character's guild. Used by guild store. */
-export function setCharacterGuild(characterId: string, guildId: string | null): void {
+const MAX_GUILDS_PER_CHARACTER = 2;
+
+/** Add character to a guild (max 2 guilds). Used by guild store. */
+export function addCharacterToGuild(characterId: string, guildId: string): boolean {
+  const c = loadCharacter();
+  if (!c || c.id !== characterId) return false;
+  const ids = c.guildIds ?? [];
+  if (ids.includes(guildId)) return true;
+  if (ids.length >= MAX_GUILDS_PER_CHARACTER) return false;
+  c.guildIds = [...ids, guildId];
+  saveCharacter(c);
+  return true;
+}
+
+/** Remove character from a guild. Used by guild store. */
+export function removeCharacterFromGuild(characterId: string, guildId: string): void {
   const c = loadCharacter();
   if (!c || c.id !== characterId) return;
-  c.guildId = guildId ?? undefined;
+  const ids = c.guildIds ?? [];
+  c.guildIds = ids.filter((id) => id !== guildId);
   saveCharacter(c);
 }
 
@@ -378,8 +403,10 @@ export function logActivity(
       const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
       if (c.lastActivityDate === yesterdayStr) {
         c.streakDays += 1;
+        onStreakExtended?.(characterId);
       } else {
         c.streakDays = 1;
+        onStreakExtended?.(characterId);
       }
       c.lastActivityDate = today;
     }

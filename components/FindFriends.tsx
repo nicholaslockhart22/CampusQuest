@@ -6,12 +6,15 @@ import {
   getIncomingRequests,
   getOutgoingRequests,
   getFriends,
+  getCharacterByUsername,
   acceptRequest,
   declineRequest,
 } from "@/lib/friendsStore";
+import { follow, unfollow, isFollowing, followByUsername } from "@/lib/followStore";
 import {
   getRecommendedGuilds,
   joinGuild,
+  leaveGuild,
   requestGuildInvite,
   hasRequestedInvite,
   GUILD_INTEREST_LABELS,
@@ -83,6 +86,12 @@ export function FindFriends({
     refresh();
   }
 
+  function handleLeaveGuild(guildId: string) {
+    leaveGuild(character.id, guildId);
+    setViewGuild(null);
+    refresh();
+  }
+
   const interests: GuildInterest[] = ["study", "fitness", "networking", "clubs"];
   const recommendedByInterest = interests.map((interest) => ({
     interest,
@@ -91,6 +100,47 @@ export function FindFriends({
 
   return (
     <section className="space-y-5">
+      {/* Find Friends — above Guilds */}
+      <div className="card p-4 sm:p-5">
+        <h2 className="font-display font-semibold text-white mb-2 flex items-center gap-2">
+          <span aria-hidden>👋</span> Find Friends
+        </h2>
+        <p className="text-sm text-white/50 mb-4">
+          <strong className="text-white/70">Friends</strong> = mutual (both accept). <strong className="text-white/70">Follow</strong> = see their posts on The Quad.
+        </p>
+        <form onSubmit={handleSendRequest} className="flex gap-2 flex-wrap">
+          <input
+            type="text"
+            value={usernameInput}
+            onChange={(e) => { setUsernameInput(e.target.value.toLowerCase().replace(/\s+/g, "_")); setSendError(null); }}
+            placeholder="e.g. alex_rhody"
+            className="flex-1 min-w-[140px] px-3 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-uri-keaney/60"
+          />
+          <button
+            type="submit"
+            className="px-4 py-2.5 rounded-xl font-semibold bg-uri-keaney text-white hover:bg-uri-keaney/90 transition-colors"
+          >
+            Send request
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSendError(null);
+              const err = followByUsername(character.id, usernameInput, getCharacterByUsername);
+              if (err) setSendError(err);
+              else {
+                setUsernameInput("");
+                refresh();
+              }
+            }}
+            className="px-4 py-2.5 rounded-xl font-semibold bg-white/15 text-white border border-white/25 hover:bg-white/20 transition-colors"
+          >
+            Follow
+          </button>
+        </form>
+        {sendError && <p className="text-sm text-amber-400 mt-2">{sendError}</p>}
+      </div>
+
       {/* Guilds banner + section */}
       <div className="rounded-2xl border border-uri-keaney/25 bg-gradient-to-br from-uri-keaney/10 to-transparent p-4 sm:p-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -123,10 +173,11 @@ export function FindFriends({
                       key={guild.id}
                       guild={guild}
                       currentUserId={character.id}
-                      userGuildId={character.guildId}
+                      userGuildIds={character.guildIds ?? []}
                       hasRequestedInvite={hasRequestedInvite(character.id, guild.id)}
                       onJoin={handleJoinGuild}
                       onRequestInvite={handleRequestGuildInvite}
+                      onLeave={handleLeaveGuild}
                       onView={setViewGuild}
                     />
                   ))}
@@ -135,31 +186,6 @@ export function FindFriends({
             ) : null
           )}
         </div>
-      </div>
-
-      <div className="card p-4 sm:p-5">
-        <h2 className="font-display font-semibold text-white mb-2 flex items-center gap-2">
-          <span aria-hidden>👋</span> Find Friends
-        </h2>
-        <p className="text-sm text-white/50 mb-4">
-          Send a friend request by username. See their level and stats once they accept.
-        </p>
-        <form onSubmit={handleSendRequest} className="flex gap-2 flex-wrap">
-          <input
-            type="text"
-            value={usernameInput}
-            onChange={(e) => setUsernameInput(e.target.value.toLowerCase().replace(/\s+/g, "_"))}
-            placeholder="e.g. alex_rhody"
-            className="flex-1 min-w-[140px] px-3 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-uri-keaney/60"
-          />
-          <button
-            type="submit"
-            className="px-4 py-2.5 rounded-xl font-semibold bg-uri-keaney text-white hover:bg-uri-keaney/90 transition-colors"
-          >
-            Send request
-          </button>
-        </form>
-        {sendError && <p className="text-sm text-amber-400 mt-2">{sendError}</p>}
       </div>
 
       {incoming.length > 0 && (
@@ -227,11 +253,18 @@ export function FindFriends({
           <span aria-hidden>🦌</span> Friends ({friends.length})
         </h3>
         {friends.length === 0 ? (
-          <p className="text-sm text-white/50">No friends yet. Send a request or accept one above.</p>
+          <p className="text-sm text-white/50">No friends yet. Send a request or accept one above. You're friends only when you both accept.</p>
         ) : (
           <ul className="space-y-4">
             {friends.map((friend) => (
-              <FriendCard key={friend.userId} friend={friend} />
+              <FriendCard
+                key={friend.userId}
+                friend={friend}
+                currentUserId={character.id}
+                onFollow={() => { follow(character.id, friend.userId); refresh(); }}
+                onUnfollow={() => { unfollow(character.id, friend.userId); refresh(); }}
+                isFollowing={isFollowing(character.id, friend.userId)}
+              />
             ))}
           </ul>
         )}
@@ -244,12 +277,31 @@ export function FindFriends({
           onCreated={refresh}
         />
       )}
-      {viewGuild && <ViewGuildModal guild={viewGuild} onClose={() => setViewGuild(null)} />}
+      {viewGuild && (
+        <ViewGuildModal
+          guild={viewGuild}
+          currentUserId={character.id}
+          onLeave={handleLeaveGuild}
+          onClose={() => setViewGuild(null)}
+        />
+      )}
     </section>
   );
 }
 
-function FriendCard({ friend }: { friend: Friend }) {
+function FriendCard({
+  friend,
+  currentUserId,
+  onFollow,
+  onUnfollow,
+  isFollowing: following,
+}: {
+  friend: Friend;
+  currentUserId: string;
+  onFollow: () => void;
+  onUnfollow: () => void;
+  isFollowing: boolean;
+}) {
   return (
     <li className="p-4 rounded-xl bg-white/5 border border-uri-keaney/20">
       <div className="flex items-start gap-3">
@@ -257,7 +309,13 @@ function FriendCard({ friend }: { friend: Friend }) {
           <AvatarDisplay avatar={friend.avatar} size={56} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-white truncate">{friend.name}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-semibold text-white truncate">{friend.name}</p>
+            <span className="text-xs font-medium text-uri-keaney/90 px-2 py-0.5 rounded bg-uri-keaney/15 border border-uri-keaney/30">Friend</span>
+            {following && (
+              <span className="text-xs text-white/60">· Following (see posts on Quad)</span>
+            )}
+          </div>
           <p className="text-sm text-uri-keaney/90">@{friend.username}</p>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
             <span className="text-uri-keaney font-mono text-sm font-semibold bg-uri-keaney/15 px-1.5 py-0.5 rounded">
@@ -266,6 +324,25 @@ function FriendCard({ friend }: { friend: Friend }) {
             <span className="text-white/50 text-sm font-mono">{friend.totalXP} XP</span>
             {friend.streakDays > 0 && (
               <span className="text-amber-400/90 text-xs">🔥 {friend.streakDays}d streak</span>
+            )}
+          </div>
+          <div className="flex gap-2 mt-2">
+            {following ? (
+              <button
+                type="button"
+                onClick={onUnfollow}
+                className="text-xs font-medium text-white/70 hover:text-white px-2.5 py-1.5 rounded-lg border border-white/20 hover:bg-white/10"
+              >
+                Unfollow (hide from Quad)
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onFollow}
+                className="text-xs font-medium text-uri-keaney hover:bg-uri-keaney/15 px-2.5 py-1.5 rounded-lg border border-uri-keaney/30"
+              >
+                Follow (see posts on Quad)
+              </button>
             )}
           </div>
           <div className="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-x-3 gap-y-1.5">

@@ -65,7 +65,9 @@ export interface Character {
   completedSpecialQuests?: string[];
   /** Proof URL/text per completed special quest (questId -> proof). */
   specialQuestProofs?: Record<string, string>;
-  /** Current guild id (one guild per character). */
+  /** Up to 2 guild ids the character belongs to. */
+  guildIds?: string[];
+  /** @deprecated Use guildIds. Kept for migration. */
   guildId?: string;
 }
 
@@ -77,6 +79,8 @@ export interface Guild {
   name: string;
   crest: string; // emoji or icon
   level: number;
+  /** Guild XP (e.g. from member streaks). Level can be derived as 1 + floor(xp / 100). */
+  xp?: number;
   memberIds: string[];
   weeklyQuestGoal: string;
   interest: GuildInterest;
@@ -118,6 +122,8 @@ export interface Friend {
   streakDays: number;
   addedAt: number;
   bossesDefeatedCount?: number;
+  /** Highest guild level among the friend's guilds (for leaderboard). */
+  highestGuildLevel?: number;
   finalBossesDefeatedCount?: number;
 }
 

@@ -19,9 +19,9 @@ export function TheQuad({
   const [filter, setFilter] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
-    setNotes(getFeed(filter ?? undefined));
+    setNotes(getFeed(filter ?? undefined, character.id));
     onRefresh?.();
-  }, [filter, onRefresh]);
+  }, [filter, character.id, onRefresh]);
 
   useEffect(() => {
     refresh();
@@ -68,10 +68,14 @@ export function TheQuad({
       </div>
       <div className="divide-y divide-white/10 max-h-[60vh] overflow-y-auto">
         {notes.length === 0 ? (
-          <div className="p-10 text-center">
-            <p className="text-4xl mb-3 opacity-50">📝</p>
-            <p className="text-white/70 font-medium">No Field Notes yet</p>
-            <p className="text-sm text-white/50 mt-1">Share a study’ sesh, workout, or campus moment.</p>
+          <div className="p-10 sm:p-12 text-center">
+            <p className="text-5xl mb-4 opacity-70" aria-hidden>📝</p>
+            <p className="text-white font-semibold text-lg">No Field Notes yet</p>
+            <p className="text-sm text-white/60 mt-2 max-w-xs mx-auto">
+              Post a study sesh, workout, or campus moment. The Quad is where Rams share wins.
+            </p>
+            <p className="text-xs text-uri-keaney/80 mt-4 font-medium">Be the first to post above ↑</p>
+            <p className="text-xs text-white/50 mt-2">Follow people in Find Friends to see their posts here.</p>
           </div>
         ) : (
           notes.map((note) => (

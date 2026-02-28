@@ -7,6 +7,7 @@ import { xpProgressInLevel } from "@/lib/level";
 import { updateCharacter, prestigeStat } from "@/lib/store";
 import { getDefaultCustomAvatar, serializeAvatar } from "@/lib/avatarOptions";
 import { getClassTitle, getClassRealm } from "@/lib/characterClasses";
+import { getGuildById } from "@/lib/guildStore";
 import { AvatarDisplay } from "./AvatarDisplay";
 import { AvatarBuilder } from "./AvatarBuilder";
 
@@ -161,6 +162,18 @@ export function CharacterCard({
             <span className="text-white/50 text-sm">@{character.username}</span>
             <span className="text-white/40 text-sm font-mono">{character.totalXP} XP</span>
           </div>
+          {(character.guildIds ?? []).length > 0 && (
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              {(character.guildIds ?? []).map((gid) => {
+                const g = getGuildById(gid);
+                return g ? (
+                  <span key={gid} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white/10 text-white/90 border border-white/15 text-xs">
+                    {g.crest} {g.name}
+                  </span>
+                ) : null;
+              })}
+            </div>
+          )}
           <div className="mt-3">
             <div className="flex justify-between text-xs text-white/50 mb-1">
               <span>Level progress</span>
