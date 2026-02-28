@@ -122,7 +122,7 @@ function Header({
                           onClick={() => setDmOpen(false)}
                           aria-hidden
                         />
-                        <div className="absolute right-0 top-full mt-2 z-[101] w-[min(20rem,92vw)]">
+                        <div className="fixed left-3 right-3 top-14 z-[101] max-h-[calc(100vh-4rem)] overflow-y-auto sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[min(20rem,92vw)] sm:max-h-[70vh]">
                           <div className="rounded-2xl border border-uri-keaney/40 bg-[#041E42] shadow-xl shadow-black/40 overflow-hidden ring-1 ring-black/20">
                             <div className="px-3 py-2.5 border-b border-white/10 bg-white/5">
                               <p className="text-xs font-semibold text-white/80 uppercase tracking-wider">Direct messages</p>
@@ -193,8 +193,8 @@ function Header({
                         onClick={() => setQuestsOpen(false)}
                         aria-hidden
                       />
-                      <div className="absolute right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 top-full mt-2 z-[101] w-[min(34rem,92vw)]">
-                        <div className="rounded-2xl border border-uri-keaney/40 bg-[#041E42] shadow-xl shadow-black/40 ring-1 ring-black/20">
+                      <div className="fixed left-3 right-3 top-14 z-[101] max-h-[calc(100vh-4rem)] overflow-y-auto sm:left-1/2 sm:right-auto sm:top-full sm:mt-2 sm:w-[min(34rem,92vw)] sm:max-h-[70vh] sm:-translate-x-1/2">
+                        <div className="rounded-2xl border border-uri-keaney/40 bg-[#041E42] shadow-xl shadow-black/40 ring-1 ring-black/20 overflow-hidden">
                           <DailyQuests character={character} compact />
                         </div>
                       </div>
@@ -229,7 +229,7 @@ function Header({
                         onClick={() => setSpecialQuestsOpen(false)}
                         aria-hidden
                       />
-                      <div className="absolute right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 top-full mt-2 z-[101] w-[min(34rem,92vw)]">
+                      <div className="fixed left-3 right-3 top-14 z-[101] max-h-[calc(100vh-4rem)] overflow-y-auto sm:left-1/2 sm:right-auto sm:top-full sm:mt-2 sm:w-[min(34rem,92vw)] sm:max-h-[70vh] sm:-translate-x-1/2">
                         <div
                           className="rounded-2xl overflow-hidden border-2 border-uri-gold/60 bg-[#041E42] ring-1 ring-black/20"
                           style={{
