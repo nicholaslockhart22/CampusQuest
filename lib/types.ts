@@ -69,6 +69,8 @@ export interface Character {
   guildIds?: string[];
   /** @deprecated Use guildIds. Kept for migration. */
   guildId?: string;
+  /** Short bio shown on profile. */
+  bio?: string;
 }
 
 // —— Guilds ——

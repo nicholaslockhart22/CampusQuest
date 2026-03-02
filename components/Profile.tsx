@@ -9,13 +9,18 @@ import { getFeedByAuthorId, nodFieldNote, rallyFieldNote, getCommentsByNoteId, a
 import { getFriends, getCharacterById, removeFriend } from "@/lib/friendsStore";
 import { getFollowing, unfollow } from "@/lib/followStore";
 import { getGuildById } from "@/lib/guildStore";
-import { getUserBosses } from "@/lib/store";
+import { getUserBosses, updateCharacter } from "@/lib/store";
 import { getClassTitle, getClassRealm } from "@/lib/characterClasses";
 import { AvatarDisplay } from "./AvatarDisplay";
 import { FieldNoteCard } from "./FieldNoteCard";
 
-export function Profile({ character }: { character: Character }) {
+const BIO_MAX_LENGTH = 150;
+
+export function Profile({ character, onLogout, onRefresh }: { character: Character; onLogout?: () => void; onRefresh?: () => void }) {
   const [posts, setPosts] = useState<FieldNote[]>([]);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showEditBio, setShowEditBio] = useState(false);
+  const [bioDraft, setBioDraft] = useState(character.bio ?? "");
 
   const refresh = useCallback(() => {
     setPosts(getFeedByAuthorId(character.id));
@@ -103,6 +108,9 @@ export function Profile({ character }: { character: Character }) {
                 })}
               </p>
             )}
+            {character.bio && (
+              <p className="text-sm text-white/80 mt-2 break-words">{character.bio}</p>
+            )}
             <div className="flex justify-center sm:justify-start gap-6 mt-4">
               <div className="flex flex-col items-center sm:items-start">
                 <span className="font-bold text-white text-lg">{posts.length}</span>
@@ -125,6 +133,13 @@ export function Profile({ character }: { character: Character }) {
                 <span className="text-white/60 text-xs">Following</span>
               </button>
             </div>
+            <button
+              type="button"
+              onClick={() => { setBioDraft(character.bio ?? ""); setShowEditBio(true); }}
+              className="mt-4 w-full sm:w-auto px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 border border-white/15 transition-colors"
+            >
+              Edit bio
+            </button>
           </div>
         </div>
       </div>
@@ -192,6 +207,19 @@ export function Profile({ character }: { character: Character }) {
           })}
         </div>
       </div>
+
+      {/* Log out — only on Profile */}
+      {onLogout && (
+        <div className="card p-4">
+          <button
+            type="button"
+            onClick={() => setShowLogoutConfirm(true)}
+            className="w-full py-3 rounded-xl text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 border border-white/10 transition-colors"
+          >
+            Log out
+          </button>
+        </div>
+      )}
 
       {/* All posts to the Quad */}
       <div>
@@ -281,6 +309,85 @@ export function Profile({ character }: { character: Character }) {
                       );
                     })}
             </ul>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {showEditBio && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="edit-bio-title">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowEditBio(false)}
+            aria-hidden
+          />
+          <div className="relative z-10 w-full max-w-[20rem] rounded-2xl border border-white/15 bg-uri-navy shadow-xl shadow-black/40 p-5">
+            <h2 id="edit-bio-title" className="font-display font-semibold text-lg text-white mb-3">
+              Edit bio
+            </h2>
+            <textarea
+              value={bioDraft}
+              onChange={(e) => setBioDraft(e.target.value.slice(0, BIO_MAX_LENGTH))}
+              placeholder="A short line about you..."
+              rows={3}
+              className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white placeholder-white/40 text-sm focus:outline-none focus:ring-2 focus:ring-uri-keaney/40 resize-none"
+            />
+            <p className="text-xs text-white/50 mt-1">{bioDraft.length}/{BIO_MAX_LENGTH}</p>
+            <div className="flex gap-3 justify-end mt-4">
+              <button
+                type="button"
+                onClick={() => setShowEditBio(false)}
+                className="px-4 py-2.5 rounded-xl text-sm font-medium text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/15 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  updateCharacter({ bio: bioDraft });
+                  setShowEditBio(false);
+                  onRefresh?.();
+                }}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-uri-keaney hover:bg-uri-keaney/90 border border-uri-keaney/40 transition-colors"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {showLogoutConfirm && onLogout && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="logout-dialog-title">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowLogoutConfirm(false)}
+            aria-hidden
+          />
+          <div className="relative z-10 w-full max-w-[20rem] rounded-2xl border border-white/15 bg-uri-navy shadow-xl shadow-black/40 p-6">
+            <h2 id="logout-dialog-title" className="font-display font-semibold text-lg text-white mb-2">
+              Leave CampusQuest?
+            </h2>
+            <p className="text-sm text-white/70 mb-6">
+              The Quad shall wait for your return.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2.5 rounded-xl text-sm font-medium text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/15 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowLogoutConfirm(false); onLogout(); }}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-uri-keaney hover:bg-uri-keaney/90 border border-uri-keaney/40 transition-colors"
+              >
+                Log out
+              </button>
+            </div>
           </div>
         </div>,
         document.body

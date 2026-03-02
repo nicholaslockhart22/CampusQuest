@@ -21,48 +21,32 @@ import { Profile } from "./Profile";
 import { WeeklyRecapCard } from "./WeeklyRecapCard";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { DirectMessageThread } from "./DirectMessageThread";
+import { Inbox } from "./Inbox";
 import { STAT_KEYS, STAT_ICONS, STAT_LABELS } from "@/lib/types";
 import { getActivityById } from "@/lib/activities";
-import { getConversationsForUser } from "@/lib/dmStore";
 import { AvatarDisplay } from "./AvatarDisplay";
 
-type Tab = "quad" | "me" | "friends" | "leaderboards" | "profile";
+type Tab = "quad" | "me" | "friends" | "leaderboards" | "profile" | "inbox";
 
 function Header({
   username,
   character,
-  showLogout,
-  onLogout,
   onRefresh,
-  onOpenDm,
+  onOpenInbox,
 }: {
   username: string | null;
   character: Character | null;
-  showLogout: boolean;
-  onLogout: () => void;
   onRefresh?: () => void;
-  onOpenDm?: (other: { userId: string; username: string; name: string; avatar: string }) => void;
+  onOpenInbox?: () => void;
 }) {
   const [questsOpen, setQuestsOpen] = useState(false);
   const [specialQuestsOpen, setSpecialQuestsOpen] = useState(false);
-  const [dmOpen, setDmOpen] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const questsButtonRef = useRef<HTMLButtonElement | null>(null);
-  const conversations = character ? getConversationsForUser(character.id) : [];
-
-  function handleLogoutClick() {
-    setShowLogoutConfirm(true);
-  }
-
-  function handleConfirmLogout() {
-    setShowLogoutConfirm(false);
-    onLogout();
-  }
 
   return (
     <>
     <header
-      className={`sticky top-0 -mx-4 -mt-4 mb-4 sm:mb-5 transition-z-index ${dmOpen || questsOpen || specialQuestsOpen ? "z-[110]" : "z-10"}`}
+      className={`sticky top-0 -mx-4 -mt-4 mb-4 sm:mb-5 transition-z-index ${questsOpen || specialQuestsOpen ? "z-[110]" : "z-10"}`}
       style={{
         background: "linear-gradient(180deg, rgba(4, 30, 66, 0.98) 0%, rgba(3, 22, 48, 0.97) 100%)",
         boxShadow: "0 1px 0 0 rgba(104, 171, 232, 0.15), 0 4px 20px -4px rgba(0,0,0,0.4)",
@@ -85,7 +69,7 @@ function Header({
             </div>
           </div>
 
-          {/* Right: Quick actions + logout */}
+          {/* Right: Quick actions */}
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             {character && (
               <div
@@ -93,84 +77,12 @@ function Header({
                 role="group"
                 aria-label="Quick actions"
               >
-                {onOpenDm && (
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setQuestsOpen(false);
-                        setSpecialQuestsOpen(false);
-                        setDmOpen((v) => !v);
-                      }}
-                      className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                        dmOpen
-                          ? "bg-uri-keaney/25 text-uri-keaney border border-uri-keaney/40 shadow-sm"
-                          : "text-white/90 hover:bg-white/10 hover:text-white border border-transparent"
-                      }`}
-                      aria-haspopup="dialog"
-                      aria-expanded={dmOpen}
-                      title="Direct messages"
-                    >
-                      <span aria-hidden>💬</span>
-                      <span className="hidden sm:inline">Messages</span>
-                      <span className="text-[10px] opacity-70" aria-hidden>{dmOpen ? "▴" : "▾"}</span>
-                    </button>
-                    {dmOpen && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-[100] bg-black/30 cursor-default"
-                          onClick={() => setDmOpen(false)}
-                          aria-hidden
-                        />
-                        <div className="fixed left-3 right-3 top-14 z-[101] max-h-[calc(100vh-4rem)] overflow-y-auto sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[min(20rem,92vw)] sm:max-h-[70vh]">
-                          <div className="rounded-2xl border border-uri-keaney/40 bg-[#041E42] shadow-xl shadow-black/40 overflow-hidden ring-1 ring-black/20">
-                            <div className="px-3 py-2.5 border-b border-white/10 bg-white/5">
-                              <p className="text-xs font-semibold text-white/80 uppercase tracking-wider">Direct messages</p>
-                            </div>
-                            <ul className="max-h-[70vh] overflow-y-auto p-2">
-                              {conversations.length === 0 ? (
-                                <li className="text-sm text-white/50 py-6 text-center">No conversations yet.</li>
-                              ) : (
-                                conversations.map((conv) => (
-                                  <li key={conv.conversationId}>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        onOpenDm({
-                                          userId: conv.otherUserId,
-                                          username: conv.otherUsername,
-                                          name: conv.otherName,
-                                          avatar: conv.otherAvatar,
-                                        });
-                                        setDmOpen(false);
-                                      }}
-                                      className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/10 text-left transition-colors"
-                                    >
-                                      <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center overflow-hidden flex-shrink-0 border border-uri-keaney/30">
-                                        <AvatarDisplay avatar={conv.otherAvatar} size={36} />
-                                      </div>
-                                      <div className="min-w-0 flex-1">
-                                        <p className="font-medium text-white text-sm truncate">{conv.otherName}</p>
-                                        <p className="text-xs text-white/50 truncate">{conv.lastMessage}</p>
-                                      </div>
-                                    </button>
-                                  </li>
-                                ))
-                              )}
-                            </ul>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
                 <div className="relative">
                   <button
                     ref={questsButtonRef}
                     type="button"
                     onClick={() => {
                       setSpecialQuestsOpen(false);
-                      setDmOpen(false);
                       setQuestsOpen((v) => !v);
                     }}
                     className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -206,7 +118,6 @@ function Header({
                     type="button"
                     onClick={() => {
                       setQuestsOpen(false);
-                      setDmOpen(false);
                       setSpecialQuestsOpen((v) => !v);
                     }}
                     className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -245,57 +156,23 @@ function Header({
                     </>
                   )}
                 </div>
+                {onOpenInbox && (
+                  <button
+                    type="button"
+                    onClick={onOpenInbox}
+                    className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-lg text-sm font-medium text-white/90 hover:bg-white/10 hover:text-white border border-transparent transition-all"
+                    title="Inbox"
+                  >
+                    <span aria-hidden>📬</span>
+                    <span className="hidden sm:inline">Inbox</span>
+                  </button>
+                )}
               </div>
-            )}
-            {showLogout && (
-              <button
-                type="button"
-                onClick={handleLogoutClick}
-                className="px-3 py-2 rounded-xl text-xs font-medium text-white/70 hover:text-white hover:bg-white/10 border border-white/10 transition-colors"
-                aria-label="Log out"
-              >
-                Log out
-              </button>
             )}
           </div>
         </div>
       </div>
     </header>
-
-      {showLogoutConfirm && typeof document !== "undefined" && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="logout-dialog-title">
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowLogoutConfirm(false)}
-            aria-hidden
-          />
-          <div className="relative z-10 w-full max-w-[20rem] rounded-2xl border border-white/15 bg-uri-navy shadow-xl shadow-black/40 p-6">
-            <h2 id="logout-dialog-title" className="font-display font-semibold text-lg text-white mb-2">
-              Leave CampusQuest?
-            </h2>
-            <p className="text-sm text-white/70 mb-6">
-              The Quad shall wait for your return.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                type="button"
-                onClick={() => setShowLogoutConfirm(false)}
-                className="px-4 py-2.5 rounded-xl text-sm font-medium text-white/80 hover:text-white bg-white/10 hover:bg-white/15 border border-white/15 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmLogout}
-                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-uri-keaney hover:bg-uri-keaney/90 border border-uri-keaney/40 transition-colors"
-              >
-                Log Out
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
     </>
   );
 }
@@ -381,7 +258,7 @@ export function Dashboard() {
     }
     return (
       <>
-        <Header username={null} character={null} showLogout={false} onLogout={handleLogout} onRefresh={refresh} />
+        <Header username={null} character={null} onRefresh={refresh} />
         <CharacterGate onReady={() => { refresh(); setTab("quad"); }} />
       </>
     );
@@ -430,7 +307,7 @@ export function Dashboard() {
 
   return (
     <>
-      <Header username={character?.username ?? null} character={character} showLogout onLogout={handleLogout} onRefresh={refresh} onOpenDm={setDmWithOther} />
+      <Header username={character?.username ?? null} character={character} onRefresh={refresh} onOpenInbox={() => setTab("inbox")} />
       <div style={{ paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))" }}>
         {gainToast && (
           <div className="fixed left-1/2 top-20 -translate-x-1/2 z-40 w-[min(28rem,92vw)] toast-enter">
@@ -491,6 +368,14 @@ export function Dashboard() {
       )}
 
       <div key={tab} className="tab-content-enter space-y-5 sm:space-y-6">
+        {tab === "inbox" && character && (
+          <Inbox
+            character={character}
+            onBack={() => setTab("quad")}
+            onOpenDm={setDmWithOther}
+          />
+        )}
+
         {tab === "quad" && (
           <>
             <TheQuad character={character} onRefresh={refresh} />
@@ -507,7 +392,7 @@ export function Dashboard() {
         )}
 
         {tab === "profile" && (
-          <Profile character={character} />
+          <Profile character={character} onLogout={handleLogout} onRefresh={refresh} />
         )}
 
         {tab === "me" && (

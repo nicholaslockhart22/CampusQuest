@@ -267,7 +267,7 @@ export function createCharacter(
 }
 
 export function updateCharacter(
-  updates: Partial<Pick<Character, "name" | "avatar" | "username" | "classId" | "starterWeapon">>
+  updates: Partial<Pick<Character, "name" | "avatar" | "username" | "classId" | "starterWeapon" | "bio">>
 ): Character | null {
   const c = loadCharacter();
   if (!c) return null;
@@ -276,6 +276,7 @@ export function updateCharacter(
   if (updates.username !== undefined) c.username = (updates.username || c.username).toLowerCase().replace(/\s+/g, "_");
   if (updates.classId !== undefined) c.classId = updates.classId;
   if (updates.starterWeapon !== undefined) c.starterWeapon = updates.starterWeapon;
+  if (updates.bio !== undefined) c.bio = updates.bio.trim() || undefined;
   saveCharacter(c);
   return c;
 }
