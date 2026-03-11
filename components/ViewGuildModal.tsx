@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { Guild } from "@/lib/types";
-import { GUILD_INTEREST_LABELS, deleteGuild, setGuildCofounder, MAX_GUILD_MEMBERS, COFOUNDER_REQUIRED_AT_MEMBERS } from "@/lib/guildStore";
+import { GUILD_INTEREST_LABELS, deleteGuild, setGuildCofounder, updateGuildSettings, MAX_GUILD_MEMBERS, COFOUNDER_REQUIRED_AT_MEMBERS } from "@/lib/guildStore";
 import { getCharacterById } from "@/lib/friendsStore";
 import { AvatarDisplay } from "./AvatarDisplay";
 
@@ -27,11 +27,39 @@ export function ViewGuildModal({
   onUpdated?: () => void;
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editingSettings, setEditingSettings] = useState(false);
+  const [editName, setEditName] = useState(guild.name);
+  const [editWeeklyGoal, setEditWeeklyGoal] = useState(guild.weeklyQuestGoal);
+  useEffect(() => {
+    setEditName(guild.name);
+    setEditWeeklyGoal(guild.weeklyQuestGoal);
+  }, [guild.id, guild.name, guild.weeklyQuestGoal]);
   const creator = guild.createdByUserId ? getCharacterById(guild.createdByUserId) : null;
   const isMember = currentUserId != null && guild.memberIds.includes(currentUserId);
   const isCreator = currentUserId != null && guild.createdByUserId === currentUserId;
+  const isCofounder = currentUserId != null && guild.cofounderUserId === currentUserId;
+  const canEditGuild = isCreator || isCofounder;
   const level = guildDisplayLevel(guild);
   const needsCofounder = guild.memberIds.length > COFOUNDER_REQUIRED_AT_MEMBERS && !guild.cofounderUserId;
+
+  function startEditing() {
+    setEditName(guild.name);
+    setEditWeeklyGoal(guild.weeklyQuestGoal);
+    setEditingSettings(true);
+  }
+
+  function cancelEditing() {
+    setEditName(guild.name);
+    setEditWeeklyGoal(guild.weeklyQuestGoal);
+    setEditingSettings(false);
+  }
+
+  function saveSettings() {
+    if (!currentUserId) return;
+    updateGuildSettings(guild.id, currentUserId, { name: editName, weeklyQuestGoal: editWeeklyGoal });
+    setEditingSettings(false);
+    onUpdated?.();
+  }
 
   function handleConfirmDelete() {
     if (!currentUserId) return;
@@ -50,15 +78,69 @@ export function ViewGuildModal({
             <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-uri-keaney/20 to-uri-navy flex items-center justify-center text-3xl border border-uri-keaney/30">
               {guild.crest}
             </div>
-            <div>
-              <h2 id="view-guild-title" className="font-display font-semibold text-lg text-white">
-                {guild.name}
-              </h2>
-              <p className="text-xs text-white/60">{GUILD_INTEREST_LABELS[guild.interest]} · Lv.{level}</p>
+            <div className="min-w-0 flex-1">
+              {editingSettings ? (
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Guild name"
+                  maxLength={40}
+                  className="w-full font-display font-semibold text-lg text-white bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-uri-keaney/50"
+                  aria-label="Guild name"
+                />
+              ) : (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 id="view-guild-title" className="font-display font-semibold text-lg text-white">
+                    {guild.name}
+                  </h2>
+                  {canEditGuild && (
+                    <button
+                      type="button"
+                      onClick={startEditing}
+                      className="text-xs font-medium text-uri-keaney/90 hover:text-uri-keaney px-2 py-0.5 rounded border border-uri-keaney/40 hover:bg-uri-keaney/10"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
+              )}
+              <p className="text-xs text-white/60 mt-0.5">{GUILD_INTEREST_LABELS[guild.interest]} · Lv.{level}</p>
             </div>
           </div>
           <div className="space-y-3 text-sm mb-4">
-            <p><span className="text-white/50">Weekly goal:</span> <span className="text-white/90">{guild.weeklyQuestGoal}</span></p>
+            {editingSettings ? (
+              <div className="space-y-2">
+                <label className="block text-white/50 text-xs uppercase tracking-wider">Weekly goal</label>
+                <input
+                  type="text"
+                  value={editWeeklyGoal}
+                  onChange={(e) => setEditWeeklyGoal(e.target.value)}
+                  placeholder="Weekly goal"
+                  maxLength={80}
+                  className="w-full text-white/90 bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-uri-keaney/50"
+                  aria-label="Weekly goal"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={saveSettings}
+                    className="py-1.5 px-3 rounded-lg font-medium bg-uri-keaney/90 text-uri-navy hover:bg-uri-keaney border border-uri-keaney/50"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelEditing}
+                    className="py-1.5 px-3 rounded-lg font-medium text-white/80 bg-white/10 border border-white/15 hover:bg-white/15"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p><span className="text-white/50">Weekly goal:</span> <span className="text-white/90">{guild.weeklyQuestGoal}</span></p>
+            )}
             {creator && (
               <p className="text-white/70">
                 <span className="text-white/50">Founder:</span> {creator.name} <span className="text-uri-keaney/90">@{creator.username}</span>
