@@ -324,6 +324,29 @@ export function leaveGuild(characterId: string, guildId?: string): void {
   removeCharacterFromGuild(characterId, targetGuildId);
 }
 
+/** Update guild name and/or weekly goal. Only founder or cofounder can update. */
+export function updateGuildSettings(
+  guildId: string,
+  requestedByUserId: string,
+  updates: { name?: string; weeklyQuestGoal?: string }
+): boolean {
+  const guilds = loadGuilds();
+  const guild = guilds.find((g) => g.id === guildId);
+  if (!guild) return false;
+  const isFounder = guild.createdByUserId === requestedByUserId;
+  const isCofounder = guild.cofounderUserId === requestedByUserId;
+  if (!isFounder && !isCofounder) return false;
+  if (updates.name !== undefined) {
+    const name = updates.name.trim().slice(0, 40);
+    if (name) guild.name = name;
+  }
+  if (updates.weeklyQuestGoal !== undefined) {
+    guild.weeklyQuestGoal = updates.weeklyQuestGoal.trim().slice(0, 80) || guild.weeklyQuestGoal;
+  }
+  saveGuilds(guilds);
+  return true;
+}
+
 /** Set co-founder. Only the founder can set; cofounder must be a current member and not the founder. Required for guilds with 10+ members. */
 export function setGuildCofounder(guildId: string, requestedByUserId: string, cofounderUserId: string): boolean {
   const guilds = loadGuilds();

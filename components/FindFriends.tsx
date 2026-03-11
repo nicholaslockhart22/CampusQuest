@@ -14,6 +14,7 @@ import {
 import { follow, unfollow, isFollowing, followByUsername } from "@/lib/followStore";
 import {
   getRecommendedGuilds,
+  getGuildById,
   joinGuild,
   leaveGuild,
   requestGuildInvite,
@@ -334,7 +335,7 @@ export function FindFriends({
           onLeave={handleLeaveGuild}
           onClose={() => setViewGuild(null)}
           onDeleted={refresh}
-          onUpdated={refresh}
+          onUpdated={() => { refresh(); setViewGuild((g) => (g ? getGuildById(g.id) ?? g : null)); }}
         />
       )}
     </section>
