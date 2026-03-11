@@ -188,9 +188,16 @@ function loadGuilds(): Guild[] {
       const { guilds: migrated, changed } = migratePlaceholderMemberIds(guilds);
       guilds = migrated;
       if (changed) saveGuilds(guilds);
-      const beforeRemove = guilds.length;
-      guilds = guilds.filter((g) => g.name.trim().toLowerCase() !== "super guild");
-      if (guilds.length < beforeRemove) saveGuilds(guilds);
+      const nameLower = (g: Guild) => g.name.trim().toLowerCase();
+      const toRemove = guilds.filter((g) => {
+        const n = nameLower(g);
+        return n === "super guild" || n.includes("zuc");
+      });
+      guilds = guilds.filter((g) => !toRemove.includes(g));
+      for (const g of toRemove) {
+        for (const memberId of g.memberIds) removeCharacterFromGuild(memberId, g.id);
+      }
+      if (toRemove.length > 0) saveGuilds(guilds);
       ensurePlaceholderMembersRegistered(guilds);
     }
     return guilds;

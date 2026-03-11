@@ -3,20 +3,25 @@
 import { useState, useCallback, useRef } from "react";
 import { createFieldNote, normalizeRamMarkTag } from "@/lib/feedStore";
 import type { Character } from "@/lib/types";
+import type { QuadPostVisibility } from "@/lib/types";
 import { FIELD_NOTE_MAX_CHARS, RAMMARK_MAX_LENGTH, RAMMARK_MAX_PER_POST } from "@/lib/types";
 import type { RamMark } from "@/lib/types";
 
 export function FieldNoteComposer({
   character,
   onPosted,
+  defaultVisibility = "public",
 }: {
   character: Character;
   onPosted: () => void;
+  /** Default selected feed when opening composer (e.g. current tab). */
+  defaultVisibility?: QuadPostVisibility;
 }) {
   const [body, setBody] = useState("");
   const [ramMarkInput, setRamMarkInput] = useState("");
   const [ramMarks, setRamMarks] = useState<RamMark[]>([]);
   const [proofUrl, setProofUrl] = useState("");
+  const [visibility, setVisibility] = useState<QuadPostVisibility>(defaultVisibility);
   const [error, setError] = useState<string | null>(null);
   const proofFileRef = useRef<HTMLInputElement>(null);
 
@@ -75,6 +80,7 @@ export function FieldNoteComposer({
       body: trimmed,
       ramMarks,
       proofUrl: proofUrl.trim() || undefined,
+      visibility,
     });
     if (note) {
       setBody("");
@@ -88,6 +94,33 @@ export function FieldNoteComposer({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
+      <div>
+        <span className="block text-xs text-white/60 mb-1.5">Post to</span>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setVisibility("public")}
+            className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-colors ${
+              visibility === "public"
+                ? "bg-uri-keaney/25 text-uri-keaney border-uri-keaney/50"
+                : "bg-white/5 text-white/70 border-white/15 hover:bg-white/10"
+            }`}
+          >
+            🌐 Public Quad
+          </button>
+          <button
+            type="button"
+            onClick={() => setVisibility("friends")}
+            className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium border transition-colors ${
+              visibility === "friends"
+                ? "bg-uri-keaney/25 text-uri-keaney border-uri-keaney/50"
+                : "bg-white/5 text-white/70 border-white/15 hover:bg-white/10"
+            }`}
+          >
+            👥 Friends only
+          </button>
+        </div>
+      </div>
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value.slice(0, FIELD_NOTE_MAX_CHARS))}
@@ -179,7 +212,7 @@ export function FieldNoteComposer({
         disabled={!body.trim()}
         className="w-full py-3 rounded-xl font-semibold bg-uri-keaney text-white hover:bg-uri-keaney/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-uri-keaney/40 shadow-[0_0_12px_rgba(104,171,232,0.15)]"
       >
-        Post to The Quad
+        {visibility === "public" ? "Post to Public Quad" : "Post to Friends only"}
       </button>
     </form>
   );

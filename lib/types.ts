@@ -181,6 +181,9 @@ export interface RamMark {
   tag: string; // normalized lowercase, no # in storage
 }
 
+/** Who can see this post: public = everyone on The Quad, friends = only you and your friends */
+export type QuadPostVisibility = "public" | "friends";
+
 export interface FieldNote {
   id: string;
   authorId: string;
@@ -190,11 +193,13 @@ export interface FieldNote {
   body: string;
   ramMarks: RamMark[];
   nodCount: number;
-  rallyCount: number;
+  vouchCount: number;
   nodByUserIds: Set<string>;
-  rallyByUserIds: Set<string>;
+  vouchByUserIds: Set<string>;
   createdAt: number;
   proofUrl?: string; // optional proof image for bonus XP
+  /** public = show on Public Quad; friends = show only on Friends feed (you + your friends) */
+  visibility?: QuadPostVisibility;
 }
 
 // For serialization we store nod/rally as arrays
@@ -207,11 +212,12 @@ export interface FieldNoteSerialized {
   body: string;
   ramMarks: RamMark[];
   nodCount: number;
-  rallyCount: number;
+  vouchCount: number;
   nodByUserIds: string[];
-  rallyByUserIds: string[];
+  vouchByUserIds: string[];
   createdAt: number;
   proofUrl?: string;
+  visibility?: QuadPostVisibility;
 }
 
 /** Comment on a Quad post (field note). */

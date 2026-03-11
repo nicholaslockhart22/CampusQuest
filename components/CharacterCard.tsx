@@ -78,24 +78,32 @@ export function CharacterCard({
   }
 
   return (
-    <section className="card p-5 sm:p-6">
+    <section className="character-hero-panel rounded-2xl p-5 sm:p-6">
       <div className="flex items-start gap-4">
         <div className="relative flex-shrink-0">
           <div
-            className="w-20 h-20 rounded-2xl bg-gradient-to-br from-uri-keaney/25 to-uri-navy flex items-center justify-center overflow-hidden border border-uri-keaney/40"
+            className="character-avatar-frame w-20 h-20 rounded-xl flex items-center justify-center overflow-hidden p-[2px]"
             aria-hidden
           >
-            <AvatarDisplay
-            avatar={character.avatar}
-            size={80}
-            classId={character.classId}
-            starterWeapon={character.starterWeapon}
-          />
+            <div className="w-full h-full rounded-[calc(0.5rem-1px)] bg-uri-navy flex items-center justify-center overflow-hidden">
+              <AvatarDisplay
+                avatar={character.avatar}
+                size={80}
+                classId={character.classId}
+                starterWeapon={character.starterWeapon}
+              />
+            </div>
+          </div>
+          <div
+            className="character-level-badge absolute -bottom-1 -right-1 min-w-[2rem] h-6 px-1.5 rounded-md flex items-center justify-center text-[10px] font-display"
+            aria-label={`Level ${character.level}`}
+          >
+            {character.level}
           </div>
           <button
             type="button"
             onClick={openEditModal}
-            className="absolute -bottom-1 -right-1 w-8 h-8 rounded-lg bg-uri-keaney text-white border-2 border-uri-navy flex items-center justify-center text-sm shadow-md hover:bg-uri-keaney/90 focus:outline-none focus:ring-2 focus:ring-uri-keaney focus:ring-offset-2 focus:ring-offset-uri-navy"
+            className="absolute -bottom-1 left-0 w-7 h-7 rounded-lg bg-uri-keaney text-white border-2 border-uri-navy flex items-center justify-center text-xs shadow-md hover:bg-uri-keaney/90 focus:outline-none focus:ring-2 focus:ring-uri-keaney focus:ring-offset-2 focus:ring-offset-uri-navy"
             aria-label="Edit avatar"
             title="Edit avatar"
           >
@@ -103,8 +111,8 @@ export function CharacterCard({
           </button>
           {editingAvatar && typeof document !== "undefined" && createPortal(
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && setEditingAvatar(false)} role="dialog" aria-modal="true" aria-label="Edit your avatar">
-              <div className="absolute inset-0 bg-black/60" aria-hidden onClick={() => setEditingAvatar(false)} />
-              <div className="relative z-10 w-[min(22rem,92vw)] max-h-[85vh] overflow-y-auto p-4 rounded-2xl bg-uri-navy border border-uri-keaney/30 shadow-xl card">
+              <div className="absolute inset-0 bg-black/85" aria-hidden onClick={() => setEditingAvatar(false)} />
+              <div className="relative z-10 w-[min(22rem,92vw)] max-h-[85vh] overflow-y-auto p-4 rounded-2xl bg-uri-navy border border-uri-keaney/30 shadow-xl shadow-black/50">
                 <p className="text-xs font-semibold text-white/80 uppercase tracking-wider mb-3">
                   Edit your avatar
                 </p>
@@ -142,7 +150,7 @@ export function CharacterCard({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="font-display font-bold text-lg text-white truncate">
+          <h2 className="font-display font-bold text-lg text-white truncate drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]">
             {character.name}
           </h2>
           {character.classId && (getClassTitle(character.classId) || getClassRealm(character.classId)) && (
@@ -153,13 +161,7 @@ export function CharacterCard({
               )}
             </p>
           )}
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            <span className="text-uri-keaney font-mono font-semibold text-sm bg-uri-keaney/15 px-2 py-0.5 rounded-lg">
-              Lv.{character.level}
-            </span>
-            <span className="text-white/50 text-sm">@{character.username}</span>
-            <span className="text-white/40 text-sm font-mono">{character.totalXP} XP</span>
-          </div>
+          <p className="text-white/50 text-sm mt-0.5">@{character.username}</p>
           {(character.guildIds ?? []).length > 0 && (
             <div className="flex items-center gap-1.5 mt-2 flex-wrap">
               {(character.guildIds ?? []).map((gid) => {
@@ -173,21 +175,24 @@ export function CharacterCard({
             </div>
           )}
           <div className="mt-3">
-            <div className="flex justify-between text-xs text-white/50 mb-1">
+            <div className="flex justify-between text-xs text-white/60 mb-1">
               <span>Level progress</span>
-              <span className="font-mono text-uri-keaney/90">{current} / {needed} XP</span>
+              <span className="font-mono text-uri-keaney/95">{current} / {needed} XP</span>
             </div>
-            <div className="stat-bar bg-white/20">
-              <div className="stat-fill bg-uri-keaney" style={{ width: `${xpPct}%` }} />
+            <div className="xp-bar-track h-2.5 rounded-full overflow-hidden">
+              <div className="xp-bar-fill h-full rounded-full transition-all duration-500" style={{ width: `${xpPct}%` }} />
             </div>
           </div>
         </div>
       </div>
 
       <div className="mt-5 pt-4 border-t border-uri-keaney/20">
-        <h3 className="text-xs font-semibold text-uri-keaney/90 uppercase tracking-wider mb-3">
-          Stats
-        </h3>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-base" aria-hidden>⚔️</span>
+          <h3 className="text-xs font-semibold text-uri-keaney/90 uppercase tracking-wider">
+            Stats
+          </h3>
+        </div>
         <div className="grid gap-3">
           {STAT_KEYS.map((key) => {
             const value = character.stats[key] ?? 0;
@@ -196,7 +201,7 @@ export function CharacterCard({
             const prestigeCount = character.statPrestige?.[key] ?? 0;
             return (
               <div key={key} className="flex items-center gap-3">
-                <span className="text-lg w-6" title={STAT_LABELS[key]}>
+                <span className="text-base w-6 flex-shrink-0" title={STAT_LABELS[key]}>
                   {STAT_ICONS[key]}
                 </span>
                 <div className="flex-1 min-w-0">
@@ -204,13 +209,13 @@ export function CharacterCard({
                     <span className="text-white/70 flex items-center gap-1.5">
                       {STAT_LABELS[key]}
                       {prestigeCount > 0 && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-uri-gold/25 text-uri-gold border border-uri-gold/40 font-mono font-semibold">
+                        <span className="px-1.5 py-0.5 rounded-md bg-uri-gold/25 text-uri-gold border border-uri-gold/40 font-mono font-semibold text-[10px]">
                           {prestigeCount}
                         </span>
                       )}
                     </span>
                     <span className="flex items-center gap-2">
-                      <span className={`font-mono ${atMax ? "text-uri-gold" : "text-white/90"}`}>
+                      <span className={`font-mono font-semibold ${atMax ? "text-uri-gold" : "text-white/95"}`}>
                         {value}{atMax && " ★"}
                       </span>
                       {atMax && onRefresh && (
@@ -226,11 +231,9 @@ export function CharacterCard({
                       )}
                     </span>
                   </div>
-                  <div
-                    className={`stat-bar ${atMax ? "bg-uri-gold/20 border border-uri-gold/40 shadow-[0_0_10px_rgba(197,165,40,0.15)]" : ""}`}
-                  >
+                  <div className="stat-bar-game h-2.5 rounded-full overflow-hidden">
                     <div
-                      className={`stat-fill ${atMax ? "bg-gradient-to-r from-uri-gold via-amber-400 to-uri-gold shadow-[0_0_8px_rgba(197,165,40,0.4)] border border-uri-gold/50" : STAT_FILL_COLORS[key]}`}
+                      className={`stat-fill-game rounded-full ${atMax ? "bg-gradient-to-r from-uri-gold via-amber-400 to-uri-gold shadow-[0_0_6px_rgba(197,165,40,0.4)]" : STAT_FILL_COLORS[key]}`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>

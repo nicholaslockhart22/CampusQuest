@@ -20,7 +20,7 @@ export function FieldNoteCard({
   currentUserId,
   comments = [],
   onNod,
-  onRally,
+  onVouch,
   onAddComment,
   currentUser,
 }: {
@@ -28,7 +28,7 @@ export function FieldNoteCard({
   currentUserId: string;
   comments?: QuadComment[];
   onNod: (noteId: string) => void;
-  onRally: (noteId: string) => void;
+  onVouch: (noteId: string) => void;
   onAddComment?: (noteId: string, body: string) => void;
   currentUser?: { id: string; name: string; username: string; avatar: string };
 }) {
@@ -36,7 +36,7 @@ export function FieldNoteCard({
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const hasNodded = note.nodByUserIds.has(currentUserId);
-  const hasRallied = note.rallyByUserIds.has(currentUserId);
+  const hasVouched = note.vouchByUserIds.has(currentUserId);
 
   const proofImgUrl = note.proofUrl?.trim();
   const isImgUrl = proofImgUrl && /\.(jpe?g|png|gif|webp)/i.test(proofImgUrl);
@@ -87,13 +87,13 @@ export function FieldNoteCard({
             </button>
             <button
               type="button"
-              onClick={() => onRally(note.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${hasRallied ? "text-uri-keaney bg-uri-keaney/10" : "text-white/55 hover:text-uri-keaney hover:bg-white/5"}`}
-              aria-label={hasRallied ? "Remove rally" : "Rally"}
+              onClick={() => onVouch(note.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${hasVouched ? "text-uri-keaney bg-uri-keaney/10" : "text-white/55 hover:text-uri-keaney hover:bg-white/5"}`}
+              aria-label={hasVouched ? "Remove vouch" : "Vouch"}
             >
-              <span>🦌</span>
-              <span>Rally</span>
-              {note.rallyCount > 0 && <span className="font-mono text-xs">({note.rallyCount})</span>}
+              <span>🤝</span>
+              <span>Vouch</span>
+              {note.vouchCount > 0 && <span className="font-mono text-xs">({note.vouchCount})</span>}
             </button>
           </div>
 

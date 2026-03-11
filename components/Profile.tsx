@@ -5,7 +5,8 @@ import { createPortal } from "react-dom";
 import type { Character } from "@/lib/types";
 import type { FieldNote } from "@/lib/types";
 import { STAT_KEYS, STAT_LABELS, STAT_ICONS, MAX_STAT, type StatKey } from "@/lib/types";
-import { getFeedByAuthorId, nodFieldNote, rallyFieldNote, getCommentsByNoteId, addComment } from "@/lib/feedStore";
+import { xpProgressInLevel } from "@/lib/level";
+import { getFeedByAuthorId, nodFieldNote, vouchFieldNote, getCommentsByNoteId, addComment } from "@/lib/feedStore";
 import { getFriends, getCharacterById, removeFriend } from "@/lib/friendsStore";
 import { getFollowing, unfollow } from "@/lib/followStore";
 import { getGuildById } from "@/lib/guildStore";
@@ -13,6 +14,14 @@ import { getUserBosses, updateCharacter } from "@/lib/store";
 import { getClassTitle, getClassRealm } from "@/lib/characterClasses";
 import { AvatarDisplay } from "./AvatarDisplay";
 import { FieldNoteCard } from "./FieldNoteCard";
+
+const STAT_FILL: Record<StatKey, string> = {
+  strength: "linear-gradient(90deg, #f59e0b, #fbbf24)",
+  stamina: "linear-gradient(90deg, #0d9488, #2dd4bf)",
+  knowledge: "linear-gradient(90deg, #68ABE8, #93c5fd)",
+  social: "linear-gradient(90deg, #2e7d32, #4ade80)",
+  focus: "linear-gradient(90deg, #5e35b1, #a78bfa)",
+};
 
 const BIO_MAX_LENGTH = 150;
 
@@ -35,8 +44,8 @@ export function Profile({ character, onLogout, onRefresh }: { character: Charact
     refresh();
   }
 
-  function handleRally(noteId: string) {
-    rallyFieldNote(noteId, character.id);
+  function handleVouch(noteId: string) {
+    vouchFieldNote(noteId, character.id);
     refresh();
   }
 
@@ -63,80 +72,105 @@ export function Profile({ character, onLogout, onRefresh }: { character: Charact
   const finalBossesDefeated =
     character.finalBossesDefeatedCount ?? bosses.filter((b) => b.defeated && b.maxHp > 500).length;
 
+  const { current: xpCurrent, needed: xpNeeded } = xpProgressInLevel(character.totalXP);
+  const xpPct = xpNeeded > 0 ? Math.min(100, (xpCurrent / xpNeeded) * 100) : 0;
+
   return (
     <div className="space-y-6">
-      {/* Instagram-style header: avatar + name + counts */}
-      <div className="card p-5 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-          <div className="flex justify-center sm:justify-start">
-            <div
-              className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-uri-keaney/30 to-uri-navy border-4 border-uri-keaney/40 flex items-center justify-center overflow-hidden shadow-lg"
-              aria-hidden
-            >
-              <AvatarDisplay
-                avatar={character.avatar}
-                size={112}
-                className="rounded-full"
-                classId={character.classId}
-                starterWeapon={character.starterWeapon}
-              />
+      {/* Game-style character hero panel */}
+      <div className="character-hero-panel rounded-2xl p-6 sm:p-8 overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-6 sm:gap-8">
+          <div className="flex justify-center sm:justify-start flex-shrink-0">
+            <div className="relative">
+              <div
+                className="character-avatar-frame w-28 h-28 sm:w-32 sm:h-32 rounded-2xl flex items-center justify-center overflow-hidden p-[3px]"
+                aria-hidden
+              >
+                <div className="w-full h-full rounded-[calc(1rem-2px)] bg-uri-navy flex items-center justify-center overflow-hidden">
+                  <AvatarDisplay
+                    avatar={character.avatar}
+                    size={128}
+                    className="rounded-xl"
+                    classId={character.classId}
+                    starterWeapon={character.starterWeapon}
+                  />
+                </div>
+              </div>
+              <div
+                className="character-level-badge absolute -bottom-2 -right-2 min-w-[2.75rem] h-8 px-2 rounded-lg flex items-center justify-center text-xs font-display"
+                aria-label={`Level ${character.level}`}
+              >
+                LV.{character.level}
+              </div>
             </div>
           </div>
           <div className="flex-1 text-center sm:text-left min-w-0">
-            <h2 className="font-display font-bold text-xl sm:text-2xl text-white tracking-tight">
+            <h2 className="font-display font-bold text-2xl sm:text-3xl text-white tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
               {character.name}
             </h2>
-            <p className="text-uri-keaney/90 text-sm mt-0.5">@{character.username}</p>
+            <p className="text-uri-keaney/95 text-sm mt-0.5 font-medium">@{character.username}</p>
             {character.classId && (getClassTitle(character.classId) || getClassRealm(character.classId)) && (
-              <p className="text-uri-gold/90 text-sm mt-1 font-medium">
+              <p className="inline-block mt-2 px-3 py-1 rounded-lg bg-uri-gold/20 border border-uri-gold/40 text-uri-gold text-sm font-semibold">
                 {getClassTitle(character.classId)}
                 {getClassRealm(character.classId) && (
-                  <span className="text-white/50 font-normal"> · {getClassRealm(character.classId)}</span>
+                  <span className="text-white/60 font-normal"> · {getClassRealm(character.classId)}</span>
                 )}
               </p>
             )}
+            {/* XP bar */}
+            <div className="mt-4">
+              <div className="flex justify-between text-xs text-white/70 mb-1.5">
+                <span>Level progress</span>
+                <span className="font-mono text-uri-keaney/95">{xpCurrent} / {xpNeeded} XP</span>
+              </div>
+              <div className="xp-bar-track h-3 rounded-full overflow-hidden">
+                <div
+                  className="xp-bar-fill h-full rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${xpPct}%` }}
+                />
+              </div>
+            </div>
             {(character.guildIds ?? []).length > 0 && (
-              <p className="text-sm text-white/80 mt-1.5 flex items-center gap-1.5 flex-wrap justify-center sm:justify-start">
-                <span className="text-white/50">Guilds:</span>
+              <div className="flex items-center gap-1.5 mt-3 flex-wrap justify-center sm:justify-start">
                 {(character.guildIds ?? []).map((gid) => {
                   const g = getGuildById(gid);
                   return g ? (
-                    <span key={gid} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-uri-keaney/15 text-uri-keaney border border-uri-keaney/30 text-xs font-medium">
-                      {g.crest} {g.name} <span className="text-white/60">Lv.{g.xp != null ? 1 + Math.floor(g.xp / 100) : g.level}</span>
+                    <span key={gid} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 text-white/90 border border-uri-keaney/25 text-xs font-medium">
+                      {g.crest} {g.name} <span className="text-white/50">Lv.{g.xp != null ? 1 + Math.floor(g.xp / 100) : g.level}</span>
                     </span>
                   ) : null;
                 })}
-              </p>
+              </div>
             )}
             {character.bio && (
-              <p className="text-sm text-white/80 mt-2 break-words">{character.bio}</p>
+              <p className="text-sm text-white/85 mt-3 break-words leading-relaxed">{character.bio}</p>
             )}
-            <div className="flex justify-center sm:justify-start gap-6 mt-4">
-              <div className="flex flex-col items-center sm:items-start">
-                <span className="font-bold text-white text-lg">{posts.length}</span>
-                <span className="text-white/60 text-xs">Posts</span>
+            <div className="flex justify-center sm:justify-start gap-4 mt-5 flex-wrap">
+              <div className="game-stat-pill rounded-xl px-4 py-2.5 min-w-[4rem] text-center">
+                <span className="font-bold text-white text-lg block leading-tight">{posts.length}</span>
+                <span className="text-white/60 text-xs uppercase tracking-wider">Posts</span>
               </div>
               <button
                 type="button"
                 onClick={() => setListModal("friends")}
-                className="flex flex-col items-center sm:items-start text-left hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-uri-keaney/50 focus:ring-offset-2 focus:ring-offset-uri-navy rounded-lg"
+                className="game-stat-pill rounded-xl px-4 py-2.5 min-w-[4rem] text-center hover:border-uri-keaney/40 hover:shadow-[0_0_20px_rgba(104,171,232,0.1)] transition-all focus:outline-none focus:ring-2 focus:ring-uri-keaney/50 focus:ring-offset-2 focus:ring-offset-uri-navy"
               >
-                <span className="font-bold text-white text-lg">{friendsCount}</span>
-                <span className="text-white/60 text-xs">Friends</span>
+                <span className="font-bold text-white text-lg block leading-tight">{friendsCount}</span>
+                <span className="text-white/60 text-xs uppercase tracking-wider">Friends</span>
               </button>
               <button
                 type="button"
                 onClick={() => setListModal("following")}
-                className="flex flex-col items-center sm:items-start text-left hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-uri-keaney/50 focus:ring-offset-2 focus:ring-offset-uri-navy rounded-lg"
+                className="game-stat-pill rounded-xl px-4 py-2.5 min-w-[4rem] text-center hover:border-uri-keaney/40 hover:shadow-[0_0_20px_rgba(104,171,232,0.1)] transition-all focus:outline-none focus:ring-2 focus:ring-uri-keaney/50 focus:ring-offset-2 focus:ring-offset-uri-navy"
               >
-                <span className="font-bold text-white text-lg">{followingCount}</span>
-                <span className="text-white/60 text-xs">Following</span>
+                <span className="font-bold text-white text-lg block leading-tight">{followingCount}</span>
+                <span className="text-white/60 text-xs uppercase tracking-wider">Following</span>
               </button>
             </div>
             <button
               type="button"
               onClick={() => { setBioDraft(character.bio ?? ""); setShowEditBio(true); }}
-              className="mt-4 w-full sm:w-auto px-4 py-2 rounded-xl text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 border border-white/15 transition-colors"
+              className="mt-4 w-full sm:w-auto px-4 py-2.5 rounded-xl text-sm font-medium text-white/90 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 transition-colors"
             >
               Edit bio
             </button>
@@ -144,64 +178,86 @@ export function Profile({ character, onLogout, onRefresh }: { character: Charact
         </div>
       </div>
 
-      {/* Avatar stats: level, XP, and the 5 stats */}
-      <div className="card p-5">
-        <h3 className="font-display font-semibold text-white text-sm uppercase tracking-wider mb-4">
-          Stats
-        </h3>
-        <div className="flex flex-wrap gap-4 mb-4">
-          <div className="px-3 py-1.5 rounded-xl bg-uri-keaney/20 border border-uri-keaney/30">
-            <span className="text-white/70 text-xs">Level</span>
-            <span className="font-bold text-uri-keaney block text-lg">{character.level}</span>
+      {/* Character stats — game-style sheet; 2x2 grid on mobile, single row on desktop */}
+      <div className="character-hero-panel rounded-2xl p-4 sm:p-6 overflow-hidden">
+        <div className="flex items-center gap-2 mb-4 sm:mb-5">
+          <span className="text-lg sm:text-xl" aria-hidden>⚔️</span>
+          <h3 className="font-display font-bold text-white text-xs sm:text-sm uppercase tracking-widest">
+            Character stats
+          </h3>
+          <div className="flex-1 h-px bg-gradient-to-r from-uri-keaney/40 to-transparent" />
+        </div>
+        {/* Mobile: 2x2 grid for breathing room. Desktop: one row. */}
+        <div className="grid grid-cols-2 sm:flex sm:flex-nowrap gap-3 sm:gap-3 mb-5 sm:mb-6">
+          <div className="game-stat-pill rounded-xl px-4 py-3 sm:py-2.5 flex flex-1 min-w-0 items-center gap-3 sm:gap-2">
+            <span className="text-2xl sm:text-xl flex-shrink-0" aria-hidden>📊</span>
+            <div className="min-w-0">
+              <span className="text-white/60 text-xs uppercase block">Level</span>
+              <span className="font-bold text-uri-keaney text-lg sm:text-base block">{character.level}</span>
+            </div>
           </div>
-          <div className="px-3 py-1.5 rounded-xl bg-white/10 border border-white/20">
-            <span className="text-white/70 text-xs">Total XP</span>
-            <span className="font-bold text-white block text-lg">{character.totalXP}</span>
+          <div className="game-stat-pill rounded-xl px-4 py-3 sm:py-2.5 flex flex-1 min-w-0 items-center gap-3 sm:gap-2">
+            <span className="text-2xl sm:text-xl flex-shrink-0" aria-hidden>✨</span>
+            <div className="min-w-0">
+              <span className="text-white/60 text-xs uppercase block">Total XP</span>
+              <span className="font-bold text-white text-lg sm:text-base font-mono block">{character.totalXP}</span>
+            </div>
           </div>
-          <div className="px-3 py-1.5 rounded-xl bg-uri-gold/15 border border-uri-gold/30">
-            <span className="text-white/70 text-xs">Bosses defeated</span>
-            <span className="font-bold text-uri-gold block text-lg">{bossesDefeated}</span>
+          <div className="game-stat-pill-gold rounded-xl px-4 py-3 sm:py-2.5 flex flex-1 min-w-0 items-center gap-3 sm:gap-2">
+            <span className="text-2xl sm:text-xl flex-shrink-0" aria-hidden>🐉</span>
+            <div className="min-w-0">
+              <span className="text-uri-gold/80 text-xs uppercase block">Bosses defeated</span>
+              <span className="font-bold text-uri-gold text-lg sm:text-base block">{bossesDefeated}</span>
+            </div>
           </div>
-          <div
-            className="px-3 py-1.5 rounded-xl border shadow-[0_0_12px_rgba(197,165,40,0.15)]"
-            style={{
-              background: "linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(197, 165, 40, 0.15) 100%)",
-              borderColor: "rgba(197, 165, 40, 0.5)",
-            }}
-          >
-            <span className="text-white/80 text-xs flex items-center gap-1">
-              <span aria-hidden>👑</span> Final bosses defeated
-            </span>
-            <span className="font-bold block text-lg bg-clip-text text-transparent bg-gradient-to-r from-uri-gold to-amber-200">
-              {finalBossesDefeated}
-            </span>
+          <div className="game-stat-pill-final rounded-xl px-4 py-3 sm:py-2.5 flex flex-1 min-w-0 items-center gap-3 sm:gap-2">
+            <span className="text-2xl sm:text-xl flex-shrink-0" aria-hidden>👑</span>
+            <div className="min-w-0">
+              <span className="text-uri-gold/90 text-xs uppercase font-semibold block">Final bosses</span>
+              <span className="font-bold text-lg sm:text-base bg-clip-text text-transparent bg-gradient-to-r from-uri-gold via-amber-200 to-uri-gold block">{finalBossesDefeated}</span>
+            </div>
           </div>
         </div>
-        <div className="space-y-3">
+        {/* Mobile: stacked (label + value on top, bar full width below). Desktop: single row. */}
+        <div className="space-y-4 sm:space-y-3">
           {STAT_KEYS.map((key: StatKey) => {
             const value = character.stats[key] ?? 0;
             const pct = Math.min(100, (value / MAX_STAT) * 100);
             const atMax = value >= MAX_STAT;
             const prestigeCount = character.statPrestige?.[key] ?? 0;
+            const valueEl = (
+              <span className={`font-mono text-sm font-semibold ${atMax ? "text-uri-gold" : "text-white/95"}`}>
+                {value}{atMax ? " ★" : ""}
+              </span>
+            );
             return (
-              <div key={key} className="flex items-center gap-3">
-                <span className="text-white/80 text-sm w-24 flex-shrink-0 flex items-center gap-1" title={STAT_LABELS[key]}>
-                  {STAT_ICONS[key]} {STAT_LABELS[key]}
-                  {prestigeCount > 0 && (
-                    <span className="text-uri-gold/90 font-mono text-xs">{prestigeCount}</span>
-                  )}
-                </span>
-                <div
-                  className={`stat-bar flex-1 min-w-0 ${atMax ? "bg-uri-gold/20 border border-uri-gold/40 shadow-[0_0_10px_rgba(197,165,40,0.15)]" : ""}`}
-                >
+              <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
+                <div className="flex items-center justify-between sm:justify-start sm:w-32 flex-shrink-0">
+                  <span className="flex items-center gap-2 text-white/90 text-sm">
+                    <span className="text-lg w-6 flex-shrink-0" title={STAT_LABELS[key]}>
+                      {STAT_ICONS[key]}
+                    </span>
+                    {STAT_LABELS[key]}
+                    {prestigeCount > 0 && (
+                      <span className="text-uri-gold/90 font-mono text-xs">×{prestigeCount}</span>
+                    )}
+                  </span>
+                  <span className="sm:hidden">{valueEl}</span>
+                </div>
+                <div className="stat-bar-game w-full sm:flex-1 h-4 rounded-full overflow-hidden min-w-0">
                   <div
-                    className={`stat-fill ${atMax ? "bg-gradient-to-r from-uri-gold via-amber-400 to-uri-gold shadow-[0_0_8px_rgba(197,165,40,0.4)] border border-uri-gold/50" : "bg-uri-keaney"}`}
-                    style={{ width: `${pct}%` }}
+                    className="stat-fill-game rounded-full min-w-0"
+                    style={{
+                      width: `${pct}%`,
+                      minWidth: pct > 0 ? "4px" : 0,
+                      background: atMax
+                        ? "linear-gradient(90deg, #c5a028, #fbbf24)"
+                        : STAT_FILL[key],
+                      boxShadow: atMax ? "0 0 10px rgba(197,165,40,0.4), inset 0 1px 0 rgba(255,255,255,0.2)" : undefined,
+                    }}
                   />
                 </div>
-                <span className={`font-mono text-sm w-10 text-right ${atMax ? "text-uri-gold font-semibold" : "text-uri-keaney"}`}>
-                  {value}{atMax ? " ★" : ""}
-                </span>
+                <span className="hidden sm:block w-10 text-right flex-shrink-0">{valueEl}</span>
               </div>
             );
           })}
@@ -223,9 +279,12 @@ export function Profile({ character, onLogout, onRefresh }: { character: Charact
 
       {/* All posts to the Quad */}
       <div>
-        <h3 className="font-display font-semibold text-white text-sm uppercase tracking-wider mb-3 px-1">
-          Posts to the Quad
-        </h3>
+        <div className="flex items-center gap-2 mb-3 px-1">
+          <span className="text-lg" aria-hidden>📜</span>
+          <h3 className="font-display font-semibold text-white text-sm uppercase tracking-wider">
+            Posts to the Quad
+          </h3>
+        </div>
         {posts.length === 0 ? (
           <div className="card p-8 text-center">
             <p className="text-white/60 text-sm">No posts yet. Share something on The Quad!</p>
@@ -239,7 +298,7 @@ export function Profile({ character, onLogout, onRefresh }: { character: Charact
                 currentUserId={character.id}
                 comments={getCommentsByNoteId(note.id)}
                 onNod={handleNod}
-                onRally={handleRally}
+                onVouch={handleVouch}
                 onAddComment={handleAddComment}
                 currentUser={{
                   id: character.id,

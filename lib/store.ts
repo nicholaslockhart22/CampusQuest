@@ -5,7 +5,7 @@ import { STAT_KEYS, MAX_STAT } from "./types";
 import { xpToLevel, streakMultiplier, DAILY_MINIMUM_XP } from "./level";
 import { getActivityById, isStudyActivityForBoss } from "./activities";
 import { getSampleBosses } from "./bosses";
-import { registerCharacter as registerCharacterInFriends } from "./friendsStore";
+import { registerCharacter as registerCharacterInFriends, getCharacterById } from "./friendsStore";
 import { applyClassStats, type CharacterClassId } from "./characterClasses";
 import { pickLootCosmetic } from "./cosmetics";
 import { getSpecialQuestById } from "./specialQuests";
@@ -607,4 +607,21 @@ export function getLogsByActivity(characterId: string): Record<string, number> {
     }
   });
   return count;
+}
+
+/** Grant XP to a character (e.g. when their post gets vouches). Works for current user or friends. */
+export function addXpToCharacter(characterId: string, amount: number): void {
+  const current = loadCharacter();
+  if (current && current.id === characterId) {
+    current.totalXP += amount;
+    current.level = xpToLevel(current.totalXP);
+    saveCharacter(current);
+    return;
+  }
+  const c = getCharacterById(characterId);
+  if (c) {
+    c.totalXP += amount;
+    c.level = xpToLevel(c.totalXP);
+    registerCharacterInFriends(c);
+  }
 }

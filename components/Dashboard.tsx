@@ -377,10 +377,7 @@ export function Dashboard() {
         )}
 
         {tab === "quad" && (
-          <>
-            <TheQuad character={character} onRefresh={refresh} />
-            <BossBattles character={character} onRefresh={refresh} />
-          </>
+          <TheQuad character={character} onRefresh={refresh} />
         )}
 
         {tab === "friends" && (

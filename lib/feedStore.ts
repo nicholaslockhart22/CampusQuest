@@ -1,18 +1,63 @@
 "use client";
 
-import type { FieldNote, RamMark, FieldNoteSerialized, QuadComment } from "./types";
-import { getFollowing } from "./followStore";
+import type { FieldNote, RamMark, FieldNoteSerialized, QuadComment, QuadPostVisibility } from "./types";
+import { getFriends } from "./friendsStore";
+import { addXpToCharacter } from "./store";
 import { FIELD_NOTE_MAX_CHARS, RAMMARK_MAX_LENGTH, RAMMARK_MAX_PER_POST, QUAD_COMMENT_MAX_CHARS } from "./types";
 
 // In-memory feed (resets on refresh for MVP). Character-backed; author comes from store.
 let feed: FieldNote[] = [];
 let comments: QuadComment[] = [];
 
+/** Filler posts from random students — good examples for the Quad. Always included in getFeed when viewerId is set. */
+const BASE_TS = Date.now();
+function seedNote(
+  authorId: string,
+  authorName: string,
+  authorUsername: string,
+  authorAvatar: string,
+  body: string,
+  ramMarks: { tag: string }[],
+  hoursAgo: number,
+  nodCount = 0,
+  rallyCount = 0
+): FieldNote {
+  const id = `fn-seed-${authorId}`;
+  const ramMarksWithIds: RamMark[] = ramMarks.map((r) => ({ id: `rm-${id}-${r.tag}`, tag: r.tag.toLowerCase() }));
+  return {
+    id,
+    authorId,
+    authorName,
+    authorUsername,
+    authorAvatar,
+    body,
+    ramMarks: ramMarksWithIds,
+    nodCount,
+    vouchCount: rallyCount,
+    nodByUserIds: new Set(),
+    vouchByUserIds: new Set(),
+    createdAt: BASE_TS - hoursAgo * 60 * 60 * 1000,
+    visibility: "public",
+  };
+}
+const SEED_FIELD_NOTES: FieldNote[] = [
+  seedNote("seed-1", "Jordan Kim", "jordan_kim", "📚", "Just finished a 2-hour study session at the library. That calc problem set was no joke but we got through it. #studysesh #library", [{ tag: "studysesh" }, { tag: "library" }], 1, 3, 1),
+  seedNote("seed-2", "Alex Rivera", "alex_rivera", "💪", "Morning lift at the rec center. New PR on bench! #gym #ramnation", [{ tag: "gym" }, { tag: "ramnation" }], 3, 5, 2),
+  seedNote("seed-3", "Casey Lee", "casey_lee", "☕", "Coffee + flashcards at the union. Midterms are coming but we're ready. #study #coffee", [{ tag: "study" }, { tag: "coffee" }], 5, 2, 0),
+  seedNote("seed-4", "Riley Morgan", "riley_morgan", "🏃", "5K run around campus before class. Nothing like fresh air to wake you up. #running #campus", [{ tag: "running" }, { tag: "campus" }], 8, 4, 1),
+  seedNote("seed-5", "Quinn Taylor", "quinn_taylor", "📖", "Group study for orgo in the science building. Shoutout to the squad for explaining mechanisms. #groupstudy #orgo", [{ tag: "groupstudy" }, { tag: "orgo" }], 12, 6, 3),
+  seedNote("seed-6", "Avery Jones", "avery_jones", "🎯", "Deep focus block: 90 minutes no phone. Finished my essay draft. #focus #productivity", [{ tag: "focus" }, { tag: "productivity" }], 18, 2, 2),
+  seedNote("seed-7", "Morgan Blake", "morgan_blake", "💼", "Went to the career fair today. So many companies! Dropped my resume at 4 booths. #networking #career", [{ tag: "networking" }, { tag: "career" }], 24, 8, 4),
+  seedNote("seed-8", "Sam Chen", "sam_chen", "🦌", "Ram Run event was a blast. 200+ people showed up. URI spirit is real. #ramrun #uri", [{ tag: "ramrun" }, { tag: "uri" }], 36, 12, 5),
+  seedNote("seed-9", "Jamie Foster", "jamie_foster", "🌟", "Club meeting tonight — we're planning the spring concert. So much to do but the team is amazing. #clublife #campus", [{ tag: "clublife" }, { tag: "campus" }], 48, 1, 0),
+  seedNote("seed-10", "Drew Patel", "drew_patel", "🎸", "Practiced for the open mic at the pub. Nerves are real but so is the excitement. #music #campuslife", [{ tag: "music" }, { tag: "campuslife" }], 60, 7, 3),
+];
+
 function serialize(note: FieldNote): FieldNoteSerialized {
   return {
     ...note,
     nodByUserIds: Array.from(note.nodByUserIds),
-    rallyByUserIds: Array.from(note.rallyByUserIds),
+    vouchByUserIds: Array.from(note.vouchByUserIds),
   };
 }
 
@@ -20,7 +65,7 @@ function deserialize(raw: FieldNoteSerialized): FieldNote {
   return {
     ...raw,
     nodByUserIds: new Set(raw.nodByUserIds),
-    rallyByUserIds: new Set(raw.rallyByUserIds),
+    vouchByUserIds: new Set(raw.vouchByUserIds),
   };
 }
 
@@ -47,20 +92,28 @@ export function parseRamMarksFromText(text: string): RamMark[] {
   return list;
 }
 
-/** Optional viewerId: show only own posts + posts from people the viewer follows. Omit for unfiltered feed. */
-export function getFeed(filterRamMark?: string, viewerId?: string): FieldNote[] {
-  let list = [...feed].sort((a, b) => b.createdAt - a.createdAt);
-  if (viewerId != null) {
-    const followingIds = new Set(getFollowing(viewerId));
-    list = list.filter(
-      (n) => n.authorId === viewerId || followingIds.has(n.authorId)
+export type QuadFeedType = "public" | "friends";
+
+/** Get feed for the Quad. public = all public posts + seed; friends = only you + your friends' friends-only posts. */
+export function getFeed(viewerId: string | undefined, feedType: QuadFeedType): FieldNote[] {
+  if (viewerId == null) return [];
+  let list: FieldNote[];
+  if (feedType === "public") {
+    list = feed.filter((n) => (n.visibility ?? "public") === "public");
+    const listIds = new Set(list.map((n) => n.id));
+    SEED_FIELD_NOTES.forEach((n) => {
+      if (!listIds.has(n.id)) {
+        list.push(n);
+        listIds.add(n.id);
+      }
+    });
+  } else {
+    const friendIds = new Set(getFriends(viewerId).map((f) => f.userId));
+    list = feed.filter(
+      (n) => n.visibility === "friends" && (n.authorId === viewerId || friendIds.has(n.authorId))
     );
   }
-  if (filterRamMark) {
-    const tag = filterRamMark.toLowerCase();
-    list = list.filter((n) => n.ramMarks.some((r) => r.tag === tag));
-  }
-  return list;
+  return list.sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export function getFeedByAuthorId(authorId: string): FieldNote[] {
@@ -77,6 +130,7 @@ export interface CreateFieldNoteParams {
   body: string;
   ramMarks: RamMark[];
   proofUrl?: string;
+  visibility?: QuadPostVisibility;
 }
 
 export function createFieldNote(params: CreateFieldNoteParams): FieldNote | null {
@@ -97,11 +151,12 @@ export function createFieldNote(params: CreateFieldNoteParams): FieldNote | null
     body,
     ramMarks,
     nodCount: 0,
-    rallyCount: 0,
+    vouchCount: 0,
     nodByUserIds: new Set(),
-    rallyByUserIds: new Set(),
+    vouchByUserIds: new Set(),
     createdAt: Date.now(),
     proofUrl: params.proofUrl,
+    visibility: params.visibility ?? "public",
   };
   feed.unshift(note);
   return note;
@@ -120,15 +175,18 @@ export function nodFieldNote(noteId: string, userId: string): FieldNote | null {
   return note;
 }
 
-export function rallyFieldNote(noteId: string, userId: string): FieldNote | null {
+export function vouchFieldNote(noteId: string, userId: string): FieldNote | null {
   const note = feed.find((n) => n.id === noteId);
   if (!note) return null;
-  if (note.rallyByUserIds.has(userId)) {
-    note.rallyByUserIds.delete(userId);
-    note.rallyCount = note.rallyByUserIds.size;
+  if (note.vouchByUserIds.has(userId)) {
+    note.vouchByUserIds.delete(userId);
+    note.vouchCount = note.vouchByUserIds.size;
   } else {
-    note.rallyByUserIds.add(userId);
-    note.rallyCount = note.rallyByUserIds.size;
+    note.vouchByUserIds.add(userId);
+    note.vouchCount = note.vouchByUserIds.size;
+    if (note.vouchCount % 2 === 0) {
+      addXpToCharacter(note.authorId, 5);
+    }
   }
   return note;
 }
@@ -136,6 +194,7 @@ export function rallyFieldNote(noteId: string, userId: string): FieldNote | null
 export function getAllRamMarks(): string[] {
   const set = new Set<string>();
   feed.forEach((n) => n.ramMarks.forEach((r) => set.add(r.tag)));
+  SEED_FIELD_NOTES.forEach((n) => n.ramMarks.forEach((r) => set.add(r.tag)));
   return Array.from(set).sort();
 }
 
