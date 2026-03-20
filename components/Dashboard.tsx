@@ -183,7 +183,15 @@ export function Dashboard() {
   const [showWelcomeSplash, setShowWelcomeSplash] = useState(true);
   const [showAuthScreen, setShowAuthScreen] = useState(true);
   const [tab, setTab] = useState<Tab>("quad");
-  const [gainToast, setGainToast] = useState<null | { xp: number; stats: Partial<Record<keyof Character["stats"], number>>; title: string }>(null);
+  const [gainToast, setGainToast] = useState<null | {
+    xp: number;
+    stats: Partial<Record<keyof Character["stats"], number>>;
+    title: string;
+    lastBossDrop?: { bossName: string; loot?: { icon: string; label: string; rarity: string } };
+  }>(null);
+  const [bossDefeatPhase, setBossDefeatPhase] = useState<"teaser" | "reveal" | null>(null);
+  const [bossVictoryExiting, setBossVictoryExiting] = useState(false);
+  const bossVictoryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showLevel3Popup, setShowLevel3Popup] = useState(false);
   const [dmWithOther, setDmWithOther] = useState<{ userId: string; username: string; name: string; avatar: string } | null>(null);
 
@@ -221,6 +229,30 @@ export function Dashboard() {
     } catch {}
     setShowLevel3Popup(false);
   }
+
+  function dismissBossVictory() {
+    if (bossVictoryTimerRef.current) {
+      clearTimeout(bossVictoryTimerRef.current);
+      bossVictoryTimerRef.current = null;
+    }
+    setBossVictoryExiting(true);
+    window.setTimeout(() => {
+      setGainToast(null);
+      setBossDefeatPhase(null);
+      setBossVictoryExiting(false);
+    }, 500);
+  }
+
+  useEffect(() => {
+    if (bossDefeatPhase !== "reveal") return;
+    bossVictoryTimerRef.current = window.setTimeout(dismissBossVictory, 10000);
+    return () => {
+      if (bossVictoryTimerRef.current) {
+        clearTimeout(bossVictoryTimerRef.current);
+        bossVictoryTimerRef.current = null;
+      }
+    };
+  }, [bossDefeatPhase]);
 
   if (!mounted) {
     return (
@@ -267,8 +299,9 @@ export function Dashboard() {
   function handleLog(activityId: string, options?: { minutes?: number; proofUrl?: string; tags?: string[] }) {
     if (!character) return null;
     const before = character;
-    const updated = logActivity(character.id, activityId, options);
-    if (updated) {
+    const result = logActivity(character.id, activityId, options);
+    if (result) {
+      const updated = result.character;
       setCharacter(updated);
       const def = getActivityById(activityId);
       const xp = Math.max(0, updated.totalXP - before.totalXP);
@@ -277,12 +310,30 @@ export function Dashboard() {
         const delta = (updated.stats?.[k] ?? 0) - (before.stats?.[k] ?? 0);
         if (delta > 0) stats[k] = delta;
       }
+      const rarityLabel =
+        result.lastBossDrop?.loot != null
+          ? result.lastBossDrop.loot.rarity.charAt(0).toUpperCase() + result.lastBossDrop.loot.rarity.slice(1)
+          : undefined;
       setGainToast({
         xp,
         stats,
         title: def ? `${def.icon} ${def.label}` : "Activity logged",
+        lastBossDrop: result.lastBossDrop
+          ? {
+              bossName: result.lastBossDrop.bossName,
+              loot:
+                result.lastBossDrop.loot != null
+                  ? {
+                      icon: result.lastBossDrop.loot.icon,
+                      label: result.lastBossDrop.loot.label,
+                      rarity: rarityLabel ?? result.lastBossDrop.loot.rarity,
+                    }
+                  : undefined,
+            }
+          : undefined,
       });
-      window.setTimeout(() => setGainToast(null), 3200);
+      if (result.lastBossDrop) setBossDefeatPhase("teaser");
+      if (!result.lastBossDrop) window.setTimeout(() => setGainToast(null), 3200);
       // Show 300 XP celebration when they just reached 300 total XP
       if (before.totalXP < 300 && updated.totalXP >= 300) {
         try {
@@ -293,8 +344,9 @@ export function Dashboard() {
           setShowLevel3Popup(true);
         }
       }
+      return result.character;
     }
-    return updated;
+    return null;
   }
 
   const navItems: { tab: Tab; icon: string; label: string }[] = [
@@ -309,7 +361,113 @@ export function Dashboard() {
     <>
       <Header username={character?.username ?? null} character={character} onRefresh={refresh} onOpenInbox={() => setTab("inbox")} />
       <div style={{ paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))" }}>
-        {gainToast && (
+        {gainToast?.lastBossDrop && typeof document !== "undefined" && createPortal(
+          bossDefeatPhase === "teaser" ? (
+            <div
+              className={`fixed inset-0 z-[100] flex items-center justify-center p-4 lootbox-teaser-enter ${bossVictoryExiting ? "boss-victory-exit" : ""}`}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="lootbox-teaser-title"
+              style={{ background: "radial-gradient(ellipse 100% 100% at 50% 40%, rgba(197,165,40,0.2) 0%, rgba(4,30,66,0.98) 45%, #041E42 100%)" }}
+            >
+              <div className="absolute inset-0 bg-black/50" aria-hidden />
+              <div className="relative z-10 w-full max-w-sm flex flex-col items-center text-center">
+                <p className="text-uri-gold/90 font-semibold text-sm uppercase tracking-widest mb-2">Victory!</p>
+                <h2 id="lootbox-teaser-title" className="text-white font-display font-bold text-2xl mb-1">A loot box awaits</h2>
+                <p className="text-white/70 text-sm mb-6">You defeated a boss. Open it to see what you earned.</p>
+                <button
+                  type="button"
+                  onClick={() => setBossDefeatPhase("reveal")}
+                  className="lootbox-teaser-glow relative flex items-center justify-center rounded-2xl border-4 border-uri-gold/60 bg-gradient-to-br from-uri-gold/30 to-uri-navy p-2 shadow-2xl hover:scale-105 active:scale-[0.98] transition-transform cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-uri-gold w-40 h-40 sm:w-44 sm:h-44 min-w-[10rem] min-h-[10rem] overflow-visible"
+                  aria-label="Open loot box"
+                >
+                  <span className="lootbox-teaser-chest flex w-full h-full items-center justify-center pointer-events-none">
+                    <img
+                      src="/treasure-chest.png"
+                      alt=""
+                      className="w-full h-full max-w-[9rem] max-h-[9rem] object-contain"
+                      width={144}
+                      height={144}
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                        const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                        if (fallback) fallback.style.display = "flex";
+                      }}
+                    />
+                    <span
+                      className="hidden w-full h-full items-center justify-center text-6xl sm:text-7xl"
+                      style={{ display: "none" }}
+                      aria-hidden
+                    >
+                      📦
+                    </span>
+                  </span>
+                </button>
+                <p className="mt-6 text-white/60 text-sm">Tap the chest to open</p>
+              </div>
+            </div>
+          ) : (
+            <div
+              className={`fixed inset-0 z-[100] flex items-center justify-center p-4 boss-victory-enter ${bossVictoryExiting ? "boss-victory-exit" : ""}`}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="boss-victory-title"
+              style={{ background: "radial-gradient(ellipse 80% 60% at 50% 30%, rgba(197,165,40,0.25) 0%, rgba(4,30,66,0.97) 50%, #041E42 100%)" }}
+            >
+              <div className="absolute inset-0 bg-black/40" aria-hidden />
+              <div className="relative z-10 w-full max-w-md rounded-3xl border-2 border-uri-gold/50 bg-uri-navy/95 shadow-2xl boss-victory-glow overflow-hidden">
+                <div className="p-6 sm:p-8 text-center">
+                  <h2 id="boss-victory-title" className="boss-victory-title font-display font-black text-3xl sm:text-4xl text-transparent bg-clip-text bg-gradient-to-r from-uri-gold via-amber-200 to-uri-gold drop-shadow-lg">
+                    BOSS DEFEATED!
+                  </h2>
+                  <p className="mt-2 text-white/90 font-semibold text-lg">
+                    You defeated {gainToast.lastBossDrop.bossName}
+                  </p>
+                  <div className="boss-victory-card mt-6 rounded-2xl border border-white/15 bg-white/10 p-4 text-left">
+                    <div className="text-sm text-white/80 font-medium mb-1">Activity</div>
+                    <div className="text-white font-semibold">{gainToast.title}</div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-sm">
+                      <span className="font-mono text-uri-keaney font-bold">+{gainToast.xp} XP</span>
+                      {STAT_KEYS.filter((k) => (gainToast.stats as any)[k] > 0).map((k) => (
+                        <span key={k} className="text-white/80">
+                          {STAT_ICONS[k]} <span className="text-white font-medium">+{(gainToast.stats as any)[k]}</span> {STAT_LABELS[k]}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {gainToast.lastBossDrop.loot ? (
+                    <div className="boss-victory-card mt-4 rounded-2xl border-2 border-uri-gold/40 bg-uri-gold/10 p-4">
+                      <div className="text-xs font-semibold text-uri-gold/90 uppercase tracking-wider mb-2">Loot dropped</div>
+                      <div className="flex items-center justify-center gap-3">
+                        <span className="boss-victory-loot-icon inline-flex w-16 h-16 items-center justify-center text-4xl rounded-xl bg-white/15 border border-uri-gold/30">
+                          {gainToast.lastBossDrop.loot.icon}
+                        </span>
+                        <div className="text-left">
+                          <div className="text-white font-bold text-lg">{gainToast.lastBossDrop.loot.label}</div>
+                          <div className="text-uri-gold font-semibold text-sm">{gainToast.lastBossDrop.loot.rarity}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="boss-victory-card mt-4 rounded-2xl border-2 border-uri-gold/40 bg-uri-gold/10 p-4">
+                      <div className="text-xs font-semibold text-uri-gold/90 uppercase tracking-wider mb-2">Loot</div>
+                      <p className="text-white/80 text-sm">No new loot this time. Keep defeating bosses to collect more!</p>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={dismissBossVictory}
+                    className="mt-6 w-full py-3.5 rounded-xl font-bold text-uri-navy bg-uri-gold hover:bg-amber-400 border-2 border-uri-gold/60 shadow-lg transition-transform active:scale-[0.98]"
+                  >
+                    Awesome!
+                  </button>
+                </div>
+              </div>
+            </div>
+          ),
+          document.body
+        )}
+        {gainToast && !gainToast.lastBossDrop && (
           <div className="fixed left-1/2 top-20 -translate-x-1/2 z-40 w-[min(28rem,92vw)] toast-enter">
             <div className="card px-4 py-3 border border-uri-keaney/40 bg-uri-navy shadow-keaney">
               <div className="flex items-start justify-between gap-3">
@@ -423,12 +581,12 @@ export function Dashboard() {
 
       {/* Bottom nav — width aligned with main content */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-20 px-4 flex justify-center"
-        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+        className="fixed bottom-0 left-0 right-0 z-20 flex justify-center"
+        style={{ paddingBottom: 0 }}
       >
         <nav
-          className="w-full max-w-2xl mx-auto flex items-center justify-around rounded-t-xl bg-uri-navy border border-b-0 border-uri-keaney/20 shadow-[0_-4px_24px_-4px_rgba(0,0,0,0.35),0_-1px_0_0_rgba(104,171,232,0.08)]"
-          style={{ paddingTop: "0.5rem", paddingBottom: "0.75rem" }}
+          className="w-full flex items-center justify-around rounded-t-xl bg-uri-navy border border-b-0 border-uri-keaney/20 shadow-[0_-4px_24px_-4px_rgba(0,0,0,0.35),0_-1px_0_0_rgba(104,171,232,0.08)]"
+          style={{ paddingTop: "0.5rem", paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 0px))" }}
           aria-label="Main navigation"
         >
         {navItems.map(({ tab: t, icon, label }) => (

@@ -7,7 +7,8 @@ import { getActivityById, isStudyActivityForBoss } from "./activities";
 import { getSampleBosses } from "./bosses";
 import { registerCharacter as registerCharacterInFriends, getCharacterById } from "./friendsStore";
 import { applyClassStats, type CharacterClassId } from "./characterClasses";
-import { pickLootCosmetic } from "./cosmetics";
+import { pickLootCosmetic, type CosmeticItem } from "./cosmetics";
+import { addLootDrop } from "./lootLog";
 import { getSpecialQuestById } from "./specialQuests";
 
 /** Called when a character extends their streak (so guilds can add XP). Set by guildStore. */
@@ -25,6 +26,9 @@ const STORAGE_KEY_ACTIVE_BOSS_ID = "campusquest_active_boss_id";
 
 const MAX_USER_BOSSES = 4;
 const MIN_BOSS_HP = 250;
+
+// Fallback so "Attack" still works even if `localStorage` is blocked (common on some mobile browsers).
+let inMemoryActiveBossId: string | null = null;
 
 /** XP on defeat: 100 at 250 HP, +5 per 10 HP above 250 */
 function bossXpReward(maxHp: number): number {
@@ -75,7 +79,11 @@ function loadCharacter(): Character | null {
 function saveCharacter(c: Character): void {
   if (typeof window === "undefined") return;
   c.level = xpToLevel(c.totalXP);
-  localStorage.setItem(STORAGE_KEY_CHARACTER, JSON.stringify(c));
+  try {
+    localStorage.setItem(STORAGE_KEY_CHARACTER, JSON.stringify(c));
+  } catch {
+    // Persistence may fail on some mobile browsers (e.g. QuotaExceededError / blocked storage).
+  }
   registerCharacterInFriends(c);
 }
 
@@ -92,7 +100,11 @@ function loadLogs(): ActivityLog[] {
 
 function saveLogs(logs: ActivityLog[]): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(logs));
+  try {
+    localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(logs));
+  } catch {
+    // Ignore persistence failure.
+  }
 }
 
 type BossProgressRecord = Record<string, BossProgressType>;
@@ -110,7 +122,11 @@ function loadBossProgress(): BossProgressRecord {
 
 function saveBossProgress(record: BossProgressRecord): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY_BOSS_PROGRESS, JSON.stringify(record));
+  try {
+    localStorage.setItem(STORAGE_KEY_BOSS_PROGRESS, JSON.stringify(record));
+  } catch {
+    // Ignore persistence failure.
+  }
 }
 
 function loadCurrentBoss(): CurrentBoss | null {
@@ -127,9 +143,17 @@ function loadCurrentBoss(): CurrentBoss | null {
 function saveCurrentBoss(boss: CurrentBoss | null): void {
   if (typeof window === "undefined") return;
   if (boss === null) {
-    localStorage.removeItem(STORAGE_KEY_CURRENT_BOSS);
+    try {
+      localStorage.removeItem(STORAGE_KEY_CURRENT_BOSS);
+    } catch {
+      // Ignore persistence failure.
+    }
   } else {
-    localStorage.setItem(STORAGE_KEY_CURRENT_BOSS, JSON.stringify(boss));
+    try {
+      localStorage.setItem(STORAGE_KEY_CURRENT_BOSS, JSON.stringify(boss));
+    } catch {
+      // Ignore persistence failure.
+    }
   }
 }
 
@@ -150,18 +174,30 @@ function loadUserBosses(): UserBoss[] {
 
 function saveUserBosses(bosses: UserBoss[]): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY_USER_BOSSES, JSON.stringify(bosses));
+  try {
+    localStorage.setItem(STORAGE_KEY_USER_BOSSES, JSON.stringify(bosses));
+  } catch {
+    // Ignore persistence failure.
+  }
 }
 
 function loadActiveBossId(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(STORAGE_KEY_ACTIVE_BOSS_ID);
+  try {
+    return localStorage.getItem(STORAGE_KEY_ACTIVE_BOSS_ID);
+  } catch {
+    return inMemoryActiveBossId;
+  }
 }
 
 function saveActiveBossId(id: string | null): void {
   if (typeof window === "undefined") return;
-  if (id === null) localStorage.removeItem(STORAGE_KEY_ACTIVE_BOSS_ID);
-  else localStorage.setItem(STORAGE_KEY_ACTIVE_BOSS_ID, id);
+  try {
+    if (id === null) localStorage.removeItem(STORAGE_KEY_ACTIVE_BOSS_ID);
+    else localStorage.setItem(STORAGE_KEY_ACTIVE_BOSS_ID, id);
+  } catch {
+    inMemoryActiveBossId = id;
+  }
 }
 
 function calculateXp(
@@ -222,7 +258,11 @@ export function getCharacter(): Character | null {
 /** Clear character from storage; next getCharacter() will return null (shows CharacterGate). */
 export function logout(): void {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(STORAGE_KEY_CHARACTER);
+  try {
+    localStorage.removeItem(STORAGE_KEY_CHARACTER);
+  } catch {
+    // Ignore persistence failure.
+  }
 }
 
 export interface CreateCharacterOptions {
@@ -354,7 +394,7 @@ export function logActivity(
   characterId: string,
   activityId: string,
   options?: LogActivityOptions
-): Character | null {
+): { character: Character; lastBossDrop?: { bossName: string; loot?: CosmeticItem } } | null {
   const activity = getActivityById(activityId);
   if (!activity) return null;
 
@@ -425,18 +465,26 @@ export function logActivity(
   if (c.level > prevLevel) ensureAchievement(c, `Reached Level ${c.level}`);
 
   // Boss battles: any activity can deal damage; some types are stronger.
-  applyActivityDamageToCurrentBoss(c, activityId, minutes);
+  const bossDrop = applyActivityDamageToCurrentBoss(c, activityId, minutes);
 
   saveCharacter(c);
-  return c;
+  const lastBossDrop =
+    bossDrop?.defeatedBossName != null
+      ? { bossName: bossDrop.defeatedBossName, loot: bossDrop.droppedLoot ?? undefined }
+      : undefined;
+  return { character: c, lastBossDrop };
 }
 
-function applyActivityDamageToCurrentBoss(c: Character, activityId: string, minutes: number | undefined): void {
+function applyActivityDamageToCurrentBoss(
+  c: Character,
+  activityId: string,
+  minutes: number | undefined
+): { droppedLoot: CosmeticItem | null; defeatedBossName: string | null } | undefined {
   const activeId = loadActiveBossId();
-  if (!activeId) return;
+  if (!activeId) return undefined;
   const bosses = loadUserBosses();
   const boss = bosses.find((b) => b.id === activeId);
-  if (!boss || boss.defeated) return;
+  if (!boss || boss.defeated) return undefined;
 
   const def = getActivityById(activityId);
   if (!def) return;
@@ -473,8 +521,9 @@ function applyActivityDamageToCurrentBoss(c: Character, activityId: string, minu
     c.totalXP += xp;
     c.level = xpToLevel(c.totalXP);
     ensureAchievement(c, `Defeated ${boss.name} Boss (+${xp} XP)`);
-    // Loot: unlock one cosmetic (if any remain locked)
+    const isFinalBoss = boss.maxHp > 500;
     const loot = pickLootCosmetic({
+      isFinalBoss,
       achievements: c.achievements,
       level: c.level,
       unlockedCosmetics: c.unlockedCosmetics,
@@ -483,6 +532,14 @@ function applyActivityDamageToCurrentBoss(c: Character, activityId: string, minu
       boss.loot = [...(boss.loot ?? []), loot.id];
       ensureUnlockedCosmetic(c, loot.id);
       ensureAchievement(c, `Looted: ${loot.icon} ${loot.label}`);
+      addLootDrop({
+        characterId: c.id,
+        cosmeticId: loot.id,
+        bossName: boss.name,
+        isFinalBoss,
+        rarity: loot.rarity,
+        obtainedAt: Date.now(),
+      });
     }
     // Remove defeated boss after rewarding XP so it disappears from the list
     const remaining = bosses.filter((b) => b.id !== boss.id);
@@ -490,9 +547,10 @@ function applyActivityDamageToCurrentBoss(c: Character, activityId: string, minu
     if (loadActiveBossId() === boss.id) saveActiveBossId(null);
     c.bossesDefeatedCount = (c.bossesDefeatedCount ?? 0) + 1;
     if (boss.maxHp > 500) c.finalBossesDefeatedCount = (c.finalBossesDefeatedCount ?? 0) + 1;
-    return;
+    return { droppedLoot: loot ?? null, defeatedBossName: boss.name };
   }
   saveUserBosses(bosses);
+  return undefined;
 }
 
 export function getBossProgress(characterId: string): BossProgressType[] {

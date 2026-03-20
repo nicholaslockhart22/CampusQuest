@@ -14,6 +14,7 @@ import { getUserBosses, updateCharacter } from "@/lib/store";
 import { getClassTitle, getClassRealm } from "@/lib/characterClasses";
 import { AvatarDisplay } from "./AvatarDisplay";
 import { FieldNoteCard } from "./FieldNoteCard";
+import { LootCodex } from "./LootCodex";
 
 const STAT_FILL: Record<StatKey, string> = {
   strength: "linear-gradient(90deg, #f59e0b, #fbbf24)",
@@ -29,6 +30,7 @@ export function Profile({ character, onLogout, onRefresh }: { character: Charact
   const [posts, setPosts] = useState<FieldNote[]>([]);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showEditBio, setShowEditBio] = useState(false);
+  const [showLootCodex, setShowLootCodex] = useState(false);
   const [bioDraft, setBioDraft] = useState(character.bio ?? "");
 
   const refresh = useCallback(() => {
@@ -167,13 +169,22 @@ export function Profile({ character, onLogout, onRefresh }: { character: Charact
                 <span className="text-white/60 text-xs uppercase tracking-wider">Following</span>
               </button>
             </div>
-            <button
-              type="button"
-              onClick={() => { setBioDraft(character.bio ?? ""); setShowEditBio(true); }}
-              className="mt-4 w-full sm:w-auto px-4 py-2.5 rounded-xl text-sm font-medium text-white/90 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 transition-colors"
-            >
-              Edit bio
-            </button>
+            <div className="flex flex-wrap gap-3 mt-4">
+              <button
+                type="button"
+                onClick={() => { setBioDraft(character.bio ?? ""); setShowEditBio(true); }}
+                className="px-4 py-2.5 rounded-xl text-sm font-medium text-white/90 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 transition-colors"
+              >
+                Edit bio
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowLootCodex(true)}
+                className="px-4 py-2.5 rounded-xl text-sm font-medium text-uri-keaney/95 hover:text-uri-keaney bg-uri-keaney/15 hover:bg-uri-keaney/25 border border-uri-keaney/30 transition-colors"
+              >
+                Loot Codex
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -414,6 +425,11 @@ export function Profile({ character, onLogout, onRefresh }: { character: Charact
             </div>
           </div>
         </div>,
+        document.body
+      )}
+
+      {showLootCodex && typeof document !== "undefined" && createPortal(
+        <LootCodex characterId={character.id} onClose={() => setShowLootCodex(false)} />,
         document.body
       )}
 

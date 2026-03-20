@@ -31,7 +31,11 @@ function loadRequests(): FriendRequest[] {
 
 function saveRequests(requests: FriendRequest[]): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY_REQUESTS, JSON.stringify(requests));
+  try {
+    localStorage.setItem(STORAGE_KEY_REQUESTS, JSON.stringify(requests));
+  } catch {
+    // Ignore persistence failure.
+  }
 }
 
 function loadFriends(): FriendEntry[] {
@@ -47,7 +51,11 @@ function loadFriends(): FriendEntry[] {
 
 function saveFriends(entries: FriendEntry[]): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY_FRIENDS, JSON.stringify(entries));
+  try {
+    localStorage.setItem(STORAGE_KEY_FRIENDS, JSON.stringify(entries));
+  } catch {
+    // Ignore persistence failure.
+  }
 }
 
 function loadCharactersByUsername(): Record<string, Character> {
@@ -63,7 +71,11 @@ function loadCharactersByUsername(): Record<string, Character> {
 
 function saveCharactersByUsername(map: Record<string, Character>): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY_CHARACTERS_BY_USERNAME, JSON.stringify(map));
+  try {
+    localStorage.setItem(STORAGE_KEY_CHARACTERS_BY_USERNAME, JSON.stringify(map));
+  } catch {
+    // Ignore persistence failure.
+  }
 }
 
 function loadCharactersById(): Record<string, Character> {
@@ -79,7 +91,11 @@ function loadCharactersById(): Record<string, Character> {
 
 function saveCharactersById(map: Record<string, Character>): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY_CHARACTERS_BY_ID, JSON.stringify(map));
+  try {
+    localStorage.setItem(STORAGE_KEY_CHARACTERS_BY_ID, JSON.stringify(map));
+  } catch {
+    // Ignore persistence failure.
+  }
 }
 
 /** Register a character so they can be found and their stats shown to friends. */
