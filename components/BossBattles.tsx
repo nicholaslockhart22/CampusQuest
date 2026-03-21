@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   getUserBosses,
@@ -17,6 +17,7 @@ import { STAT_KEYS, STAT_ICONS, STAT_LABELS } from "@/lib/types";
 import { getCosmeticById } from "@/lib/cosmetics";
 import { describeCosmeticEquipEffect } from "@/lib/gameBuffs";
 import { CampusBossRaid } from "@/components/CampusBossRaid";
+import { GuildBossBattle } from "@/components/GuildBossBattle";
 
 const DELETE_CONFIRM_DIALOGS: { message: string; fightOn: string; retreat: string }[] = [
   {
@@ -55,12 +56,232 @@ function getRandomDeleteDialog() {
   return DELETE_CONFIRM_DIALOGS[Math.floor(Math.random() * DELETE_CONFIRM_DIALOGS.length)];
 }
 
-const FINAL_BOSS_HP = 500; // Any boss with maxHp > 500 is a Final Boss
+const FINAL_BOSS_HP = 500;
+
+function BattleSection({
+  sectionId,
+  icon,
+  title,
+  subtitle,
+  tone = "keaney",
+  scrollable = false,
+  className = "",
+  bodyClassName = "",
+  children,
+}: {
+  sectionId: string;
+  icon: ReactNode;
+  title: string;
+  subtitle?: string;
+  tone?: "keaney" | "gold";
+  /** Scroll overflowing content inside the panel (for long boss lists in the 2×2 grid). */
+  scrollable?: boolean;
+  className?: string;
+  bodyClassName?: string;
+  children: ReactNode;
+}) {
+  const head =
+    tone === "gold"
+      ? "border-uri-gold/30 bg-gradient-to-r from-uri-gold/[0.12] via-uri-gold/[0.04] to-transparent"
+      : "border-uri-keaney/25 bg-gradient-to-r from-uri-keaney/[0.14] via-uri-keaney/[0.05] to-transparent";
+  return (
+    <section
+      className={`flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] shadow-[0_4px_28px_-6px_rgba(0,0,0,0.45)] ${className}`}
+      aria-labelledby={sectionId}
+    >
+      <div className={`shrink-0 border-b px-3 py-3 sm:px-5 sm:py-4 ${head}`}>
+        <div className="flex items-start gap-2.5 sm:gap-3">
+          <span className="mt-0.5 flex-shrink-0 text-xl leading-none sm:text-2xl" aria-hidden>
+            {icon}
+          </span>
+          <div className="min-w-0">
+            <h2 id={sectionId} className="font-display text-[15px] font-bold leading-snug tracking-tight text-white sm:text-lg">
+              {title}
+            </h2>
+            {subtitle ? (
+              <p className="mt-1 text-xs leading-relaxed text-white/60 sm:text-[13px] sm:text-white/55">{subtitle}</p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+      <div
+        className={`flex min-h-0 flex-1 flex-col bg-white/[0.02] p-3 sm:p-4 md:p-5 ${bodyClassName}`}
+      >
+        {scrollable ? (
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
+            {children}
+          </div>
+        ) : (
+          children
+        )}
+      </div>
+    </section>
+  );
+}
+
+function BossFightRow({
+  boss,
+  variant,
+  isActive,
+  onToggleAttack,
+  onRemove,
+}: {
+  boss: UserBoss;
+  variant: "final" | "regular";
+  isActive: boolean;
+  onToggleAttack: () => void;
+  onRemove: () => void;
+}) {
+  const hpPct = boss.defeated ? 0 : Math.min(100, (boss.currentHp / boss.maxHp) * 100);
+  const weakness = boss.weaknessStat as StatKey | undefined;
+  const loot = (boss.loot ?? []).map((id) => getCosmeticById(id)).filter(Boolean);
+  const isFinal = variant === "final";
+  const face = boss.defeated ? "💀" : isFinal ? "👑" : "🧟";
+
+  const shell =
+    isFinal
+      ? `final-boss-card rounded-xl p-3 sm:rounded-2xl sm:p-4 md:p-5 ${boss.defeated ? "opacity-85" : ""}`
+      : `rounded-xl p-3 sm:rounded-2xl sm:p-4 md:p-5 ${
+          boss.defeated ? "boss-card-defeated" : isActive ? "boss-card-active" : "boss-card-default"
+        }`;
+
+  const attackBtn =
+    isFinal
+      ? isActive
+        ? "border-uri-gold/55 bg-uri-gold/35 text-uri-gold hover:bg-uri-gold/45"
+        : "border-uri-gold/35 bg-white/10 text-white hover:border-uri-gold/50 hover:bg-uri-gold/15 hover:text-uri-gold"
+      : isActive
+        ? "border-uri-keaney/50 bg-uri-keaney/35 text-uri-keaney hover:bg-uri-keaney/45"
+        : "border-white/20 bg-white/10 text-white hover:border-uri-keaney/45 hover:bg-uri-keaney/15 hover:text-uri-keaney";
+
+  return (
+    <article className={`${shell} flex flex-col gap-3 sm:gap-4`}>
+      <div className="flex gap-3 sm:gap-4">
+        <div
+          className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl border text-xl shadow-lg sm:h-16 sm:w-16 sm:rounded-2xl sm:text-3xl ${
+            isFinal ? "border-uri-gold/45 bg-black/45" : "border-white/12 bg-black/30"
+          }`}
+        >
+          {face}
+        </div>
+        <div className="min-w-0 flex-1 space-y-2">
+          <h3 className="font-display break-words text-[15px] font-bold leading-snug text-white sm:text-lg">{boss.name}</h3>
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            {boss.defeated && (
+              <span className="rounded-full border border-emerald-500/45 bg-emerald-500/20 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-200">
+                Defeated
+              </span>
+            )}
+            {!boss.defeated && isActive && (
+              <span
+                className={`rounded-full border px-2 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+                  isFinal
+                    ? "border-uri-gold/55 bg-uri-gold/25 text-uri-gold"
+                    : "border-uri-keaney/45 bg-uri-keaney/25 text-uri-keaney"
+                }`}
+              >
+                Attacking
+              </span>
+            )}
+            {weakness && (
+              <span className="rounded-full border border-white/15 bg-white/[0.08] px-2 py-1 text-[11px] text-white/80">
+                Weak: {STAT_ICONS[weakness]} {STAT_LABELS[weakness]}
+              </span>
+            )}
+          </div>
+
+          {loot.length > 0 && (
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-950/20 px-3 py-2.5 sm:py-3">
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-emerald-200/90 sm:text-[10px] sm:mb-1.5">
+                Loot on this boss
+              </p>
+              <ul className="space-y-2.5 sm:space-y-1.5">
+                {loot.map((piece) => (
+                  <li key={piece!.id} className="flex flex-col gap-1 text-xs leading-snug sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-1 sm:text-[11px]">
+                    <span className="inline-flex flex-wrap items-baseline gap-1.5">
+                      <span aria-hidden>{piece!.icon}</span>
+                      <span className="font-semibold text-white">{piece!.label}</span>
+                    </span>
+                    <span className="pl-7 text-[11px] leading-relaxed text-emerald-200/90 sm:pl-0 sm:leading-snug">
+                      <span className="hidden sm:inline">· </span>
+                      {describeCosmeticEquipEffect(piece!.id)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {!boss.defeated && (
+            <div className="pt-0.5">
+              <div className="mb-1.5 flex items-baseline justify-between gap-2 text-xs text-white/65 sm:text-[11px]">
+                <span>Health</span>
+                <span className={`shrink-0 text-right font-mono text-[13px] font-semibold tabular-nums sm:text-[11px] ${isFinal ? "text-amber-200" : "text-red-200/90"}`}>
+                  {boss.currentHp} / {boss.maxHp}
+                </span>
+              </div>
+              {isFinal ? (
+                <div className="final-boss-hp-bar h-3.5 sm:h-3 sm:min-h-0">
+                  <div className="final-boss-hp-fill" style={{ width: `${hpPct}%` }} />
+                </div>
+              ) : (
+                <div className="boss-hp-bar h-3.5 min-h-[14px] sm:h-3 sm:min-h-[12px]">
+                  <div className="boss-hp-fill" style={{ width: `${hpPct}%` }} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <footer className="flex flex-col gap-3 border-t border-white/10 pt-3 sm:flex-row sm:items-stretch sm:justify-between sm:pt-4">
+        <div
+          className={`flex items-baseline justify-center gap-2 rounded-xl border px-3 py-2.5 sm:inline-flex sm:justify-start sm:py-2 ${
+            isFinal ? "border-uri-gold/45 bg-uri-gold/10" : "border-uri-gold/35 bg-uri-gold/[0.08]"
+          }`}
+        >
+          <span className="font-mono text-xl font-bold text-uri-gold sm:text-lg">+{boss.xpReward}</span>
+          <span className="text-xs font-medium text-uri-gold/85 sm:text-[11px]">XP if defeated</span>
+        </div>
+        <div
+          className={
+            boss.defeated
+              ? "flex justify-end"
+              : "grid grid-cols-[1fr_auto] gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end"
+          }
+        >
+          {!boss.defeated && (
+            <button
+              type="button"
+              onClick={onToggleAttack}
+              className={`min-h-[48px] rounded-xl border px-4 py-3 text-sm font-semibold transition-all active:scale-[0.98] sm:min-h-0 sm:py-2.5 ${attackBtn}`}
+            >
+              <span className="sm:hidden">{isActive ? "Stop" : "Attack"}</span>
+              <span className="hidden sm:inline">{isActive ? "Stop attacking" : "Attack this boss"}</span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onRemove}
+            className={`flex items-center justify-center rounded-xl border border-white/10 text-lg text-white/50 transition-colors hover:border-red-500/35 hover:bg-red-500/10 hover:text-red-200 sm:p-2.5 ${
+              boss.defeated ? "min-h-[48px] min-w-[48px]" : "min-h-[48px] min-w-[48px] sm:min-h-0 sm:min-w-0"
+            }`}
+            aria-label={`Remove ${boss.name}`}
+            title="Remove boss (frees a slot, no XP)"
+          >
+            🗑️
+          </button>
+        </div>
+      </footer>
+    </article>
+  );
+}
 
 export function BossBattles({ character, onRefresh }: { character: Character; onRefresh?: () => void }) {
   const [bossName, setBossName] = useState("");
   const [bossHp, setBossHp] = useState("250");
   const [bossWeakness, setBossWeakness] = useState<StatKey | "random">("random");
+  const [recruitOpen, setRecruitOpen] = useState(false);
   const [bossToDelete, setBossToDelete] = useState<UserBoss | null>(null);
   const deleteDialog = useMemo(() => (bossToDelete ? getRandomDeleteDialog() : null), [bossToDelete]);
 
@@ -103,360 +324,310 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
   }, [bossToDelete, onRefresh]);
 
   return (
-    <section className="card overflow-hidden p-0">
-      {/* Header */}
-      <div className="px-4 sm:px-5 pt-4 sm:pt-5 pb-4 sm:pb-3 bg-gradient-to-b from-uri-keaney/10 to-transparent border-b border-uri-keaney/20">
-        <div className="flex items-start sm:items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-uri-navy/80 border border-uri-keaney/30 flex items-center justify-center text-xl shadow-inner flex-shrink-0">
-            ⚔️
+    <section
+      className="overflow-hidden rounded-xl border border-white/[0.08] shadow-[0_1px_0_0_rgba(104,171,232,0.1),0_8px_40px_-12px_rgba(0,0,0,0.5)] sm:rounded-2xl"
+      style={{
+        background: "linear-gradient(180deg, rgba(4, 30, 66, 0.98) 0%, rgba(3, 22, 48, 0.96) 100%)",
+      }}
+    >
+      {/* Hub header */}
+      <div
+        className="border-b border-white/[0.08] px-3 py-4 sm:px-6 sm:py-6"
+        style={{
+          background: "linear-gradient(165deg, rgba(104, 171, 232, 0.18) 0%, rgba(4, 30, 66, 0.92) 45%, rgba(4, 30, 66, 0.98) 100%)",
+          boxShadow: "0 1px 0 0 rgba(104, 171, 232, 0.12)",
+        }}
+      >
+        <div className="grid gap-4 md:grid-cols-2 md:items-center md:gap-6">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl border border-uri-keaney/40 bg-uri-navy/90 text-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:h-16 sm:w-16 sm:rounded-2xl sm:text-3xl">
+              ⚔️
+            </div>
+            <div className="min-w-0">
+              <h1 className="font-display text-lg font-bold leading-tight tracking-tight text-white sm:text-2xl">Boss battles</h1>
+              <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-white/70 sm:text-sm sm:text-white/65">
+                Tap <strong className="text-uri-keaney/95">Attack</strong> on a boss, then log activities on{" "}
+                <strong className="text-white/90">Character</strong> to deal damage.{" "}
+                <strong className="text-uri-gold/90">Campus</strong> &amp; <strong className="text-white/90">Guild</strong> raids
+                chip in from every log. Weakness = bonus damage. Defeat for XP and loot.
+              </p>
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="font-display font-bold text-white text-lg">Boss Battles</h3>
-            <p className="text-xs text-white/60 mt-0.5 sm:mt-0 hidden sm:block">
-              Add up to {MAX_BOSSES} bosses (min 250 HP). Any logged activity deals damage to the one you attack. Boss weakness boosts damage for matching stats. XP on defeat: 100 + 5 per 10 HP above 250.
-            </p>
-            <p className="text-xs text-white/60 mt-0.5 sm:hidden">
-              Add up to {MAX_BOSSES} bosses (min 250 HP). Log activities to deal damage. Defeat for XP.
-            </p>
+          <div className="grid grid-cols-2 gap-2 md:flex md:flex-wrap md:justify-end">
+            <span className="rounded-lg border border-white/15 bg-white/[0.07] px-3 py-2 text-center text-xs font-semibold text-white/85 sm:py-1.5 sm:text-[11px]">
+              {bosses.length} / {MAX_BOSSES} boss slots
+            </span>
+            <span className="rounded-lg border border-uri-gold/35 bg-uri-gold/10 px-3 py-2 text-center text-xs font-semibold leading-snug text-uri-gold/95 sm:py-1.5 sm:text-[11px]">
+              Min {MIN_BOSS_HP} HP · Final {FINAL_BOSS_HP}+ HP
+            </span>
           </div>
         </div>
       </div>
 
-      <div className="px-4 sm:px-5 pb-4">
-        <CampusBossRaid character={character} />
-      </div>
-
-      <div className="p-4 sm:p-5 space-y-4 sm:space-y-4">
-        {/* Add new boss (only if under limit) */}
-        {bosses.length < MAX_BOSSES && (
-          <div className="boss-card-default rounded-2xl p-4 sm:p-4 space-y-3">
-            <div className="text-sm font-semibold text-white flex items-center gap-2">
-              <span className="text-uri-keaney">+</span> Add new boss ({bosses.length}/{MAX_BOSSES})
-            </div>
-            <input
-              type="text"
-              value={bossName}
-              onChange={(e) => setBossName(e.target.value)}
-              placeholder="e.g. MTH215 Midterm"
-              className="w-full px-4 py-3 sm:py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm focus:outline-none focus:ring-2 focus:ring-uri-keaney/50 focus:border-uri-keaney/40 transition-colors"
-            />
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="number"
-                min={MIN_BOSS_HP}
-                value={bossHp}
-                onChange={(e) => setBossHp(e.target.value)}
-                placeholder={`HP (min ${MIN_BOSS_HP})`}
-                className="flex-1 min-w-0 px-4 py-3 sm:py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-uri-keaney/50 focus:border-uri-keaney/40 transition-colors"
-              />
-              <button
-                type="button"
-                onClick={handleAddBoss}
-                className="py-3 sm:py-2.5 px-4 rounded-xl bg-gradient-to-b from-uri-keaney to-uri-keaney/80 text-white font-semibold hover:from-uri-keaney/95 hover:to-uri-keaney/70 border border-uri-keaney/50 shadow-lg shadow-uri-keaney/20 active:scale-[0.98] transition-all whitespace-nowrap"
-              >
-                ⚔️ Add
-              </button>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-white/70 mb-2">Weakness (matching stat = extra damage)</p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setBossWeakness("random")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    bossWeakness === "random"
-                      ? "bg-uri-keaney/30 text-uri-keaney border border-uri-keaney/50"
-                      : "bg-white/10 text-white/70 border border-white/20 hover:bg-white/15"
-                  }`}
-                >
-                  Random
-                </button>
-                {STAT_KEYS.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setBossWeakness(key)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      bossWeakness === key
-                        ? "bg-uri-keaney/30 text-uri-keaney border border-uri-keaney/50"
-                        : "bg-white/10 text-white/70 border border-white/20 hover:bg-white/15"
-                    }`}
-                  >
-                    {STAT_ICONS[key]} {STAT_LABELS[key]}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-        {bosses.length >= MAX_BOSSES && (
-          <div className="rounded-xl px-3 py-2 bg-white/10 border border-white/20 text-center text-sm text-white/70">
-            Maximum {MAX_BOSSES} bosses. Defeat or remove one to free a slot.
-          </div>
-        )}
-
-        {/* Delete confirmation modal — portaled to body so always visible on screen */}
-        {bossToDelete && deleteDialog && typeof document !== "undefined" && createPortal(
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="delete-boss-title">
-            <div
-              className="absolute inset-0 bg-black/70"
-              aria-hidden
-              onClick={() => setBossToDelete(null)}
-            />
-            <div className="relative z-10 w-full max-w-[22rem] p-5 rounded-2xl bg-uri-navy border-2 border-uri-gold/50 shadow-2xl shadow-black/40">
-              <p id="delete-boss-title" className="text-uri-gold font-semibold text-sm uppercase tracking-wider mb-2">
-                ⚔️ Abandon boss?
-              </p>
-              <p className="text-white/95 text-sm leading-relaxed mb-5">
-                {deleteDialog.message}
-              </p>
-              <p className="text-white/50 text-xs mb-4">
-                Removing &quot;{bossToDelete.name}&quot; frees a slot. No XP earned.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <button
-                  type="button"
-                  onClick={() => setBossToDelete(null)}
-                  className="flex-1 py-2.5 px-4 rounded-xl bg-uri-keaney text-white font-semibold border border-uri-keaney/50 hover:bg-uri-keaney/90 transition-colors"
-                >
-                  👉 {deleteDialog.fightOn}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmDelete}
-                  className="flex-1 py-2.5 px-4 rounded-xl bg-white/10 text-white/90 font-semibold border border-white/30 hover:bg-red-500/20 hover:border-red-500/40 hover:text-red-200 transition-colors"
-                >
-                  👉 {deleteDialog.retreat}
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
-
-        {/* Which boss is currently being attacked */}
+      <div className="space-y-3 p-3 sm:space-y-4 sm:p-5 md:space-y-5 md:p-6">
+        {/* Top strip: spans full width above the 2×2 grid */}
         {activeBoss && !activeBoss.defeated && (
-          <div className="rounded-xl px-4 py-3 sm:px-3 sm:py-2 bg-uri-keaney/15 border border-uri-keaney/30 text-center">
-            <span className="text-xs text-white/70">Currently attacking: </span>
-            <span className="text-sm font-semibold text-uri-keaney break-words">{activeBoss.name}</span>
+          <div className="rounded-xl border border-uri-keaney/40 bg-gradient-to-r from-uri-keaney/25 via-uri-keaney/10 to-transparent px-3 py-3 sm:flex sm:items-center sm:gap-4 sm:rounded-2xl sm:px-5 sm:py-3.5">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              <span className="relative mt-1 flex h-3 w-3 flex-shrink-0 sm:mt-0.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-uri-keaney opacity-35" />
+                <span className="relative inline-flex h-3 w-3 rounded-full bg-uri-keaney shadow-[0_0_10px_rgba(104,171,232,0.8)]" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-uri-keaney/90">Active target</p>
+                <p className="mt-0.5 break-words font-display text-base font-bold leading-snug text-white sm:text-lg">{activeBoss.name}</p>
+                <p className="mt-2 text-[12px] leading-snug text-white/55 sm:hidden">
+                  Log activities on the <strong className="text-white/75">Character</strong> tab to deal damage.
+                </p>
+              </div>
+            </div>
+            <p className="mt-2 hidden flex-shrink-0 text-[11px] leading-snug text-white/50 sm:mt-0 sm:block sm:max-w-[9.5rem]">
+              Log activities on the Character tab to deal damage.
+            </p>
           </div>
         )}
 
-        {/* Final Boss box — 500+ HP, special styling */}
-        <div className="final-boss-box rounded-2xl p-4 sm:p-5 space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl" aria-hidden>👑</span>
-            <h4 className="font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-uri-gold via-amber-200 to-uri-gold text-sm uppercase tracking-widest">
-              Final Boss
-            </h4>
-            <span className="text-white/50 text-xs">({FINAL_BOSS_HP}+ HP)</span>
-          </div>
-          {finalBosses.length === 0 ? (
-            <div className="rounded-xl py-6 px-4 text-center bg-black/20 border border-uri-gold/20">
-              <p className="text-white/60 text-sm">No Final Boss yet.</p>
-              <p className="text-uri-gold/90 text-xs mt-1">Create a boss with 500+ HP to unlock.</p>
+        {/* Recruit — collapsible above campus / guild / roster */}
+        <div className="overflow-hidden rounded-xl border border-uri-keaney/25 bg-white/[0.03] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:rounded-2xl">
+          <button
+            type="button"
+            id="recruit-boss-toggle"
+            aria-expanded={recruitOpen}
+            aria-controls="recruit-boss-panel"
+            onClick={() => setRecruitOpen((o) => !o)}
+            className={`flex w-full items-center gap-3 px-3 py-3.5 text-left transition-colors hover:bg-white/[0.04] sm:gap-4 sm:px-5 sm:py-4 ${
+              recruitOpen ? "border-b border-white/10" : "border-b border-transparent"
+            }`}
+          >
+            <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-uri-keaney/35 bg-gradient-to-br from-uri-keaney/[0.18] to-transparent text-lg shadow-inner sm:h-11 sm:w-11 sm:text-xl">
+              ✦
+            </span>
+            <div className="min-w-0 flex-1">
+              <span className="font-display text-[15px] font-bold tracking-tight text-white sm:text-base">Recruit a boss</span>
+              <p className="mt-0.5 text-xs leading-relaxed text-white/55 sm:text-[13px]">
+                {bosses.length >= MAX_BOSSES
+                  ? `Roster full (${MAX_BOSSES}/${MAX_BOSSES}) — defeat or remove one to open a slot.`
+                  : `${bosses.length} / ${MAX_BOSSES} slots · min ${MIN_BOSS_HP} HP · ${FINAL_BOSS_HP}+ HP for final tier`}
+              </p>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {finalBosses.map((boss) => {
-                const isActive = activeId === boss.id;
-                const hpPct = boss.defeated ? 0 : Math.min(100, (boss.currentHp / boss.maxHp) * 100);
-                const weakness = boss.weaknessStat as StatKey | undefined;
-                const loot = (boss.loot ?? []).map((id) => getCosmeticById(id)).filter(Boolean);
-                return (
-                  <div
-                    key={boss.id}
-                    className={`final-boss-card rounded-xl p-4 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 ${boss.defeated ? "opacity-80" : ""}`}
-                  >
-                    <div className="flex items-center gap-3 sm:flex-1 sm:min-w-0">
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-black/40 border border-uri-gold/40 flex items-center justify-center text-2xl sm:text-3xl flex-shrink-0 shadow-lg">
-                        {boss.defeated ? "💀" : "👑"}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-display font-bold text-white flex items-center gap-2 flex-wrap">
-                          {boss.name}
-                          {boss.defeated && (
-                            <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-500/50">
-                              ✓ Defeated
-                            </span>
-                          )}
-                          {!boss.defeated && isActive && (
-                            <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-uri-gold/30 text-uri-gold border border-uri-gold/50">
-                              Attacking
-                            </span>
-                          )}
-                          {weakness && (
-                            <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-white/10 text-white/80 border border-white/15">
-                              Weak: {STAT_ICONS[weakness]} {STAT_LABELS[weakness]}
-                            </span>
-                          )}
-                        </div>
-                        {loot.length > 0 && (
-                          <ul className="mt-1.5 space-y-0.5 text-[10px] leading-snug text-white/65 w-full">
-                            {loot.map((piece) => (
-                              <li key={piece!.id} className="flex flex-wrap items-baseline gap-x-1">
-                                <span aria-hidden>{piece!.icon}</span>
-                                <span className="text-white/85 font-medium">{piece!.label}</span>
-                                <span className="text-emerald-200/85">· {describeCosmeticEquipEffect(piece!.id)}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                        {!boss.defeated && (
-                          <div className="mt-2">
-                            <div className="flex justify-between text-xs text-white/70 mb-1">
-                              <span>HP</span>
-                              <span className="font-mono font-semibold text-amber-200">{boss.currentHp} / {boss.maxHp}</span>
-                            </div>
-                            <div className="final-boss-hp-bar h-2.5 sm:h-3">
-                              <div className="final-boss-hp-fill" style={{ width: `${hpPct}%` }} />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0 sm:flex-shrink-0">
-                      <div className="px-2.5 py-1 rounded-lg bg-uri-gold/25 border border-uri-gold/50 text-right">
-                        <span className="text-uri-gold font-mono font-bold text-sm">+{boss.xpReward}</span>
-                        <span className="text-uri-gold/90 text-[10px] ml-0.5">XP</span>
-                      </div>
-                      {!boss.defeated && (
-                        <button
-                          type="button"
-                          onClick={() => handleSwitchTarget(boss)}
-                          className={`py-2 px-3 rounded-xl text-sm font-semibold transition-all ${
-                            isActive
-                              ? "bg-uri-gold/30 text-uri-gold border border-uri-gold/50 hover:bg-uri-gold/40"
-                              : "bg-white/10 text-white border border-uri-gold/30 hover:bg-uri-gold/20 hover:border-uri-gold/50 hover:text-uri-gold"
-                          }`}
-                        >
-                          {isActive ? "Stop" : "Attack"}
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => setBossToDelete(boss)}
-                        className="p-2 rounded-lg text-white/40 hover:text-red-300 hover:bg-red-500/15 border border-transparent hover:border-red-500/30 transition-colors"
-                        aria-label={`Remove ${boss.name}`}
-                        title="Remove boss (frees a slot, no XP)"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* List of user bosses — switch which one to attack */}
-        <div className="space-y-3">
-          <h4 className="text-xs font-semibold text-white/60 uppercase tracking-wider px-0.5">
-            Your bosses
-          </h4>
-          {bosses.length === 0 ? (
-            <div className="boss-card-default rounded-2xl p-6 text-center">
-              <p className="text-white/50 text-sm">No bosses yet. Add one above and start attacking by logging activities.</p>
-            </div>
-          ) : regularBosses.length === 0 ? (
-            <div className="boss-card-default rounded-2xl p-4 text-center">
-              <p className="text-white/50 text-sm">All your bosses are Final Bosses — see above. 👑</p>
-            </div>
-          ) : (
-            regularBosses.map((boss) => {
-              const isActive = activeId === boss.id;
-              const hpPct = boss.defeated ? 0 : Math.min(100, (boss.currentHp / boss.maxHp) * 100);
-              const weakness = boss.weaknessStat as StatKey | undefined;
-              const loot = (boss.loot ?? []).map((id) => getCosmeticById(id)).filter(Boolean);
-              return (
-                <div
-                  key={boss.id}
-                  className={`rounded-2xl p-4 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 ${
-                    boss.defeated ? "boss-card-defeated" : isActive ? "boss-card-active" : "boss-card-default"
-                  }`}
-                >
-                  <div className="flex items-center gap-3 sm:flex-1 sm:min-w-0">
-                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-black/20 border border-white/10 flex items-center justify-center text-xl sm:text-2xl flex-shrink-0">
-                      {boss.defeated ? "💀" : "🧟"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-display font-semibold text-white flex items-center gap-2 flex-wrap">
-                        {boss.name}
-                        {boss.defeated && (
-                          <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-emerald-500/25 text-emerald-300 border border-emerald-500/40">
-                            ✓ Defeated
-                          </span>
-                        )}
-                        {!boss.defeated && isActive && (
-                          <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-uri-keaney/25 text-uri-keaney border border-uri-keaney/40">
-                            Attacking
-                          </span>
-                        )}
-                        {weakness && (
-                          <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-white/10 text-white/80 border border-white/15">
-                            Weak: {STAT_ICONS[weakness]} {STAT_LABELS[weakness]}
-                          </span>
-                        )}
-                      </div>
-                      {loot.length > 0 && (
-                        <ul className="mt-1.5 space-y-0.5 text-[10px] leading-snug text-white/60 w-full">
-                          {loot.map((piece) => (
-                            <li key={piece!.id} className="flex flex-wrap items-baseline gap-x-1">
-                              <span aria-hidden>{piece!.icon}</span>
-                              <span className="text-white/80 font-medium">{piece!.label}</span>
-                              <span className="text-emerald-200/80">· {describeCosmeticEquipEffect(piece!.id)}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      {!boss.defeated && (
-                        <div className="mt-2">
-                          <div className="flex justify-between text-xs text-white/60 mb-1">
-                            <span>HP</span>
-                            <span className="font-mono text-red-200/90">{boss.currentHp} / {boss.maxHp}</span>
-                          </div>
-                          <div className="boss-hp-bar h-2.5 sm:h-2 min-h-[10px]">
-                            <div className="boss-hp-fill" style={{ width: `${hpPct}%` }} />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <div className="px-2.5 py-1 rounded-lg bg-uri-gold/20 border border-uri-gold/40 text-right">
-                      <span className="text-uri-gold font-mono font-bold text-sm">+{boss.xpReward}</span>
-                      <span className="text-uri-gold/90 text-[10px] ml-0.5">XP</span>
-                    </div>
-                    {!boss.defeated && (
-                      <button
-                        type="button"
-                        onClick={() => handleSwitchTarget(boss)}
-                        className={`py-2 px-3 rounded-xl text-sm font-semibold transition-all ${
-                          isActive
-                            ? "bg-uri-keaney/30 text-uri-keaney border border-uri-keaney/50 hover:bg-uri-keaney/40"
-                            : "bg-white/10 text-white border border-white/20 hover:bg-uri-keaney/20 hover:border-uri-keaney/40 hover:text-uri-keaney"
-                        }`}
-                      >
-                        {isActive ? "Stop" : "Attack"}
-                      </button>
-                    )}
+            <span className="flex-shrink-0 text-lg text-uri-keaney/90 tabular-nums" aria-hidden>
+              {recruitOpen ? "▴" : "▾"}
+            </span>
+          </button>
+          {recruitOpen ? (
+            <div
+              id="recruit-boss-panel"
+              role="region"
+              aria-labelledby="recruit-boss-toggle"
+              className="border-t border-white/[0.08] bg-black/20 px-3 py-4 sm:px-5 sm:py-5"
+            >
+              {bosses.length < MAX_BOSSES ? (
+                <div className="space-y-4 rounded-xl border border-white/10 bg-white/[0.04] p-3 sm:rounded-2xl sm:p-5">
+                  <label className="block min-w-0">
+                    <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-white/55 sm:text-[10px] sm:text-white/50">
+                      Boss name
+                    </span>
+                    <input
+                      type="text"
+                      value={bossName}
+                      onChange={(e) => setBossName(e.target.value)}
+                      placeholder="e.g. MTH 215 Midterm"
+                      className="min-h-[48px] w-full rounded-xl border border-white/20 bg-black/30 px-4 py-3 text-base text-white placeholder-white/35 transition-colors focus:border-uri-keaney/50 focus:outline-none focus:ring-2 focus:ring-uri-keaney/30 sm:min-h-0 sm:text-sm"
+                    />
+                  </label>
+                  <div className="flex flex-col gap-3 sm:grid sm:grid-cols-[1fr_auto] sm:items-end">
+                    <label className="block min-w-0 sm:max-w-[9rem] sm:justify-self-start">
+                      <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-white/55 sm:text-[10px] sm:text-white/50">HP</span>
+                      <input
+                        type="number"
+                        min={MIN_BOSS_HP}
+                        value={bossHp}
+                        onChange={(e) => setBossHp(e.target.value)}
+                        className="min-h-[48px] w-full rounded-xl border border-white/20 bg-black/30 px-4 py-3 font-mono text-base text-white transition-colors focus:border-uri-keaney/50 focus:outline-none focus:ring-2 focus:ring-uri-keaney/30 sm:min-h-0 sm:text-sm"
+                      />
+                    </label>
                     <button
                       type="button"
-                      onClick={() => setBossToDelete(boss)}
-                      className="p-2 rounded-lg text-white/40 hover:text-red-300 hover:bg-red-500/15 border border-transparent hover:border-red-500/30 transition-colors"
-                      aria-label={`Remove ${boss.name}`}
-                      title="Remove boss (frees a slot, no XP)"
+                      onClick={handleAddBoss}
+                      className="min-h-[48px] w-full rounded-xl border border-uri-keaney/50 bg-gradient-to-b from-uri-keaney to-uri-keaney/80 px-5 py-3 text-base font-bold text-white shadow-lg shadow-uri-keaney/20 transition-all hover:from-uri-keaney/95 hover:to-uri-keaney/70 active:scale-[0.98] sm:min-h-0 sm:w-auto sm:self-end sm:py-3 sm:text-sm"
                     >
-                      🗑️
+                      Add boss
                     </button>
                   </div>
+                  <div>
+                    <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/50 sm:text-[10px] sm:text-white/45">
+                      Weakness — bonus damage when the activity matches
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setBossWeakness("random")}
+                        className={`col-span-2 min-h-[44px] rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors sm:col-span-1 sm:min-h-0 sm:py-2 sm:text-xs ${
+                          bossWeakness === "random"
+                            ? "border-uri-keaney/55 bg-uri-keaney/30 text-uri-keaney"
+                            : "border-white/15 bg-white/[0.08] text-white/70 hover:bg-white/[0.12]"
+                        }`}
+                      >
+                        Random
+                      </button>
+                      {STAT_KEYS.map((key) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setBossWeakness(key)}
+                          className={`flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-lg border px-1.5 py-2 text-center transition-colors sm:min-h-0 sm:flex-row sm:gap-1.5 sm:px-3 sm:py-2 sm:text-left sm:text-xs ${
+                            bossWeakness === key
+                              ? "border-uri-keaney/55 bg-uri-keaney/30 font-semibold text-uri-keaney"
+                              : "border-white/15 bg-white/[0.08] font-medium text-white/75 hover:bg-white/[0.12]"
+                          }`}
+                        >
+                          <span className="text-lg leading-none sm:text-base" aria-hidden>
+                            {STAT_ICONS[key]}
+                          </span>
+                          <span className="max-w-[4.5rem] text-[10px] leading-tight sm:max-w-none sm:text-xs">{STAT_LABELS[key]}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              );
-            })
-          )}
+              ) : (
+                <div className="rounded-2xl border border-amber-500/25 bg-amber-950/20 py-6 text-center">
+                  <p className="text-sm text-amber-100/85">Roster full ({MAX_BOSSES}/{MAX_BOSSES}).</p>
+                  <p className="mt-1 text-xs text-white/50">Defeat a boss for XP or remove one to free a slot.</p>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+
+        {/* md+: row1 Campus | Guild · row2 Final | Roster */}
+        <div className="grid min-h-0 grid-cols-1 gap-3 sm:gap-4 md:min-h-[min(72vh,44rem)] md:grid-cols-2 md:grid-rows-2 md:gap-4 lg:gap-5">
+          <BattleSection
+            sectionId="battle-campus-raid"
+            icon="🌐"
+            title="Campus raid"
+            subtitle="Weekly shared boss — every log chips in. Resets Monday."
+            tone="gold"
+            className="md:min-h-0"
+          >
+            <CampusBossRaid character={character} embedded />
+          </BattleSection>
+
+          <BattleSection
+            sectionId="battle-guild-battle"
+            icon="🛡️"
+            title="Guild battle"
+            subtitle="Per-guild raid boss — your guild’s logs deal damage. Resets Monday."
+            tone="keaney"
+            scrollable
+            className="md:min-h-0"
+          >
+            <GuildBossBattle character={character} embedded />
+          </BattleSection>
+
+          <BattleSection
+            sectionId="battle-final-bosses"
+            icon="👑"
+            title="Final bosses"
+            subtitle={`${FINAL_BOSS_HP}+ HP · better loot odds`}
+            tone="gold"
+            scrollable
+            className="md:min-h-0"
+          >
+            <div className="final-boss-box rounded-lg p-2.5 sm:rounded-xl sm:p-4">
+              {finalBosses.length === 0 ? (
+                <div className="rounded-lg border border-uri-gold/25 bg-black/25 py-8 text-center sm:py-10">
+                  <p className="text-sm text-white/60">No final boss yet.</p>
+                  <p className="mt-2 px-2 text-xs text-uri-gold/85">
+                    Open <strong className="text-uri-gold">Recruit a boss</strong> above with <strong className="text-uri-gold">{FINAL_BOSS_HP}+ HP</strong>.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {finalBosses.map((boss) => (
+                    <BossFightRow
+                      key={boss.id}
+                      boss={boss}
+                      variant="final"
+                      isActive={activeId === boss.id}
+                      onToggleAttack={() => handleSwitchTarget(boss)}
+                      onRemove={() => setBossToDelete(boss)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </BattleSection>
+
+          <BattleSection
+            sectionId="battle-roster"
+            icon="🧟"
+            title="Your bosses"
+            subtitle="≤500 HP · Attack, then log activities"
+            tone="keaney"
+            scrollable
+            className="md:min-h-0"
+          >
+            {bosses.length === 0 ? (
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] py-10 text-center sm:py-12">
+                <p className="text-sm text-white/55">No bosses yet.</p>
+                <p className="mt-2 px-3 text-xs text-white/45">Open <strong className="text-white/70">Recruit a boss</strong> above.</p>
+              </div>
+            ) : regularBosses.length === 0 ? (
+              <div className="rounded-xl border border-white/10 bg-white/[0.03] py-8 text-center">
+                <p className="text-sm text-white/55">All bosses are final-tier.</p>
+                <p className="mt-1 text-xs text-white/45 md:hidden">See <strong className="text-white/60">Final bosses</strong> above.</p>
+                <p className="mt-1 hidden text-xs text-white/45 md:block">See the <strong className="text-white/60">Final bosses</strong> column.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {regularBosses.map((boss) => (
+                  <BossFightRow
+                    key={boss.id}
+                    boss={boss}
+                    variant="regular"
+                    isActive={activeId === boss.id}
+                    onToggleAttack={() => handleSwitchTarget(boss)}
+                    onRemove={() => setBossToDelete(boss)}
+                  />
+                ))}
+              </div>
+            )}
+          </BattleSection>
         </div>
       </div>
+
+      {bossToDelete && deleteDialog && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="delete-boss-title">
+          <div className="absolute inset-0 bg-black/70" aria-hidden onClick={() => setBossToDelete(null)} />
+          <div className="relative z-10 w-full max-w-[22rem] rounded-2xl border-2 border-uri-gold/50 bg-uri-navy p-5 shadow-2xl shadow-black/40">
+            <p id="delete-boss-title" className="mb-2 text-sm font-semibold uppercase tracking-wider text-uri-gold">
+              ⚔️ Abandon boss?
+            </p>
+            <p className="mb-5 text-sm leading-relaxed text-white/95">{deleteDialog.message}</p>
+            <p className="mb-4 text-xs text-white/50">
+              Removing &quot;{bossToDelete.name}&quot; frees a slot. No XP earned.
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => setBossToDelete(null)}
+                className="flex-1 rounded-xl border border-uri-keaney/50 bg-uri-keaney py-2.5 text-sm font-semibold text-white transition-colors hover:bg-uri-keaney/90"
+              >
+                👉 {deleteDialog.fightOn}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="flex-1 rounded-xl border border-white/30 bg-white/10 py-2.5 text-sm font-semibold text-white/90 transition-colors hover:border-red-500/40 hover:bg-red-500/20 hover:text-red-200"
+              >
+                👉 {deleteDialog.retreat}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </section>
   );
 }

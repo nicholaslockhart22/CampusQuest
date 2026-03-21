@@ -12,6 +12,7 @@ import { addLootDrop } from "./lootLog";
 import { getSpecialQuestById } from "./specialQuests";
 import { computeXpBreakdown, type XpBreakdown } from "./xpEngine";
 import { contributeCampusBossDamage } from "./campusBossEvent";
+import { contributeGuildBossDamage } from "./guildBossEvent";
 import { recordGuildWeeklyRace, getGuildWeeklyXpBoostPercent } from "./guildWeeklyRace";
 import { getTodaysSurpriseQuest } from "./surpriseQuests";
 import { todayString } from "./dateUtils";
@@ -497,6 +498,10 @@ export function logActivity(
   if (leveledUp) ensureAchievement(c, `Reached Level ${c.level}`);
 
   contributeCampusBossDamage(characterId, Math.max(1, Math.floor(xpEarned * 1.15)));
+  const guildDmg = Math.max(1, Math.floor(xpEarned * 1.05));
+  for (const gid of c.guildIds ?? []) {
+    contributeGuildBossDamage(characterId, gid, guildDmg);
+  }
   recordGuildWeeklyRace(characterId, c.guildIds ?? [], xpEarned);
   const guildIdsForXp = [...(c.guildIds ?? [])];
   void import("./guildStore").then((m) => {
@@ -572,6 +577,15 @@ function applyActivityDamageToCurrentBoss(
     boss.defeatedAt = Date.now();
     const xp = boss.xpReward ?? bossXpReward(boss.maxHp);
     c.totalXP += xp;
+    const guildIdsForBossXp = [...(c.guildIds ?? [])];
+    if (guildIdsForBossXp.length > 0) {
+      void import("./guildStore").then((m) => {
+        const amt = Math.max(1, Math.floor(xp / 20));
+        for (const gid of guildIdsForBossXp) {
+          m.addGuildXp(gid, amt);
+        }
+      });
+    }
     c.level = xpToLevel(c.totalXP);
     ensureAchievement(c, `Defeated ${boss.name} Boss (+${xp} XP)`);
     const isFinalBoss = boss.maxHp > 500;

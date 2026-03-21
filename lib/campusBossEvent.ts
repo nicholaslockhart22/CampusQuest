@@ -11,11 +11,16 @@ export interface CampusBossEventState {
   contributions: Record<string, number>;
 }
 
-function weekKey(d = new Date()): string {
+/** UTC Monday date (YYYY-MM-DD) — campus raid, guild battle, and weekly resets align on this key. */
+export function raidWeekKey(d = new Date()): string {
   const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   const day = t.getUTCDay() || 7;
   if (day !== 1) t.setUTCDate(t.getUTCDate() - (day - 1));
   return t.toISOString().slice(0, 10);
+}
+
+function weekKey(d = new Date()): string {
+  return raidWeekKey(d);
 }
 
 function defaultState(wk: string): CampusBossEventState {

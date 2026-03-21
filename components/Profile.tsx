@@ -2,20 +2,21 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
-import type { Character } from "@/lib/types";
+import type { Character, Guild } from "@/lib/types";
 import type { FieldNote } from "@/lib/types";
 import { STAT_KEYS, STAT_LABELS, STAT_ICONS, MAX_STAT, type StatKey } from "@/lib/types";
 import { xpProgressInLevel } from "@/lib/level";
 import { getFeedByAuthorId, nodFieldNote, hypeFieldNote, verifyFieldNote, assistFieldNote, getCommentsByNoteId, addComment } from "@/lib/feedStore";
 import { getFriends, getCharacterById, removeFriend } from "@/lib/friendsStore";
 import { getFollowing, unfollow } from "@/lib/followStore";
-import { getGuildById } from "@/lib/guildStore";
+import { getGuildById, leaveGuild } from "@/lib/guildStore";
 import { getUserBosses, updateCharacter } from "@/lib/store";
 import { getClassTitle, getClassRealm } from "@/lib/characterClasses";
 import { AvatarDisplay } from "./AvatarDisplay";
 import { FieldNoteCard } from "./FieldNoteCard";
 import { LootCodex } from "./LootCodex";
 import { EquipmentStrip } from "./EquipmentStrip";
+import { ViewGuildModal } from "./ViewGuildModal";
 
 const STAT_FILL: Record<StatKey, string> = {
   strength: "linear-gradient(90deg, #f59e0b, #fbbf24)",
@@ -27,7 +28,18 @@ const STAT_FILL: Record<StatKey, string> = {
 
 const BIO_MAX_LENGTH = 150;
 
-export function Profile({ character, onLogout, onRefresh }: { character: Character; onLogout?: () => void; onRefresh?: () => void }) {
+export function Profile({
+  character,
+  onLogout,
+  onRefresh,
+  /** When true, hides the large Character stats panel (used when CharacterCard already shows stats on the same screen). */
+  omitCharacterStatPanel = false,
+}: {
+  character: Character;
+  onLogout?: () => void;
+  onRefresh?: () => void;
+  omitCharacterStatPanel?: boolean;
+}) {
   const [posts, setPosts] = useState<FieldNote[]>([]);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showEditBio, setShowEditBio] = useState(false);
@@ -82,6 +94,7 @@ export function Profile({ character, onLogout, onRefresh }: { character: Charact
   const followingCount = followingIds.length;
   const [listModal, setListModal] = useState<"friends" | "following" | null>(null);
   const [listRefreshKey, setListRefreshKey] = useState(0);
+  const [viewGuild, setViewGuild] = useState<Guild | null>(null);
   const bosses = getUserBosses();
   const bossesDefeated =
     character.bossesDefeatedCount ?? bosses.filter((b) => b.defeated).length;
@@ -151,9 +164,17 @@ export function Profile({ character, onLogout, onRefresh }: { character: Charact
                 {(character.guildIds ?? []).map((gid) => {
                   const g = getGuildById(gid);
                   return g ? (
-                    <span key={gid} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 text-white/90 border border-uri-keaney/25 text-xs font-medium">
-                      {g.crest} {g.name} <span className="text-white/50">Lv.{g.xp != null ? 1 + Math.floor(g.xp / 100) : g.level}</span>
-                    </span>
+                    <button
+                      key={gid}
+                      type="button"
+                      onClick={() => setViewGuild(g)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 text-white/90 border border-uri-keaney/25 text-xs font-medium transition-colors hover:bg-uri-keaney/15 hover:border-uri-keaney/40 focus:outline-none focus:ring-2 focus:ring-uri-keaney/50 focus:ring-offset-2 focus:ring-offset-uri-navy"
+                    >
+                      <span className="truncate max-w-[14rem] sm:max-w-[18rem]">
+                        {g.crest} {g.name}
+                      </span>{" "}
+                      <span className="text-white/50 shrink-0">Lv.{g.xp != null ? 1 + Math.floor(g.xp / 100) : g.level}</span>
+                    </button>
                   ) : null;
                 })}
               </div>
@@ -207,7 +228,26 @@ export function Profile({ character, onLogout, onRefresh }: { character: Charact
         <EquipmentStrip character={character} onRefresh={onRefresh} />
       </div>
 
-      {/* Character stats — game-style sheet; 2x2 grid on mobile, single row on desktop */}
+      {omitCharacterStatPanel && (
+        <div className="character-hero-panel rounded-2xl p-4 sm:p-5 overflow-hidden flex flex-wrap gap-3">
+          <div className="game-stat-pill-gold rounded-xl px-4 py-3 flex flex-1 min-w-[8rem] items-center gap-3">
+            <span className="text-2xl flex-shrink-0" aria-hidden>🐉</span>
+            <div className="min-w-0">
+              <span className="text-uri-gold/80 text-xs uppercase block">Bosses defeated</span>
+              <span className="font-bold text-uri-gold text-lg block">{bossesDefeated}</span>
+            </div>
+          </div>
+          <div className="game-stat-pill-final rounded-xl px-4 py-3 flex flex-1 min-w-[8rem] items-center gap-3">
+            <span className="text-2xl flex-shrink-0" aria-hidden>👑</span>
+            <div className="min-w-0">
+              <span className="text-uri-gold/90 text-xs uppercase font-semibold block">Final bosses</span>
+              <span className="font-bold text-lg bg-clip-text text-transparent bg-gradient-to-r from-uri-gold via-amber-200 to-uri-gold block">{finalBossesDefeated}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!omitCharacterStatPanel && (
       <div className="character-hero-panel rounded-2xl p-4 sm:p-6 overflow-hidden">
         <div className="flex items-center gap-2 mb-4 sm:mb-5">
           <span className="text-lg sm:text-xl" aria-hidden>⚔️</span>
@@ -292,8 +332,9 @@ export function Profile({ character, onLogout, onRefresh }: { character: Charact
           })}
         </div>
       </div>
+      )}
 
-      {/* Log out — only on Profile */}
+      {/* Log out */}
       {onLogout && (
         <div className="card p-4">
           <button
@@ -455,6 +496,23 @@ export function Profile({ character, onLogout, onRefresh }: { character: Charact
           onClose={() => setShowLootCodex(false)}
         />,
         document.body
+      )}
+
+      {viewGuild && (
+        <ViewGuildModal
+          guild={viewGuild}
+          currentUserId={character.id}
+          onLeave={(guildId) => {
+            leaveGuild(character.id, guildId);
+            setViewGuild(null);
+            onRefresh?.();
+          }}
+          onClose={() => setViewGuild(null)}
+          onUpdated={() => {
+            onRefresh?.();
+            setViewGuild((g) => (g ? getGuildById(g.id) ?? g : null));
+          }}
+        />
       )}
 
       {showLogoutConfirm && onLogout && typeof document !== "undefined" && createPortal(

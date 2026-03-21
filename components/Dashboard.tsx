@@ -32,7 +32,10 @@ import { SurpriseQuestBanner } from "./SurpriseQuestBanner";
 import { MiniGameFocus } from "./MiniGameFocus";
 import type { StatKey } from "@/lib/types";
 
-type Tab = "quad" | "me" | "friends" | "leaderboards" | "profile" | "inbox";
+type Tab = "quad" | "friends" | "battle" | "leaderboards" | "character" | "inbox";
+
+/** Sub-view on the Character tab (Quad-style toggle). */
+type CharacterPane = "sheet" | "profile";
 
 function Header({
   username,
@@ -189,6 +192,7 @@ export function Dashboard() {
   const [showWelcomeSplash, setShowWelcomeSplash] = useState(true);
   const [showAuthScreen, setShowAuthScreen] = useState(true);
   const [tab, setTab] = useState<Tab>("quad");
+  const [characterPane, setCharacterPane] = useState<CharacterPane>("sheet");
   const [gainToast, setGainToast] = useState<null | {
     xp: number;
     stats: Partial<Record<keyof Character["stats"], number>>;
@@ -376,9 +380,9 @@ export function Dashboard() {
   const navItems: { tab: Tab; icon: string; label: string }[] = [
     { tab: "quad", icon: "📋", label: "Quad" },
     { tab: "friends", icon: "👋", label: "Friends" },
-    { tab: "me", icon: "⚔️", label: "Character" },
+    { tab: "battle", icon: "🐉", label: "Battle" },
     { tab: "leaderboards", icon: "🏆", label: "Rank" },
-    { tab: "profile", icon: "👤", label: "Profile" },
+    { tab: "character", icon: "👤", label: "Character" },
   ];
 
   return (
@@ -620,44 +624,141 @@ export function Dashboard() {
           <Leaderboards character={character} />
         )}
 
-        {tab === "profile" && (
-          <Profile character={character} onLogout={handleLogout} onRefresh={refresh} />
+        {tab === "battle" && (
+          <div className="space-y-4 sm:space-y-5">
+            <BossBattles character={character} onRefresh={refresh} />
+          </div>
         )}
 
-        {tab === "me" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-            <div className="md:col-span-2">
-              <CharacterCard character={character} onRefresh={refresh} />
+        {tab === "character" && (
+          <section
+            className="overflow-hidden rounded-xl border border-white/[0.08] shadow-[0_1px_0_0_rgba(104,171,232,0.12),0_8px_32px_-8px_rgba(0,0,0,0.45)] sm:rounded-2xl"
+            style={{
+              background: "linear-gradient(180deg, rgba(4, 30, 66, 0.98) 0%, rgba(3, 22, 48, 0.96) 100%)",
+            }}
+          >
+            <div
+              className="border-b border-white/[0.08] px-3 py-4 sm:px-5 sm:py-5"
+              style={{
+                background: "linear-gradient(165deg, rgba(104, 171, 232, 0.16) 0%, rgba(4, 30, 66, 0.95) 42%, rgba(4, 30, 66, 0.99) 100%)",
+                boxShadow: "0 1px 0 0 rgba(104, 171, 232, 0.12)",
+              }}
+            >
+              <div className="mb-4 flex items-start gap-3 sm:mb-5 sm:gap-4">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl border border-uri-keaney/45 bg-gradient-to-br from-uri-keaney/30 to-uri-navy/90 text-2xl shadow-[0_0_20px_rgba(104,171,232,0.2),inset_0_1px_0_rgba(255,255,255,0.08)] sm:h-14 sm:w-14 sm:text-3xl">
+                  <span className="leading-none" aria-hidden>
+                    👤
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1 pt-0.5">
+                  <h2 className="font-display text-lg font-bold leading-tight tracking-tight text-white sm:text-xl">Your Ram</h2>
+                  <p className="mt-1 text-xs leading-relaxed text-white/60 sm:text-[13px] sm:text-white/55">
+                    Level up, equip loot, and manage how you show up on the Quad.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mb-4 rounded-2xl border border-uri-gold/35 bg-gradient-to-br from-uri-gold/[0.12] via-uri-gold/[0.04] to-transparent p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] sm:mb-5 sm:p-4">
+                <div className="mb-2.5 flex items-center gap-2">
+                  <span className="text-sm" aria-hidden>
+                    ⚡
+                  </span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-uri-gold/95 sm:text-xs">Quick stats</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                  <div className="rounded-xl border border-white/12 bg-black/25 px-2 py-2.5 text-center shadow-inner sm:px-3">
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-white/45">Level</div>
+                    <div className="mt-0.5 font-display text-lg font-bold text-uri-keaney sm:text-xl">{character.level}</div>
+                  </div>
+                  <div className="rounded-xl border border-white/12 bg-black/25 px-2 py-2.5 text-center shadow-inner sm:px-3">
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-white/45">Streak</div>
+                    <div className="mt-0.5 font-display text-lg font-bold text-white sm:text-xl">{character.streakDays}d</div>
+                  </div>
+                  <div className="rounded-xl border border-white/12 bg-black/25 px-2 py-2.5 text-center shadow-inner sm:px-3">
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-white/45">XP</div>
+                    <div className="mt-0.5 truncate font-mono text-sm font-bold text-uri-keaney/95 sm:text-base">
+                      {character.totalXP.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/25 p-1 shadow-inner">
+                <div className="grid grid-cols-2 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setCharacterPane("sheet")}
+                    className={`rounded-xl px-2 py-3 text-center transition-all duration-200 sm:flex sm:items-center sm:justify-center sm:gap-2 sm:py-3 sm:pl-3 sm:pr-4 ${
+                      characterPane === "sheet"
+                        ? "bg-gradient-to-b from-uri-keaney/45 to-uri-keaney/20 text-white shadow-[0_0_24px_rgba(104,171,232,0.2)] ring-1 ring-uri-keaney/50"
+                        : "text-white/55 hover:bg-white/[0.06] hover:text-white/85"
+                    }`}
+                  >
+                    <span className="text-xl leading-none sm:text-lg" aria-hidden>
+                      ⚔️
+                    </span>
+                    <span className="mt-1 block text-xs font-bold sm:mt-0 sm:text-sm">Character</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCharacterPane("profile")}
+                    className={`rounded-xl px-2 py-3 text-center transition-all duration-200 sm:flex sm:items-center sm:justify-center sm:gap-2 sm:py-3 sm:pl-3 sm:pr-4 ${
+                      characterPane === "profile"
+                        ? "bg-gradient-to-b from-uri-keaney/45 to-uri-keaney/20 text-white shadow-[0_0_24px_rgba(104,171,232,0.2)] ring-1 ring-uri-keaney/50"
+                        : "text-white/55 hover:bg-white/[0.06] hover:text-white/85"
+                    }`}
+                  >
+                    <span className="text-xl leading-none sm:text-lg" aria-hidden>
+                      👤
+                    </span>
+                    <span className="mt-1 block text-xs font-bold sm:mt-0 sm:text-sm">Profile</span>
+                  </button>
+                </div>
+              </div>
+              <p className="mt-3 text-center text-[11px] leading-relaxed text-white/45 sm:text-left sm:text-xs">
+                {characterPane === "sheet"
+                  ? "Log activities, skills, streaks, and weekly recap — your main progression hub."
+                  : "Bio, equipment, stats sheet, Loot Codex, and posts you’ve shared to the Quad."}
+              </p>
             </div>
-            <div className="md:col-span-2">
-              <StreakCard character={character} />
+
+            <div className="space-y-4 px-3 py-4 sm:space-y-5 sm:px-5 sm:py-5">
+              {characterPane === "sheet" ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                  <div className="md:col-span-2">
+                    <CharacterCard character={character} onRefresh={refresh} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <ActivityList onLog={handleLog} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <StreakCard character={character} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <SurpriseQuestBanner character={character} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <SkillTreePanel character={character} onRefresh={refresh} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <MiniGameFocus character={character} onRefresh={refresh} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <CollapsibleSection title="Weekly recap" defaultCollapsed>
+                      <WeeklyRecapCard character={character} />
+                    </CollapsibleSection>
+                  </div>
+                  <div className="min-w-0 md:col-span-2">
+                    <CollapsibleSection title="Recent activities" defaultCollapsed>
+                      <RecentActivities characterId={character.id} />
+                    </CollapsibleSection>
+                  </div>
+                </div>
+              ) : (
+                <Profile character={character} onLogout={handleLogout} onRefresh={refresh} />
+              )}
             </div>
-            <div className="md:col-span-2">
-              <SurpriseQuestBanner character={character} />
-            </div>
-            <div className="md:col-span-2">
-              <SkillTreePanel character={character} onRefresh={refresh} />
-            </div>
-            <div className="md:col-span-2">
-              <MiniGameFocus character={character} onRefresh={refresh} />
-            </div>
-            <div className="md:col-span-2">
-              <CollapsibleSection title="Weekly recap" defaultCollapsed>
-                <WeeklyRecapCard character={character} />
-              </CollapsibleSection>
-            </div>
-            <div className="md:col-span-2">
-              <ActivityList onLog={handleLog} />
-            </div>
-            <div className="min-w-0">
-              <CollapsibleSection title="Recent activities" defaultCollapsed>
-                <RecentActivities characterId={character.id} />
-              </CollapsibleSection>
-            </div>
-            <div className="md:col-span-2">
-              <BossBattles character={character} onRefresh={refresh} />
-            </div>
-          </div>
+          </section>
         )}
       </div>
       </div>

@@ -68,18 +68,21 @@ const SAMPLE_GUILD_TEMPLATES: Omit<Guild, "memberIds" | "createdByUserId" | "cof
 const PLACEHOLDER_ID_PREFIX = "ph-guild-";
 
 /**
- * Min 1 (founder), max 15. Declared early for placeholder helpers.
+ * Min 1 (founder), max `MAX_GUILD_MEMBERS`.
  * `MAX_GUILD_MEMBERS_WITHOUT_COFOUNDER`: up to 10 members may join without a co-founder; the 11th requires one.
  * Every guild with **more than 10** members always has a co-founder (enforced on load, join, and leave).
  */
-export const MAX_GUILD_MEMBERS = 15;
+export const MAX_GUILD_MEMBERS = 100;
 export const MAX_GUILD_MEMBERS_WITHOUT_COFOUNDER = 10;
 
-/** Deterministic "random" 1–15 from guild id so placeholder data is stable. */
+/** Sample guilds only: small roster for UI (capped by placeholder student pool). */
+const SAMPLE_PLACEHOLDER_MEMBER_SPAN = 15;
+
+/** Deterministic "random" count for sample guild placeholders — not tied to `MAX_GUILD_MEMBERS`. */
 function placeholderMemberCount(guildId: string): number {
   let h = 0;
   for (let i = 0; i < guildId.length; i++) h = (h * 31 + guildId.charCodeAt(i)) >>> 0;
-  return (h % MAX_GUILD_MEMBERS) + 1;
+  return (h % SAMPLE_PLACEHOLDER_MEMBER_SPAN) + 1;
 }
 
 /** Deterministic shuffle of indices [0..n-1] seeded by guild id. */
@@ -268,7 +271,7 @@ export function getRecommendedGuilds(interest?: GuildInterest): Guild[] {
   return [...guilds].sort((a, b) => b.level - a.level);
 }
 
-const GUILD_XP_PER_LEVEL = 100;
+export const GUILD_XP_PER_LEVEL = 100;
 
 /** @deprecated Use MAX_GUILD_MEMBERS_WITHOUT_COFOUNDER */
 export const COFOUNDER_REQUIRED_AT_MEMBERS = MAX_GUILD_MEMBERS_WITHOUT_COFOUNDER;
@@ -311,6 +314,41 @@ export function guildBlockedForJoinWithoutCofounder(guild: Guild): boolean {
 
 function guildLevelFromXp(xp: number): number {
   return 1 + Math.floor(Math.max(0, xp) / GUILD_XP_PER_LEVEL);
+}
+
+/** Display level from stored `xp` or legacy `level`. */
+export function getGuildDisplayLevel(guild: Guild): number {
+  return guild.xp != null ? guildLevelFromXp(guild.xp) : guild.level;
+}
+
+/** XP toward the next guild level (100 XP per level). */
+export function guildXpInCurrentLevel(guild: Guild): { current: number; needed: number; totalXp: number } {
+  const totalXp = Math.max(0, guild.xp ?? 0);
+  return {
+    current: totalXp % GUILD_XP_PER_LEVEL,
+    needed: GUILD_XP_PER_LEVEL,
+    totalXp,
+  };
+}
+
+/** Sum boss defeat stats from member characters known in the local roster (friends + placeholders + you). */
+export function getGuildAggregatedBossKills(guild: Guild): {
+  bossesDefeated: number;
+  finalBossesDefeated: number;
+  membersWithKnownStats: number;
+} {
+  let bossesDefeated = 0;
+  let finalBossesDefeated = 0;
+  let membersWithKnownStats = 0;
+  for (const id of guild.memberIds) {
+    const c = getCharacterById(id);
+    if (c) {
+      membersWithKnownStats += 1;
+      bossesDefeated += c.bossesDefeatedCount ?? 0;
+      finalBossesDefeated += c.finalBossesDefeatedCount ?? 0;
+    }
+  }
+  return { bossesDefeated, finalBossesDefeated, membersWithKnownStats };
 }
 
 export function createGuild(params: {

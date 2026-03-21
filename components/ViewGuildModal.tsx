@@ -3,13 +3,20 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { Guild } from "@/lib/types";
-import { GUILD_INTEREST_LABELS, deleteGuild, setGuildCofounder, updateGuildSettings, MAX_GUILD_MEMBERS, guildBlockedForJoinWithoutCofounder } from "@/lib/guildStore";
+import {
+  GUILD_INTEREST_LABELS,
+  deleteGuild,
+  setGuildCofounder,
+  updateGuildSettings,
+  MAX_GUILD_MEMBERS,
+  guildBlockedForJoinWithoutCofounder,
+  getGuildDisplayLevel,
+  guildXpInCurrentLevel,
+  getGuildAggregatedBossKills,
+  GUILD_XP_PER_LEVEL,
+} from "@/lib/guildStore";
 import { getCharacterById } from "@/lib/friendsStore";
 import { AvatarDisplay } from "./AvatarDisplay";
-
-function guildDisplayLevel(guild: Guild): number {
-  return guild.xp != null ? 1 + Math.floor(guild.xp / 100) : guild.level;
-}
 
 export function ViewGuildModal({
   guild,
@@ -39,7 +46,10 @@ export function ViewGuildModal({
   const isCreator = currentUserId != null && guild.createdByUserId === currentUserId;
   const isCofounder = currentUserId != null && guild.cofounderUserId === currentUserId;
   const canEditGuild = isCreator || isCofounder;
-  const level = guildDisplayLevel(guild);
+  const level = getGuildDisplayLevel(guild);
+  const { current: guildXpCur, needed: guildXpNeed, totalXp: guildTotalXp } = guildXpInCurrentLevel(guild);
+  const guildXpPct = guildXpNeed > 0 ? Math.min(100, (guildXpCur / guildXpNeed) * 100) : 0;
+  const bossAgg = getGuildAggregatedBossKills(guild);
   const needsCofounder = guildBlockedForJoinWithoutCofounder(guild);
 
   function startEditing() {
@@ -106,6 +116,35 @@ export function ViewGuildModal({
                 </div>
               )}
               <p className="text-xs text-white/60 mt-0.5">{GUILD_INTEREST_LABELS[guild.interest]} · Lv.{level}</p>
+            </div>
+          </div>
+          <div className="mb-4 rounded-xl border border-uri-keaney/25 bg-black/25 p-3">
+            <div className="flex justify-between text-[11px] text-white/65 mb-1.5">
+              <span className="font-semibold uppercase tracking-wider text-uri-keaney/90">Guild XP</span>
+              <span className="font-mono text-uri-keaney/95 tabular-nums">
+                {guildXpCur} / {guildXpNeed} to Lv.{level + 1}
+              </span>
+            </div>
+            <div className="h-2.5 rounded-full overflow-hidden bg-white/10 border border-white/10">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-uri-keaney to-uri-keaney/70 transition-all duration-500"
+                style={{ width: `${guildXpPct}%` }}
+              />
+            </div>
+            <p className="mt-2 text-[10px] leading-relaxed text-white/45">
+              {guildTotalXp.toLocaleString()} total XP · {GUILD_XP_PER_LEVEL} XP per level. Members add guild XP when they earn activity XP and when they defeat bosses.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <div className="rounded-xl border border-uri-gold/30 bg-uri-gold/[0.08] px-3 py-2.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-uri-gold/85">Bosses defeated</p>
+              <p className="font-display text-xl font-bold text-white tabular-nums">{bossAgg.bossesDefeated}</p>
+              <p className="text-[10px] text-white/45 mt-0.5">Across known members</p>
+            </div>
+            <div className="rounded-xl border border-amber-500/35 bg-amber-950/25 px-3 py-2.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-200/90">Final bosses</p>
+              <p className="font-display text-xl font-bold text-amber-100 tabular-nums">{bossAgg.finalBossesDefeated}</p>
+              <p className="text-[10px] text-white/45 mt-0.5">Across known members</p>
             </div>
           </div>
           <div className="space-y-3 text-sm mb-4">

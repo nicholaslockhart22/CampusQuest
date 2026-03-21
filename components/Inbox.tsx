@@ -59,6 +59,7 @@ export function Inbox({
   onOpenDm?: (other: { userId: string; username: string; name: string; avatar: string }) => void;
 }) {
   const [subTab, setSubTab] = useState<InboxSubTab>("notifications");
+  const [messageSearch, setMessageSearch] = useState("");
   const [dmWith, setDmWith] = useState<{ userId: string; username: string; name: string; avatar: string } | null>(null);
   const [starredNotifications, setStarredNotifications] = useState<Set<string>>(() => loadStarredSet(STORAGE_STARRED_NOTIFICATIONS));
   const [starredMessages, setStarredMessages] = useState<Set<string>>(() => loadStarredSet(STORAGE_STARRED_MESSAGES));
@@ -113,6 +114,17 @@ export function Inbox({
       return b.ts - a.ts;
     });
   }, [starredMessages]);
+
+  const filteredMessages = useMemo(() => {
+    const q = messageSearch.trim().toLowerCase();
+    if (!q) return sortedMessages;
+    return sortedMessages.filter((m) => {
+      if (m.type === "dm") {
+        return m.from.toLowerCase().includes(q) || m.fromUsername.toLowerCase().includes(q);
+      }
+      return m.guildName.toLowerCase().includes(q) || m.from.toLowerCase().includes(q);
+    });
+  }, [sortedMessages, messageSearch]);
 
   function handleOpenDm(userId: string, username: string, name: string, avatar: string) {
     if (onOpenDm) {
@@ -193,13 +205,42 @@ export function Inbox({
         )}
 
         {subTab === "messages" && (
-          <ul className="divide-y divide-white/10 max-h-[50vh] overflow-y-auto">
-            {sortedMessages.map((m) => (
+          <>
+            <div className="border-b border-white/10 p-3 sm:p-4">
+              <label htmlFor="inbox-msg-search" className="sr-only">
+                Search messages by name
+              </label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/40" aria-hidden>
+                  🔍
+                </span>
+                <input
+                  id="inbox-msg-search"
+                  type="search"
+                  value={messageSearch}
+                  onChange={(e) => setMessageSearch(e.target.value)}
+                  placeholder="Search by name…"
+                  autoComplete="off"
+                  className="w-full rounded-xl border border-white/15 bg-white/[0.06] py-2.5 pl-10 pr-3 text-sm text-white placeholder-white/40 shadow-inner transition-colors focus:border-uri-keaney/45 focus:outline-none focus:ring-2 focus:ring-uri-keaney/25"
+                />
+              </div>
+            </div>
+            <ul className="divide-y divide-white/10 max-h-[min(50vh,28rem)] overflow-y-auto overscroll-y-contain">
+            {filteredMessages.length === 0 ? (
+              <li className="px-4 py-10 text-center">
+                <p className="text-sm text-white/55">
+                  {messageSearch.trim()
+                    ? `No conversations match "${messageSearch.trim()}".`
+                    : "No messages."}
+                </p>
+              </li>
+            ) : (
+              filteredMessages.map((m) => (
               <li key={m.id} className="flex items-center gap-2">
                 {m.type === "dm" ? (
                   <button
                     type="button"
-                    onClick={() => onOpenDm && handleOpenDm(m.userId, m.fromUsername, m.from, m.fromAvatar)}
+                    onClick={() => handleOpenDm(m.userId, m.fromUsername, m.from, m.fromAvatar)}
                     className="flex-1 min-w-0 flex items-center gap-3 p-4 hover:bg-white/[0.04] text-left transition-colors"
                   >
                     <div className="w-11 h-11 rounded-xl bg-white/10 border border-uri-keaney/30 flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -233,8 +274,10 @@ export function Inbox({
                   {starredMessages.has(m.id) ? "★" : "☆"}
                 </button>
               </li>
-            ))}
-          </ul>
+              ))
+            )}
+            </ul>
+          </>
         )}
       </div>
 
