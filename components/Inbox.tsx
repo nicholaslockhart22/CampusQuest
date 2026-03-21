@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import type { Character } from "@/lib/types";
 import { AvatarDisplay } from "./AvatarDisplay";
 import { DirectMessageThread } from "./DirectMessageThread";
+import { buildUrgencyFeed } from "@/lib/urgencyPulse";
 
 type InboxSubTab = "notifications" | "messages";
 
@@ -24,7 +25,7 @@ function loadStarredSet(key: string): Set<string> {
 
 function saveStarredSet(key: string, set: Set<string>): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(key, JSON.stringify([...set]));
+  localStorage.setItem(key, JSON.stringify(Array.from(set)));
 }
 
 /** Filler notifications with ts for sort (most recent first). */
@@ -87,13 +88,22 @@ export function Inbox({
   }, []);
 
   const sortedNotifications = useMemo(() => {
-    return [...FILLER_NOTIFICATIONS].sort((a, b) => {
+    const pulse = buildUrgencyFeed(character).map((u) => ({
+      id: `pulse-${u.id}`,
+      type: "system" as const,
+      icon: u.icon,
+      title: u.title,
+      body: u.body,
+      time: "Live",
+      ts: u.ts + 1e12,
+    }));
+    return [...pulse, ...FILLER_NOTIFICATIONS].sort((a, b) => {
       const aStar = starredNotifications.has(a.id) ? 0 : 1;
       const bStar = starredNotifications.has(b.id) ? 0 : 1;
       if (aStar !== bStar) return aStar - bStar;
       return b.ts - a.ts;
     });
-  }, [starredNotifications]);
+  }, [character, starredNotifications]);
 
   const sortedMessages = useMemo(() => {
     return [...FILLER_MESSAGES].sort((a, b) => {

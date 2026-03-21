@@ -67,6 +67,14 @@ const SAMPLE_GUILD_TEMPLATES: Omit<Guild, "memberIds" | "createdByUserId" | "cof
 
 const PLACEHOLDER_ID_PREFIX = "ph-guild-";
 
+/**
+ * Min 1 (founder), max 15. Declared early for placeholder helpers.
+ * `MAX_GUILD_MEMBERS_WITHOUT_COFOUNDER`: up to 10 members may join without a co-founder; the 11th requires one.
+ * Every guild with **more than 10** members always has a co-founder (enforced on load, join, and leave).
+ */
+export const MAX_GUILD_MEMBERS = 15;
+export const MAX_GUILD_MEMBERS_WITHOUT_COFOUNDER = 10;
+
 /** Deterministic "random" 1–15 from guild id so placeholder data is stable. */
 function placeholderMemberCount(guildId: string): number {
   let h = 0;
@@ -128,7 +136,8 @@ function generateSampleGuilds(): Guild[] {
     const indices = indicesByGuild[guildIndex];
     const memberIds = indices.map((i) => `${PLACEHOLDER_ID_PREFIX}${i}`);
     const createdByUserId = memberIds[0];
-    const cofounderUserId = memberIds.length > COFOUNDER_REQUIRED_AT_MEMBERS ? memberIds[1] : undefined;
+    const cofounderUserId =
+      memberIds.length > MAX_GUILD_MEMBERS_WITHOUT_COFOUNDER ? memberIds[1] : undefined;
     return {
       ...t,
       memberIds,
@@ -155,7 +164,8 @@ function migratePlaceholderMemberIds(guilds: Guild[]): { guilds: Guild[]; change
       ...g,
       memberIds,
       createdByUserId: memberIds[0],
-      cofounderUserId: memberIds.length > COFOUNDER_REQUIRED_AT_MEMBERS ? memberIds[1] : undefined,
+      cofounderUserId:
+        memberIds.length > MAX_GUILD_MEMBERS_WITHOUT_COFOUNDER ? memberIds[1] : undefined,
     };
   });
   return { guilds: out, changed };
@@ -200,6 +210,7 @@ function loadGuilds(): Guild[] {
       if (toRemove.length > 0) saveGuilds(guilds);
       ensurePlaceholderMembersRegistered(guilds);
     }
+    applyCofounderInvariantToAll(guilds);
     return guilds;
   } catch {
     const guilds = generateSampleGuilds();
@@ -258,10 +269,45 @@ export function getRecommendedGuilds(interest?: GuildInterest): Guild[] {
 }
 
 const GUILD_XP_PER_LEVEL = 100;
-/** Min 1 (founder), max 15. Guilds with 10+ members must have a cofounder. */
-export const MAX_GUILD_MEMBERS = 15;
-/** When member count would exceed this, a cofounder must be set before the next join. */
-export const COFOUNDER_REQUIRED_AT_MEMBERS = 9;
+
+/** @deprecated Use MAX_GUILD_MEMBERS_WITHOUT_COFOUNDER */
+export const COFOUNDER_REQUIRED_AT_MEMBERS = MAX_GUILD_MEMBERS_WITHOUT_COFOUNDER;
+
+/** Co-founder is set, is a current member, and is not the founder. */
+export function isCofounderValid(guild: Guild): boolean {
+  const c = guild.cofounderUserId;
+  if (c == null) return false;
+  return guild.memberIds.includes(c) && c !== guild.createdByUserId;
+}
+
+/**
+ * If the guild has more than 10 members but no valid co-founder, assign the first non-founder member.
+ * Returns true if the guild object was updated.
+ */
+export function ensureCofounderWhenOverTenMembers(guild: Guild): boolean {
+  if (guild.memberIds.length <= MAX_GUILD_MEMBERS_WITHOUT_COFOUNDER) return false;
+  if (isCofounderValid(guild)) return false;
+  const founder = guild.createdByUserId;
+  const pick = guild.memberIds.find((id) => id !== founder);
+  if (pick == null) return false;
+  guild.cofounderUserId = pick;
+  return true;
+}
+
+/** Fix persisted guilds: any with more than 10 members must have a valid co-founder. */
+function applyCofounderInvariantToAll(guilds: Guild[]): void {
+  if (typeof window === "undefined") return;
+  let changed = false;
+  for (const g of guilds) {
+    if (ensureCofounderWhenOverTenMembers(g)) changed = true;
+  }
+  if (changed) saveGuilds(guilds);
+}
+
+/** True while the guild has 10 members and cannot accept an 11th until a co-founder is set. */
+export function guildBlockedForJoinWithoutCofounder(guild: Guild): boolean {
+  return guild.memberIds.length >= MAX_GUILD_MEMBERS_WITHOUT_COFOUNDER && !isCofounderValid(guild);
+}
 
 function guildLevelFromXp(xp: number): number {
   return 1 + Math.floor(Math.max(0, xp) / GUILD_XP_PER_LEVEL);
@@ -301,9 +347,10 @@ export function joinGuild(characterId: string, guildId: string): boolean {
   const guild = guilds.find((g) => g.id === guildId);
   if (!guild || guild.memberIds.includes(characterId)) return false;
   if (guild.memberIds.length >= MAX_GUILD_MEMBERS) return false;
-  if (guild.memberIds.length >= COFOUNDER_REQUIRED_AT_MEMBERS && !guild.cofounderUserId) return false;
+  if (guildBlockedForJoinWithoutCofounder(guild)) return false;
   if (!addCharacterToGuild(characterId, guildId)) return false;
   guild.memberIds.push(characterId);
+  ensureCofounderWhenOverTenMembers(guild);
   saveGuilds(guilds);
   return true;
 }
@@ -327,6 +374,7 @@ export function leaveGuild(characterId: string, guildId?: string): void {
   } else if (wasCofounder) {
     guild.cofounderUserId = undefined;
   }
+  ensureCofounderWhenOverTenMembers(guild);
   saveGuilds(guilds);
   removeCharacterFromGuild(characterId, targetGuildId);
 }
@@ -354,7 +402,7 @@ export function updateGuildSettings(
   return true;
 }
 
-/** Set co-founder. Only the founder can set; cofounder must be a current member and not the founder. Required for guilds with 10+ members. */
+/** Set co-founder. Only the founder can set; cofounder must be a current member and not the founder. Required once the guild has more than 10 members. */
 export function setGuildCofounder(guildId: string, requestedByUserId: string, cofounderUserId: string): boolean {
   const guilds = loadGuilds();
   const guild = guilds.find((g) => g.id === guildId);

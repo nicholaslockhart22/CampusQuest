@@ -15,6 +15,8 @@ import {
 import type { UserBoss, Character, StatKey } from "@/lib/types";
 import { STAT_KEYS, STAT_ICONS, STAT_LABELS } from "@/lib/types";
 import { getCosmeticById } from "@/lib/cosmetics";
+import { describeCosmeticEquipEffect } from "@/lib/gameBuffs";
+import { CampusBossRaid } from "@/components/CampusBossRaid";
 
 const DELETE_CONFIRM_DIALOGS: { message: string; fightOn: string; retreat: string }[] = [
   {
@@ -118,6 +120,10 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
             </p>
           </div>
         </div>
+      </div>
+
+      <div className="px-4 sm:px-5 pb-4">
+        <CampusBossRaid character={character} />
       </div>
 
       <div className="p-4 sm:p-5 space-y-4 sm:space-y-4">
@@ -284,12 +290,18 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
                               Weak: {STAT_ICONS[weakness]} {STAT_LABELS[weakness]}
                             </span>
                           )}
-                          {loot.length > 0 && (
-                            <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-uri-keaney/15 text-uri-keaney border border-uri-keaney/30">
-                              Loot: {loot.slice(0, 2).map((l) => l!.icon).join(" ")}{loot.length > 2 ? ` +${loot.length - 2}` : ""}
-                            </span>
-                          )}
                         </div>
+                        {loot.length > 0 && (
+                          <ul className="mt-1.5 space-y-0.5 text-[10px] leading-snug text-white/65 w-full">
+                            {loot.map((piece) => (
+                              <li key={piece!.id} className="flex flex-wrap items-baseline gap-x-1">
+                                <span aria-hidden>{piece!.icon}</span>
+                                <span className="text-white/85 font-medium">{piece!.label}</span>
+                                <span className="text-emerald-200/85">· {describeCosmeticEquipEffect(piece!.id)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                         {!boss.defeated && (
                           <div className="mt-2">
                             <div className="flex justify-between text-xs text-white/70 mb-1">
@@ -386,12 +398,18 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
                             Weak: {STAT_ICONS[weakness]} {STAT_LABELS[weakness]}
                           </span>
                         )}
-                        {loot.length > 0 && (
-                          <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-uri-keaney/15 text-uri-keaney border border-uri-keaney/30">
-                            Loot: {loot.slice(0, 2).map((l) => l!.icon).join(" ")}{loot.length > 2 ? ` +${loot.length - 2}` : ""}
-                          </span>
-                        )}
                       </div>
+                      {loot.length > 0 && (
+                        <ul className="mt-1.5 space-y-0.5 text-[10px] leading-snug text-white/60 w-full">
+                          {loot.map((piece) => (
+                            <li key={piece!.id} className="flex flex-wrap items-baseline gap-x-1">
+                              <span aria-hidden>{piece!.icon}</span>
+                              <span className="text-white/80 font-medium">{piece!.label}</span>
+                              <span className="text-emerald-200/80">· {describeCosmeticEquipEffect(piece!.id)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                       {!boss.defeated && (
                         <div className="mt-2">
                           <div className="flex justify-between text-xs text-white/60 mb-1">

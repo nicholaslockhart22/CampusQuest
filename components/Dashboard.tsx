@@ -25,6 +25,12 @@ import { Inbox } from "./Inbox";
 import { STAT_KEYS, STAT_ICONS, STAT_LABELS } from "@/lib/types";
 import { getActivityById } from "@/lib/activities";
 import { AvatarDisplay } from "./AvatarDisplay";
+import { playXpDing, playLevelUpFanfare } from "@/lib/playGameSound";
+import { describeCosmeticEquipEffect } from "@/lib/gameBuffs";
+import { SkillTreePanel } from "./SkillTreePanel";
+import { SurpriseQuestBanner } from "./SurpriseQuestBanner";
+import { MiniGameFocus } from "./MiniGameFocus";
+import type { StatKey } from "@/lib/types";
 
 type Tab = "quad" | "me" | "friends" | "leaderboards" | "profile" | "inbox";
 
@@ -187,13 +193,17 @@ export function Dashboard() {
     xp: number;
     stats: Partial<Record<keyof Character["stats"], number>>;
     title: string;
-    lastBossDrop?: { bossName: string; loot?: { icon: string; label: string; rarity: string } };
+    lastBossDrop?: { bossName: string; loot?: { icon: string; label: string; rarity: string; equipEffect: string } };
+    modifierLines?: { label: string; emoji?: string }[];
+    primaryStat?: StatKey;
   }>(null);
   const [bossDefeatPhase, setBossDefeatPhase] = useState<"teaser" | "reveal" | null>(null);
   const [bossVictoryExiting, setBossVictoryExiting] = useState(false);
-  const bossVictoryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bossVictoryTimerRef = useRef<number | null>(null);
   const [showLevel3Popup, setShowLevel3Popup] = useState(false);
   const [dmWithOther, setDmWithOther] = useState<{ userId: string; username: string; name: string; avatar: string } | null>(null);
+  const [screenShake, setScreenShake] = useState(false);
+  const [levelUpModal, setLevelUpModal] = useState<number | null>(null);
 
   const XP300_POPUP_KEY = "campusquest_300xp_celebrated";
 
@@ -314,10 +324,14 @@ export function Dashboard() {
         result.lastBossDrop?.loot != null
           ? result.lastBossDrop.loot.rarity.charAt(0).toUpperCase() + result.lastBossDrop.loot.rarity.slice(1)
           : undefined;
+      playXpDing();
+      const modLines = result.xpBreakdown?.lines?.map((l) => ({ label: l.label, emoji: l.emoji }));
       setGainToast({
         xp,
         stats,
         title: def ? `${def.icon} ${def.label}` : "Activity logged",
+        modifierLines: modLines,
+        primaryStat: def?.stat,
         lastBossDrop: result.lastBossDrop
           ? {
               bossName: result.lastBossDrop.bossName,
@@ -327,13 +341,23 @@ export function Dashboard() {
                       icon: result.lastBossDrop.loot.icon,
                       label: result.lastBossDrop.loot.label,
                       rarity: rarityLabel ?? result.lastBossDrop.loot.rarity,
+                      equipEffect: describeCosmeticEquipEffect(result.lastBossDrop.loot.id),
                     }
                   : undefined,
             }
           : undefined,
       });
+      if (result.leveledUp) {
+        playLevelUpFanfare();
+        setLevelUpModal(updated.level);
+        setScreenShake(true);
+        window.setTimeout(() => setScreenShake(false), 700);
+      }
       if (result.lastBossDrop) setBossDefeatPhase("teaser");
-      if (!result.lastBossDrop) window.setTimeout(() => setGainToast(null), 3200);
+      if (!result.lastBossDrop) {
+        const ms = modLines && modLines.length > 2 ? 5200 : 3800;
+        window.setTimeout(() => setGainToast(null), ms);
+      }
       // Show 300 XP celebration when they just reached 300 total XP
       if (before.totalXP < 300 && updated.totalXP >= 300) {
         try {
@@ -360,7 +384,10 @@ export function Dashboard() {
   return (
     <>
       <Header username={character?.username ?? null} character={character} onRefresh={refresh} onOpenInbox={() => setTab("inbox")} />
-      <div style={{ paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))" }}>
+      <div
+        className={screenShake ? "cq-screen-shake" : undefined}
+        style={{ paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))" }}
+      >
         {gainToast?.lastBossDrop && typeof document !== "undefined" && createPortal(
           bossDefeatPhase === "teaser" ? (
             <div
@@ -442,9 +469,12 @@ export function Dashboard() {
                         <span className="boss-victory-loot-icon inline-flex w-16 h-16 items-center justify-center text-4xl rounded-xl bg-white/15 border border-uri-gold/30">
                           {gainToast.lastBossDrop.loot.icon}
                         </span>
-                        <div className="text-left">
+                        <div className="text-left min-w-0">
                           <div className="text-white font-bold text-lg">{gainToast.lastBossDrop.loot.label}</div>
                           <div className="text-uri-gold font-semibold text-sm">{gainToast.lastBossDrop.loot.rarity}</div>
+                          <div className="text-emerald-200/90 text-xs mt-1.5 leading-snug">
+                            When equipped: {gainToast.lastBossDrop.loot.equipEffect}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -474,7 +504,17 @@ export function Dashboard() {
                 <div className="min-w-0">
                   <div className="text-white font-semibold truncate">{gainToast.title}</div>
                   <div className="text-xs text-white/60 mt-0.5">
-                    <span className="font-mono text-uri-keaney">+{gainToast.xp} XP</span>
+                    <span
+                      className={`font-mono text-uri-keaney font-bold cq-xp-burst ${
+                        gainToast.primaryStat === "strength"
+                          ? "stat-burst-strength"
+                          : gainToast.primaryStat === "knowledge"
+                            ? "stat-burst-knowledge"
+                            : ""
+                      }`}
+                    >
+                      +{gainToast.xp} XP
+                    </span>
                     {Object.keys(gainToast.stats).length > 0 && <span className="text-white/40"> · </span>}
                     {STAT_KEYS.filter((k) => (gainToast.stats as any)[k] > 0).map((k) => (
                       <span key={k} className="mr-2">
@@ -483,6 +523,19 @@ export function Dashboard() {
                       </span>
                     ))}
                   </div>
+                  {gainToast.modifierLines && gainToast.modifierLines.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {gainToast.modifierLines.map((l, i) => (
+                        <span
+                          key={`${l.label}-${i}`}
+                          className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-uri-gold/15 text-uri-gold border border-uri-gold/35"
+                        >
+                          {l.emoji ? `${l.emoji} ` : ""}
+                          {l.label}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -525,6 +578,27 @@ export function Dashboard() {
         document.body
       )}
 
+      {levelUpModal != null && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={() => setLevelUpModal(null)} aria-hidden />
+          <div className="relative z-10 w-full max-w-sm rounded-3xl border-2 border-uri-keaney/60 bg-uri-navy p-8 text-center cq-level-up-burst overflow-hidden">
+            <div className="text-6xl mb-2 cq-level-up-emoji" aria-hidden>
+              ⭐
+            </div>
+            <p className="text-uri-keaney font-black text-3xl font-display">LEVEL {levelUpModal}</p>
+            <p className="text-white/80 text-sm mt-3 mb-6">New skill point unlocked — open Skill tree on your Character tab.</p>
+            <button
+              type="button"
+              onClick={() => setLevelUpModal(null)}
+              className="w-full py-3.5 rounded-xl bg-uri-gold text-uri-navy font-bold text-sm hover:bg-amber-400"
+            >
+              Let&apos;s go!
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
       <div key={tab} className="tab-content-enter space-y-5 sm:space-y-6">
         {tab === "inbox" && character && (
           <Inbox
@@ -557,6 +631,15 @@ export function Dashboard() {
             </div>
             <div className="md:col-span-2">
               <StreakCard character={character} />
+            </div>
+            <div className="md:col-span-2">
+              <SurpriseQuestBanner character={character} />
+            </div>
+            <div className="md:col-span-2">
+              <SkillTreePanel character={character} onRefresh={refresh} />
+            </div>
+            <div className="md:col-span-2">
+              <MiniGameFocus character={character} onRefresh={refresh} />
             </div>
             <div className="md:col-span-2">
               <CollapsibleSection title="Weekly recap" defaultCollapsed>

@@ -71,6 +71,20 @@ export interface Character {
   guildId?: string;
   /** Short bio shown on profile. */
   bio?: string;
+  /** Unlocked skill tree node ids. */
+  unlockedSkillNodes?: string[];
+  /** Equipped boss-drop cosmetics (buffs apply when unlocked). */
+  equippedCosmetics?: Partial<Record<"hat" | "glasses" | "backpack", string>>;
+  /** Rare consumable: auto-saves streak once when you would lose it. */
+  streakFreezes?: number;
+  /** YYYY-MM-DD of last completed surprise quest day. */
+  lastSurpriseQuestCompletedDay?: string;
+  /** Partial progress toward today's surprise (optional). */
+  surpriseQuestDay?: string;
+  /** YYYY-MM-DD of last mini-game XP grant. */
+  lastMiniGameXpDay?: string;
+  /** Running tally from Quad "Assist" reactions (group quest vibe). */
+  quadAssistScore?: number;
 }
 
 // —— Guilds ——
@@ -89,7 +103,7 @@ export interface Guild {
   createdAt: number;
   /** Exactly one founder per guild. */
   createdByUserId: string;
-  /** Required when guild has more than 9 members. Only founder can set; must be a member. */
+  /** Required when the guild has more than 10 members. Only founder can set; must be a member (≠ founder). */
   cofounderUserId?: string;
 }
 
@@ -193,13 +207,23 @@ export interface FieldNote {
   body: string;
   ramMarks: RamMark[];
   nodCount: number;
+  /** @deprecated Prefer hypeCount; kept for migration */
   vouchCount: number;
   nodByUserIds: Set<string>;
+  /** @deprecated Prefer hypeByUserIds */
   vouchByUserIds: Set<string>;
+  hypeCount: number;
+  verifyCount: number;
+  assistCount: number;
+  hypeByUserIds: Set<string>;
+  verifyByUserIds: Set<string>;
+  assistByUserIds: Set<string>;
   createdAt: number;
   proofUrl?: string; // optional proof image for bonus XP
   /** public = show on Public Quad; friends = show only on Friends feed (you + your friends) */
   visibility?: QuadPostVisibility;
+  /** Snapshot for feed badges (optional). */
+  authorStreakDays?: number;
 }
 
 // For serialization we store nod/rally as arrays
@@ -215,9 +239,16 @@ export interface FieldNoteSerialized {
   vouchCount: number;
   nodByUserIds: string[];
   vouchByUserIds: string[];
+  hypeCount?: number;
+  verifyCount?: number;
+  assistCount?: number;
+  hypeByUserIds?: string[];
+  verifyByUserIds?: string[];
+  assistByUserIds?: string[];
   createdAt: number;
   proofUrl?: string;
   visibility?: QuadPostVisibility;
+  authorStreakDays?: number;
 }
 
 /** Comment on a Quad post (field note). */

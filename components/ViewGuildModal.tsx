@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { Guild } from "@/lib/types";
-import { GUILD_INTEREST_LABELS, deleteGuild, setGuildCofounder, updateGuildSettings, MAX_GUILD_MEMBERS, COFOUNDER_REQUIRED_AT_MEMBERS } from "@/lib/guildStore";
+import { GUILD_INTEREST_LABELS, deleteGuild, setGuildCofounder, updateGuildSettings, MAX_GUILD_MEMBERS, guildBlockedForJoinWithoutCofounder } from "@/lib/guildStore";
 import { getCharacterById } from "@/lib/friendsStore";
 import { AvatarDisplay } from "./AvatarDisplay";
 
@@ -40,7 +40,7 @@ export function ViewGuildModal({
   const isCofounder = currentUserId != null && guild.cofounderUserId === currentUserId;
   const canEditGuild = isCreator || isCofounder;
   const level = guildDisplayLevel(guild);
-  const needsCofounder = guild.memberIds.length > COFOUNDER_REQUIRED_AT_MEMBERS && !guild.cofounderUserId;
+  const needsCofounder = guildBlockedForJoinWithoutCofounder(guild);
 
   function startEditing() {
     setEditName(guild.name);
@@ -152,7 +152,7 @@ export function ViewGuildModal({
               Members ({guild.memberIds.length}/{MAX_GUILD_MEMBERS})
             </p>
             {needsCofounder && isCreator && (
-              <p className="text-xs text-amber-400/90 mb-2">Assign a co-founder so new members can join (required for 10+ members).</p>
+              <p className="text-xs text-amber-400/90 mb-2">Assign a valid co-founder so the guild can accept an 11th member (required once you have 10).</p>
             )}
             <ul className="space-y-2 max-h-48 overflow-y-auto">
               {guild.memberIds.length === 0 ? (

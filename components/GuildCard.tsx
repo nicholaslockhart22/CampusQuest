@@ -1,7 +1,7 @@
 "use client";
 
 import type { Guild, GuildInterest } from "@/lib/types";
-import { GUILD_INTEREST_LABELS, MAX_GUILD_MEMBERS } from "@/lib/guildStore";
+import { GUILD_INTEREST_LABELS, MAX_GUILD_MEMBERS, guildBlockedForJoinWithoutCofounder } from "@/lib/guildStore";
 
 const MAX_GUILDS = 2;
 
@@ -28,7 +28,7 @@ export function GuildCard({
   const atMaxGuilds = userGuildIds.length >= MAX_GUILDS && !isMember;
   const memberCount = guild.memberIds.length;
   const guildFull = memberCount >= MAX_GUILD_MEMBERS;
-  const needsCofounderToJoin = memberCount > 9 && !guild.cofounderUserId;
+  const needsCofounderToJoin = guildBlockedForJoinWithoutCofounder(guild);
 
   return (
     <div className="p-4 rounded-xl border border-white/15 bg-white/[0.06] hover:bg-white/[0.08] transition-colors">

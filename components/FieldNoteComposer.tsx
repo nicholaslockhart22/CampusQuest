@@ -81,6 +81,7 @@ export function FieldNoteComposer({
       ramMarks,
       proofUrl: proofUrl.trim() || undefined,
       visibility,
+      authorStreakDays: character.streakDays ?? 0,
     });
     if (note) {
       setBody("");

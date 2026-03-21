@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { FieldNote, QuadComment } from "@/lib/types";
+import type { FieldNote, QuadComment, StatKey } from "@/lib/types";
 import { QUAD_COMMENT_MAX_CHARS } from "@/lib/types";
 import { AvatarDisplay } from "./AvatarDisplay";
 
@@ -15,36 +15,61 @@ function formatTime(ts: number): string {
   return d.toLocaleDateString();
 }
 
+function streakBadge(days: number | undefined): string | null {
+  if (days == null || days < 3) return null;
+  if (days >= 30) return `🔥 ${days}-day streak`;
+  if (days >= 7) return `🔥 ${days}-day streak`;
+  return `🔥 ${days}d`;
+}
+
 export function FieldNoteCard({
   note,
   currentUserId,
   comments = [],
   onNod,
-  onVouch,
+  onHype,
+  onVerify,
+  onAssist,
   onAddComment,
   currentUser,
+  highlightStat,
 }: {
   note: FieldNote;
   currentUserId: string;
   comments?: QuadComment[];
   onNod: (noteId: string) => void;
-  onVouch: (noteId: string) => void;
+  onHype: (noteId: string) => void;
+  onVerify: (noteId: string) => void;
+  onAssist: (noteId: string) => void;
   onAddComment?: (noteId: string, body: string) => void;
   currentUser?: { id: string; name: string; username: string; avatar: string };
+  /** Micro celebration on author row when this post's activity matches */
+  highlightStat?: StatKey | null;
 }) {
   const [commentDraft, setCommentDraft] = useState("");
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const hasNodded = note.nodByUserIds.has(currentUserId);
-  const hasVouched = note.vouchByUserIds.has(currentUserId);
+  const hasHyped = note.hypeByUserIds?.has(currentUserId) ?? note.vouchByUserIds.has(currentUserId);
+  const hasVerified = note.verifyByUserIds?.has(currentUserId) ?? false;
+  const hasAssisted = note.assistByUserIds?.has(currentUserId) ?? false;
 
   const proofImgUrl = note.proofUrl?.trim();
   const isImgUrl = proofImgUrl && /\.(jpe?g|png|gif|webp)/i.test(proofImgUrl);
+  const streak = streakBadge(note.authorStreakDays);
 
   return (
     <article className="p-4 hover:bg-white/[0.04] transition-colors">
       <div className="flex gap-3">
-        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-uri-keaney/25 to-uri-navy flex items-center justify-center flex-shrink-0 border border-uri-keaney/30 overflow-hidden">
+        <div
+          className={`w-11 h-11 rounded-xl bg-gradient-to-br from-uri-keaney/25 to-uri-navy flex items-center justify-center flex-shrink-0 border border-uri-keaney/30 overflow-hidden ${
+            highlightStat === "strength"
+              ? "stat-aura-strength"
+              : highlightStat === "knowledge"
+                ? "stat-aura-knowledge"
+                : ""
+          }`}
+        >
           <AvatarDisplay avatar={note.authorAvatar} size={44} />
         </div>
         <div className="flex-1 min-w-0">
@@ -52,6 +77,11 @@ export function FieldNoteCard({
             <span className="font-semibold text-white">{note.authorName}</span>
             <span className="text-uri-keaney/90 text-sm">@{note.authorUsername}</span>
             <span className="text-white/40 text-xs">· {formatTime(note.createdAt)}</span>
+            {streak && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-uri-gold/20 text-uri-gold border border-uri-gold/40">
+                {streak}
+              </span>
+            )}
           </div>
           <p className="text-white/90 mt-1 whitespace-pre-wrap break-words">{note.body}</p>
           {proofImgUrl && (
@@ -59,7 +89,12 @@ export function FieldNoteCard({
               {isImgUrl ? (
                 <img src={proofImgUrl} alt="Proof" className="w-full max-h-48 object-cover" />
               ) : (
-                <a href={proofImgUrl} target="_blank" rel="noopener noreferrer" className="block px-3 py-2 text-uri-keaney text-sm truncate bg-white/5">
+                <a
+                  href={proofImgUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block px-3 py-2 text-uri-keaney text-sm truncate bg-white/5"
+                >
                   📎 Proof link
                 </a>
               )}
@@ -74,11 +109,11 @@ export function FieldNoteCard({
               ))}
             </div>
           )}
-          <div className="flex items-center gap-1 mt-3 pt-3 border-t border-white/10">
+          <div className="flex flex-wrap items-center gap-1 mt-3 pt-3 border-t border-white/10">
             <button
               type="button"
               onClick={() => onNod(note.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${hasNodded ? "text-uri-gold bg-uri-gold/10" : "text-white/55 hover:text-uri-gold hover:bg-white/5"}`}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm transition-colors ${hasNodded ? "text-uri-gold bg-uri-gold/10" : "text-white/55 hover:text-uri-gold hover:bg-white/5"}`}
               aria-label={hasNodded ? "Remove nod" : "Nod"}
             >
               <span>👍</span>
@@ -87,17 +122,41 @@ export function FieldNoteCard({
             </button>
             <button
               type="button"
-              onClick={() => onVouch(note.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${hasVouched ? "text-uri-keaney bg-uri-keaney/10" : "text-white/55 hover:text-uri-keaney hover:bg-white/5"}`}
-              aria-label={hasVouched ? "Remove vouch" : "Vouch"}
+              onClick={() => onHype(note.id)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm transition-colors ${hasHyped ? "text-orange-300 bg-orange-500/15" : "text-white/55 hover:text-orange-200 hover:bg-white/5"}`}
+              aria-label={hasHyped ? "Remove hype" : "Hype"}
+              title="Hype — you +2 XP, author +3 XP"
             >
-              <span>🤝</span>
-              <span>Vouch</span>
-              {note.vouchCount > 0 && <span className="font-mono text-xs">({note.vouchCount})</span>}
+              <span>🔥</span>
+              <span>Hype</span>
+              {(note.hypeCount ?? note.vouchCount) > 0 && (
+                <span className="font-mono text-xs">({note.hypeCount ?? note.vouchCount})</span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => onVerify(note.id)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm transition-colors ${hasVerified ? "text-emerald-300 bg-emerald-500/15" : "text-white/55 hover:text-emerald-200 hover:bg-white/5"}`}
+              aria-label={hasVerified ? "Remove verify" : "Verify"}
+              title="Verify legit — you +5 XP, author +5 XP"
+            >
+              <span>✅</span>
+              <span>Verify</span>
+              {(note.verifyCount ?? 0) > 0 && <span className="font-mono text-xs">({note.verifyCount})</span>}
+            </button>
+            <button
+              type="button"
+              onClick={() => onAssist(note.id)}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm transition-colors ${hasAssisted ? "text-uri-keaney bg-uri-keaney/15" : "text-white/55 hover:text-uri-keaney hover:bg-white/5"}`}
+              aria-label={hasAssisted ? "Remove assist" : "Assist"}
+              title="Assist — guild race points + author XP"
+            >
+              <span>⚔️</span>
+              <span>Assist</span>
+              {(note.assistCount ?? 0) > 0 && <span className="font-mono text-xs">({note.assistCount})</span>}
             </button>
           </div>
 
-          {/* Comments (collapsible) */}
           <div className="mt-3 pt-3 border-t border-white/10">
             <button
               type="button"

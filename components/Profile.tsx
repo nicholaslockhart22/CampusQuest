@@ -6,7 +6,7 @@ import type { Character } from "@/lib/types";
 import type { FieldNote } from "@/lib/types";
 import { STAT_KEYS, STAT_LABELS, STAT_ICONS, MAX_STAT, type StatKey } from "@/lib/types";
 import { xpProgressInLevel } from "@/lib/level";
-import { getFeedByAuthorId, nodFieldNote, vouchFieldNote, getCommentsByNoteId, addComment } from "@/lib/feedStore";
+import { getFeedByAuthorId, nodFieldNote, hypeFieldNote, verifyFieldNote, assistFieldNote, getCommentsByNoteId, addComment } from "@/lib/feedStore";
 import { getFriends, getCharacterById, removeFriend } from "@/lib/friendsStore";
 import { getFollowing, unfollow } from "@/lib/followStore";
 import { getGuildById } from "@/lib/guildStore";
@@ -15,6 +15,7 @@ import { getClassTitle, getClassRealm } from "@/lib/characterClasses";
 import { AvatarDisplay } from "./AvatarDisplay";
 import { FieldNoteCard } from "./FieldNoteCard";
 import { LootCodex } from "./LootCodex";
+import { EquipmentStrip } from "./EquipmentStrip";
 
 const STAT_FILL: Record<StatKey, string> = {
   strength: "linear-gradient(90deg, #f59e0b, #fbbf24)",
@@ -46,9 +47,22 @@ export function Profile({ character, onLogout, onRefresh }: { character: Charact
     refresh();
   }
 
-  function handleVouch(noteId: string) {
-    vouchFieldNote(noteId, character.id);
+  function handleHype(noteId: string) {
+    hypeFieldNote(noteId, character.id);
     refresh();
+    onRefresh?.();
+  }
+
+  function handleVerify(noteId: string) {
+    verifyFieldNote(noteId, character.id);
+    refresh();
+    onRefresh?.();
+  }
+
+  function handleAssist(noteId: string) {
+    assistFieldNote(noteId, character.id);
+    refresh();
+    onRefresh?.();
   }
 
   function handleAddComment(noteId: string, body: string) {
@@ -189,6 +203,10 @@ export function Profile({ character, onLogout, onRefresh }: { character: Charact
         </div>
       </div>
 
+      <div className="px-0 sm:px-0">
+        <EquipmentStrip character={character} onRefresh={onRefresh} />
+      </div>
+
       {/* Character stats — game-style sheet; 2x2 grid on mobile, single row on desktop */}
       <div className="character-hero-panel rounded-2xl p-4 sm:p-6 overflow-hidden">
         <div className="flex items-center gap-2 mb-4 sm:mb-5">
@@ -309,7 +327,9 @@ export function Profile({ character, onLogout, onRefresh }: { character: Charact
                 currentUserId={character.id}
                 comments={getCommentsByNoteId(note.id)}
                 onNod={handleNod}
-                onVouch={handleVouch}
+                onHype={handleHype}
+                onVerify={handleVerify}
+                onAssist={handleAssist}
                 onAddComment={handleAddComment}
                 currentUser={{
                   id: character.id,
@@ -429,7 +449,11 @@ export function Profile({ character, onLogout, onRefresh }: { character: Charact
       )}
 
       {showLootCodex && typeof document !== "undefined" && createPortal(
-        <LootCodex characterId={character.id} onClose={() => setShowLootCodex(false)} />,
+        <LootCodex
+          characterId={character.id}
+          equippedCosmetics={character.equippedCosmetics}
+          onClose={() => setShowLootCodex(false)}
+        />,
         document.body
       )}
 

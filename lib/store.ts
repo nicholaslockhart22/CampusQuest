@@ -2,7 +2,7 @@
 
 import type { Character, CharacterStats, ActivityLog, BossProgress as BossProgressType, CurrentBoss, UserBoss, StatKey } from "./types";
 import { STAT_KEYS, MAX_STAT } from "./types";
-import { xpToLevel, streakMultiplier, DAILY_MINIMUM_XP } from "./level";
+import { xpToLevel, DAILY_MINIMUM_XP } from "./level";
 import { getActivityById, isStudyActivityForBoss } from "./activities";
 import { getSampleBosses } from "./bosses";
 import { registerCharacter as registerCharacterInFriends, getCharacterById } from "./friendsStore";
@@ -10,6 +10,13 @@ import { applyClassStats, type CharacterClassId } from "./characterClasses";
 import { pickLootCosmetic, type CosmeticItem } from "./cosmetics";
 import { addLootDrop } from "./lootLog";
 import { getSpecialQuestById } from "./specialQuests";
+import { computeXpBreakdown, type XpBreakdown } from "./xpEngine";
+import { contributeCampusBossDamage } from "./campusBossEvent";
+import { recordGuildWeeklyRace, getGuildWeeklyXpBoostPercent } from "./guildWeeklyRace";
+import { getTodaysSurpriseQuest } from "./surpriseQuests";
+import { todayString } from "./dateUtils";
+import { rollStreakSave } from "./gameBuffs";
+import { canUnlockSkill, getSkillNode, availableSkillPoints } from "./skillTree";
 
 /** Called when a character extends their streak (so guilds can add XP). Set by guildStore. */
 let onStreakExtended: ((characterId: string) => void) | null = null;
@@ -46,11 +53,6 @@ function defaultStats(): CharacterStats {
   };
 }
 
-function todayString(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 function loadCharacter(): Character | null {
   if (typeof window === "undefined") return null;
   try {
@@ -70,6 +72,10 @@ function loadCharacter(): Character | null {
       data.guildIds = data.guildId ? [data.guildId] : [];
       data.guildId = undefined;
     }
+    if (!Array.isArray(data.unlockedSkillNodes)) data.unlockedSkillNodes = [];
+    if (data.streakFreezes == null) data.streakFreezes = 0;
+    if (data.equippedCosmetics != null && typeof data.equippedCosmetics !== "object") data.equippedCosmetics = {};
+    if (data.quadAssistScore == null) data.quadAssistScore = 0;
     return data;
   } catch {
     return null;
@@ -200,21 +206,6 @@ function saveActiveBossId(id: string | null): void {
   }
 }
 
-function calculateXp(
-  baseXp: number,
-  activityId: string,
-  minutes: number | undefined,
-  streakDays: number
-): number {
-  let xp = baseXp;
-  const def = getActivityById(activityId);
-  if (def?.usesMinutes && minutes != null && minutes > 0) {
-    xp += Math.floor(minutes / 10) * 5;
-  }
-  xp = Math.floor(xp * streakMultiplier(streakDays));
-  return Math.max(1, xp);
-}
-
 function applyStatIncrease(
   activityId: string,
   stat: keyof CharacterStats,
@@ -301,6 +292,9 @@ export function createCharacter(
     createdAt: Date.now(),
     classId,
     starterWeapon: options?.starterWeapon,
+    unlockedSkillNodes: [],
+    streakFreezes: 0,
+    quadAssistScore: 0,
   };
   saveCharacter(character);
   return character;
@@ -390,11 +384,19 @@ function verifyProof(proof: string | undefined): boolean {
   return typeof proof === "string" && proof.trim().length > 0;
 }
 
+export interface LogActivityResult {
+  character: Character;
+  lastBossDrop?: { bossName: string; loot?: CosmeticItem };
+  xpBreakdown?: XpBreakdown;
+  surpriseBonusXp?: number;
+  leveledUp?: boolean;
+}
+
 export function logActivity(
   characterId: string,
   activityId: string,
   options?: LogActivityOptions
-): { character: Character; lastBossDrop?: { bossName: string; loot?: CosmeticItem } } | null {
+): LogActivityResult | null {
   const activity = getActivityById(activityId);
   if (!activity) return null;
 
@@ -409,7 +411,29 @@ export function logActivity(
     rawMinutes != null
       ? Math.min(MAX_ACTIVITY_MINUTES, Math.max(0, rawMinutes))
       : undefined;
-  const xpEarned = calculateXp(baseXp, activityId, minutes, c.streakDays);
+
+  const guildBoost = getGuildWeeklyXpBoostPercent(c.id);
+  const breakdown = computeXpBreakdown({
+    character: c,
+    activityId,
+    baseXp,
+    minutes,
+    streakDays: c.streakDays,
+    guildWeeklyBoostPct: guildBoost,
+  });
+  let xpEarned = breakdown.finalXp;
+
+  let surpriseBonusXp = 0;
+  const today = todayString();
+  const surprise = getTodaysSurpriseQuest(characterId);
+  if (
+    c.lastSurpriseQuestCompletedDay !== today &&
+    surprise.matchingActivityIds.includes(activityId)
+  ) {
+    surpriseBonusXp = surprise.xpReward;
+    xpEarned += surpriseBonusXp;
+    c.lastSurpriseQuestCompletedDay = today;
+  }
 
   const logs = loadLogs();
   const log: ActivityLog = {
@@ -429,8 +453,8 @@ export function logActivity(
   c.totalXP += xpEarned;
   const prevLevel = c.level;
   c.level = xpToLevel(c.totalXP);
+  const leveledUp = c.level > prevLevel;
 
-  const today = todayString();
   const todayStart = new Date(today).getTime();
   const todayEnd = todayStart + 24 * 60 * 60 * 1000;
   const todaysXp = logs
@@ -452,19 +476,35 @@ export function logActivity(
       c.lastActivityDate = today;
     }
   } else {
-    // Python spec: if below minimum and today > last_active_day, break streak
     if (c.lastActivityDate != null) {
       const last = c.lastActivityDate;
-      if (today > last) c.streakDays = 0;
+      if (today > last) {
+        if ((c.streakFreezes ?? 0) > 0) {
+          c.streakFreezes = (c.streakFreezes ?? 0) - 1;
+          c.lastActivityDate = today;
+        } else if (rollStreakSave(c)) {
+          c.lastActivityDate = today;
+        } else {
+          c.streakDays = 0;
+        }
+      }
     }
   }
 
   ensureAchievement(c, "First Quest Completed");
   if (c.streakDays >= 7) ensureAchievement(c, "7-Day Streak");
   if (c.streakDays >= 30) ensureAchievement(c, "30-Day Streak");
-  if (c.level > prevLevel) ensureAchievement(c, `Reached Level ${c.level}`);
+  if (leveledUp) ensureAchievement(c, `Reached Level ${c.level}`);
 
-  // Boss battles: any activity can deal damage; some types are stronger.
+  contributeCampusBossDamage(characterId, Math.max(1, Math.floor(xpEarned * 1.15)));
+  recordGuildWeeklyRace(characterId, c.guildIds ?? [], xpEarned);
+  const guildIdsForXp = [...(c.guildIds ?? [])];
+  void import("./guildStore").then((m) => {
+    for (const gid of guildIdsForXp) {
+      m.addGuildXp(gid, Math.max(1, Math.floor(xpEarned / 20)));
+    }
+  });
+
   const bossDrop = applyActivityDamageToCurrentBoss(c, activityId, minutes);
 
   saveCharacter(c);
@@ -472,7 +512,20 @@ export function logActivity(
     bossDrop?.defeatedBossName != null
       ? { bossName: bossDrop.defeatedBossName, loot: bossDrop.droppedLoot ?? undefined }
       : undefined;
-  return { character: c, lastBossDrop };
+
+  const breakdownOut: XpBreakdown =
+    surpriseBonusXp > 0
+      ? {
+          ...breakdown,
+          finalXp: xpEarned,
+          lines: [
+            ...breakdown.lines,
+            { label: `Surprise quest +${surpriseBonusXp} XP`, multiplier: 1, emoji: surprise.icon },
+          ],
+        }
+      : breakdown;
+
+  return { character: c, lastBossDrop, xpBreakdown: breakdownOut, surpriseBonusXp: surpriseBonusXp || undefined, leveledUp };
 }
 
 function applyActivityDamageToCurrentBoss(
@@ -540,6 +593,9 @@ function applyActivityDamageToCurrentBoss(
         rarity: loot.rarity,
         obtainedAt: Date.now(),
       });
+    } else if (Math.random() < 0.16) {
+      c.streakFreezes = (c.streakFreezes ?? 0) + 1;
+      ensureAchievement(c, "Earned: Streak Freeze (rare drop)");
     }
     // Remove defeated boss after rewarding XP so it disappears from the list
     const remaining = bosses.filter((b) => b.id !== boss.id);
@@ -665,6 +721,69 @@ export function getLogsByActivity(characterId: string): Record<string, number> {
     }
   });
   return count;
+}
+
+export function getGuildIdsForCharacter(userId: string): string[] {
+  const c = loadCharacter();
+  if (c && c.id === userId) return [...(c.guildIds ?? [])];
+  return [];
+}
+
+export function bumpQuadAssistForAuthor(authorId: string): void {
+  const c = loadCharacter();
+  if (c && c.id === authorId) {
+    c.quadAssistScore = (c.quadAssistScore ?? 0) + 1;
+    saveCharacter(c);
+    return;
+  }
+  const other = getCharacterById(authorId);
+  if (other) {
+    other.quadAssistScore = (other.quadAssistScore ?? 0) + 1;
+    registerCharacterInFriends(other);
+  }
+}
+
+export function unlockSkillNode(characterId: string, nodeId: string): Character | null {
+  const c = loadCharacter();
+  if (!c || c.id !== characterId) return null;
+  const nodes = c.unlockedSkillNodes ?? [];
+  if (nodes.includes(nodeId)) return null;
+  if (!getSkillNode(nodeId)) return null;
+  if (!canUnlockSkill(nodes, nodeId)) return null;
+  const pts = availableSkillPoints(c.level, nodes.length);
+  if (pts < 1) return null;
+  c.unlockedSkillNodes = [...nodes, nodeId];
+  saveCharacter(c);
+  return c;
+}
+
+export function setEquippedCosmeticSlot(
+  characterId: string,
+  slot: "hat" | "glasses" | "backpack",
+  cosmeticId: string | null
+): Character | null {
+  const c = loadCharacter();
+  if (!c || c.id !== characterId) return null;
+  const u = c.unlockedCosmetics ?? [];
+  if (cosmeticId && !u.includes(cosmeticId)) return null;
+  const next = { ...(c.equippedCosmetics ?? {}) };
+  if (cosmeticId) next[slot] = cosmeticId;
+  else delete next[slot];
+  c.equippedCosmetics = Object.keys(next).length ? next : undefined;
+  saveCharacter(c);
+  return c;
+}
+
+export function claimMiniGameBonusXp(characterId: string): Character | null {
+  const c = loadCharacter();
+  if (!c || c.id !== characterId) return null;
+  const d = todayString();
+  if (c.lastMiniGameXpDay === d) return null;
+  c.totalXP += 18;
+  c.level = xpToLevel(c.totalXP);
+  c.lastMiniGameXpDay = d;
+  saveCharacter(c);
+  return c;
 }
 
 /** Grant XP to a character (e.g. when their post gets vouches). Works for current user or friends. */

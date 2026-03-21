@@ -21,6 +21,7 @@ import {
   hasRequestedInvite,
   GUILD_INTEREST_LABELS,
 } from "@/lib/guildStore";
+import { getGuildWeeklyScores } from "@/lib/guildWeeklyRace";
 import type { Character, Friend, FriendRequest, Guild, GuildInterest } from "@/lib/types";
 import { STAT_KEYS, STAT_LABELS, STAT_ICONS } from "@/lib/types";
 import { AvatarDisplay } from "./AvatarDisplay";
@@ -110,8 +111,30 @@ export function FindFriends({
     return { interest, guilds };
   });
 
+  const weeklyRace = getGuildWeeklyScores().slice(0, 5);
+
   return (
     <section className="space-y-5">
+      {weeklyRace.length > 0 && (
+        <div className="rounded-2xl border border-uri-gold/40 bg-gradient-to-r from-uri-gold/10 to-transparent p-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-uri-gold mb-2">⚔️ Guild vs guild (this week)</h3>
+          <p className="text-[11px] text-white/55 mb-2">#1 guild next Monday: members get +10% XP for the week. Every log adds race points.</p>
+          <ol className="space-y-1">
+            {weeklyRace.map((row, i) => {
+              const g = getGuildById(row.guildId);
+              return (
+                <li key={row.guildId} className="flex justify-between text-sm text-white/90">
+                  <span>
+                    {i + 1}. {g?.name ?? row.guildId}
+                  </span>
+                  <span className="font-mono text-uri-keaney">{row.score} pts</span>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+      )}
+
       {/* Find Friends — above Guilds */}
       <div className="card p-4 sm:p-5">
         <h2 className="font-display font-semibold text-white mb-2 flex items-center gap-2">
