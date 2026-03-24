@@ -11,6 +11,24 @@ let comments: QuadComment[] = [];
 
 const BASE_TS = Date.now();
 
+/**
+ * Same-origin JPEGs in /public/quad-feed — avoids broken embeds on mobile/Safari where
+ * third-party CDNs (e.g. Unsplash) can fail hotlink/referrer checks.
+ */
+const SEED_POST_IMAGES = {
+  /** Women's basketball — hosted locally; source photo Rhode Island Current (Z915188, Feb 2024). */
+  womensBasketball: "/quad-feed/womens-basketball.jpg",
+  /** URI Keaney Gymnasium — Wikimedia Commons (KeaneyGym.jpg, Greenstrat, public domain). */
+  gym: "/quad-feed/gym.jpg",
+  coffee: "/quad-feed/coffee.jpg",
+  running: "/quad-feed/running.jpg",
+  groupStudy: "/quad-feed/group-study.jpg",
+  careerFair: "/quad-feed/career.jpg",
+  raceCrowd: "/quad-feed/race.jpg",
+  concert: "/quad-feed/concert.jpg",
+  guitar: "/quad-feed/guitar.jpg",
+} as const;
+
 function seedNote(
   authorId: string,
   authorName: string,
@@ -21,7 +39,8 @@ function seedNote(
   hoursAgo: number,
   nodCount = 0,
   hypeSeed = 0,
-  authorStreakDays = 0
+  authorStreakDays = 0,
+  proofUrl?: string
 ): FieldNote {
   const id = `fn-seed-${authorId}`;
   const ramMarksWithIds: RamMark[] = ramMarks.map((r) => ({ id: `rm-${id}-${r.tag}`, tag: r.tag.toLowerCase() }));
@@ -46,20 +65,129 @@ function seedNote(
     createdAt: BASE_TS - hoursAgo * 60 * 60 * 1000,
     visibility: "public",
     authorStreakDays: authorStreakDays || (hypeSeed > 2 ? 7 : 3),
+    ...(proofUrl ? { proofUrl } : {}),
   };
 }
 
 const SEED_FIELD_NOTES: FieldNote[] = [
-  seedNote("seed-1", "Jordan Kim", "jordan_kim", "📚", "Just finished a 2-hour study session at the library. That calc problem set was no joke but we got through it. #studysesh #library", [{ tag: "studysesh" }, { tag: "library" }], 1, 3, 8),
-  seedNote("seed-2", "Alex Rivera", "alex_rivera", "💪", "Morning lift at the rec center. New PR on bench! #gym #ramnation", [{ tag: "gym" }, { tag: "ramnation" }], 3, 5, 12),
-  seedNote("seed-3", "Casey Lee", "casey_lee", "☕", "Coffee + flashcards at the union. Midterms are coming but we're ready. #study #coffee", [{ tag: "study" }, { tag: "coffee" }], 5, 2, 0),
-  seedNote("seed-4", "Riley Morgan", "riley_morgan", "🏃", "5K run around campus before class. Nothing like fresh air to wake you up. #running #campus", [{ tag: "running" }, { tag: "campus" }], 8, 4, 5),
-  seedNote("seed-5", "Quinn Taylor", "quinn_taylor", "📖", "Group study for orgo in the science building. Shoutout to the squad for explaining mechanisms. #groupstudy #orgo", [{ tag: "groupstudy" }, { tag: "orgo" }], 12, 6, 14),
+  seedNote(
+    "seed-1",
+    "Jordan Kim",
+    "jordan_kim",
+    "🏀",
+    "Went to the women's basketball game last night — the energy in the arena was unreal. URI played tough, the crowd was loud, and I left already counting down to the next home game. What a night. #wbb #ramnation #uri",
+    [{ tag: "wbb" }, { tag: "ramnation" }, { tag: "uri" }],
+    1,
+    3,
+    8,
+    undefined,
+    SEED_POST_IMAGES.womensBasketball
+  ),
+  seedNote(
+    "seed-2",
+    "Alex Rivera",
+    "alex_rivera",
+    "💪",
+    "Morning lift at Keaney Gym — new PR on bench! Nothing like URI's home court energy. #gym #ramnation",
+    [{ tag: "gym" }, { tag: "ramnation" }],
+    3,
+    5,
+    12,
+    undefined,
+    SEED_POST_IMAGES.gym
+  ),
+  seedNote(
+    "seed-3",
+    "Casey Lee",
+    "casey_lee",
+    "☕",
+    "Coffee + flashcards at the union. Midterms are coming but we're ready. #study #coffee",
+    [{ tag: "study" }, { tag: "coffee" }],
+    5,
+    2,
+    0,
+    undefined,
+    SEED_POST_IMAGES.coffee
+  ),
+  seedNote(
+    "seed-4",
+    "Riley Morgan",
+    "riley_morgan",
+    "🏃",
+    "5K run around campus before class. Nothing like fresh air to wake you up. #running #campus",
+    [{ tag: "running" }, { tag: "campus" }],
+    8,
+    4,
+    5,
+    undefined,
+    SEED_POST_IMAGES.running
+  ),
+  seedNote(
+    "seed-5",
+    "Quinn Taylor",
+    "quinn_taylor",
+    "📖",
+    "Group study for orgo in the science building. Shoutout to the squad for explaining mechanisms. #groupstudy #orgo",
+    [{ tag: "groupstudy" }, { tag: "orgo" }],
+    12,
+    6,
+    14,
+    undefined,
+    SEED_POST_IMAGES.groupStudy
+  ),
   seedNote("seed-6", "Avery Jones", "avery_jones", "🎯", "Deep focus block: 90 minutes no phone. Finished my essay draft. #focus #productivity", [{ tag: "focus" }, { tag: "productivity" }], 18, 2, 21),
-  seedNote("seed-7", "Morgan Blake", "morgan_blake", "💼", "Went to the career fair today. So many companies! Dropped my resume at 4 booths. #networking #career", [{ tag: "networking" }, { tag: "career" }], 24, 8, 4),
-  seedNote("seed-8", "Sam Chen", "sam_chen", "🦌", "Ram Run event was a blast. 200+ people showed up. URI spirit is real. #ramrun #uri", [{ tag: "ramrun" }, { tag: "uri" }], 36, 12, 30),
-  seedNote("seed-9", "Jamie Foster", "jamie_foster", "🌟", "Club meeting tonight — we're planning the spring concert. So much to do but the team is amazing. #clublife #campus", [{ tag: "clublife" }, { tag: "campus" }], 48, 1, 2),
-  seedNote("seed-10", "Drew Patel", "drew_patel", "🎸", "Practiced for the open mic at the pub. Nerves are real but so is the excitement. #music #campuslife", [{ tag: "music" }, { tag: "campuslife" }], 60, 7, 6),
+  seedNote(
+    "seed-7",
+    "Morgan Blake",
+    "morgan_blake",
+    "💼",
+    "Went to the career fair today. So many companies! Dropped my resume at 4 booths. #networking #career",
+    [{ tag: "networking" }, { tag: "career" }],
+    24,
+    8,
+    4,
+    undefined,
+    SEED_POST_IMAGES.careerFair
+  ),
+  seedNote(
+    "seed-8",
+    "Sam Chen",
+    "sam_chen",
+    "🦌",
+    "Ram Run event was a blast. 200+ people showed up. URI spirit is real. #ramrun #uri",
+    [{ tag: "ramrun" }, { tag: "uri" }],
+    36,
+    12,
+    30,
+    undefined,
+    SEED_POST_IMAGES.raceCrowd
+  ),
+  seedNote(
+    "seed-9",
+    "Jamie Foster",
+    "jamie_foster",
+    "🌟",
+    "Club meeting tonight — we're planning the spring concert. So much to do but the team is amazing. #clublife #campus",
+    [{ tag: "clublife" }, { tag: "campus" }],
+    48,
+    1,
+    2,
+    undefined,
+    SEED_POST_IMAGES.concert
+  ),
+  seedNote(
+    "seed-10",
+    "Drew Patel",
+    "drew_patel",
+    "🎸",
+    "Practiced for the open mic at the pub. Nerves are real but so is the excitement. #music #campuslife",
+    [{ tag: "music" }, { tag: "campuslife" }],
+    60,
+    7,
+    6,
+    undefined,
+    SEED_POST_IMAGES.guitar
+  ),
 ];
 
 function migrateNote(n: FieldNote): FieldNote {

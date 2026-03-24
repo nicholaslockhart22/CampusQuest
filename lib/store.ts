@@ -11,11 +11,18 @@ import { pickLootCosmetic, type CosmeticItem } from "./cosmetics";
 import { addLootDrop } from "./lootLog";
 import { getSpecialQuestById } from "./specialQuests";
 import { computeXpBreakdown, type XpBreakdown } from "./xpEngine";
-import { contributeCampusBossDamage } from "./campusBossEvent";
-import { contributeGuildBossDamage } from "./guildBossEvent";
+import { contributeCampusBossDamage, clearCampusBossContributors } from "./campusBossEvent";
+import { contributeGuildBossDamage, clearGuildBossContributors } from "./guildBossEvent";
 import { recordGuildWeeklyRace, getGuildWeeklyXpBoostPercent } from "./guildWeeklyRace";
 import { getTodaysSurpriseQuest } from "./surpriseQuests";
-import { todayString } from "./dateUtils";
+import { todayString, yesterdayString } from "./dateUtils";
+import {
+  ensureMiniGameTrainingRollover,
+  streakMultiplierForTraining,
+  MINI_GAME_MAX_PLAYS_PER_DAY,
+  MINI_GAME_DAILY_QUOTA_BONUS_XP,
+  MINI_GAME_WEEK_ALL_FIVE_BONUS_XP,
+} from "./miniGameTraining";
 import { rollStreakSave } from "./gameBuffs";
 import { canUnlockSkill, getSkillNode, availableSkillPoints } from "./skillTree";
 
@@ -255,6 +262,8 @@ export function logout(): void {
   } catch {
     // Ignore persistence failure.
   }
+  clearCampusBossContributors();
+  clearGuildBossContributors();
 }
 
 export interface CreateCharacterOptions {
@@ -788,16 +797,69 @@ export function setEquippedCosmeticSlot(
   return c;
 }
 
-export function claimMiniGameBonusXp(characterId: string): Character | null {
+export interface MiniGameTrainingGrantResult {
+  character: Character;
+  sessionXp: number;
+  extras: { label: string; xp: number }[];
+}
+
+/** Award XP from a completed stat mini-game (max 2/day). Applies streak mult, daily quota bonus, weekly all-five bonus; syncs campus/guild. */
+export function grantMiniGameTrainingXp(characterId: string, stat: StatKey, baseXp: number): MiniGameTrainingGrantResult | null {
   const c = loadCharacter();
   if (!c || c.id !== characterId) return null;
-  const d = todayString();
-  if (c.lastMiniGameXpDay === d) return null;
-  c.totalXP += 18;
+  ensureMiniGameTrainingRollover(c);
+  const m = c.miniGameTraining!;
+  if (m.playsUsed >= MINI_GAME_MAX_PLAYS_PER_DAY) return null;
+
+  const mult = streakMultiplierForTraining(m.fullTrainingStreak);
+  const sessionXp = Math.max(1, Math.round(baseXp * mult));
+  const extras: { label: string; xp: number }[] = [];
+
+  m.playsUsed += 1;
+  if (!m.statsTrainedToday.includes(stat)) m.statsTrainedToday.push(stat);
+  if (!m.weekStatsTrained.includes(stat)) m.weekStatsTrained.push(stat);
+
+  c.totalXP += sessionXp;
+  let totalAdded = sessionXp;
+
+  if (m.playsUsed >= MINI_GAME_MAX_PLAYS_PER_DAY && !m.dailyQuotaBonusClaimed) {
+    m.dailyQuotaBonusClaimed = true;
+    const bonus = MINI_GAME_DAILY_QUOTA_BONUS_XP;
+    c.totalXP += bonus;
+    extras.push({ label: "Daily training complete", xp: bonus });
+    totalAdded += bonus;
+
+    const td = todayString();
+    const yd = yesterdayString();
+    if (m.lastFullTrainingDay !== td) {
+      if (m.lastFullTrainingDay === yd) m.fullTrainingStreak += 1;
+      else m.fullTrainingStreak = 1;
+      m.lastFullTrainingDay = td;
+    }
+  }
+
+  if (STAT_KEYS.every((s) => m.weekStatsTrained.includes(s)) && !m.weekAllFiveBonusClaimed) {
+    m.weekAllFiveBonusClaimed = true;
+    c.totalXP += MINI_GAME_WEEK_ALL_FIVE_BONUS_XP;
+    extras.push({ label: "All stats trained this week", xp: MINI_GAME_WEEK_ALL_FIVE_BONUS_XP });
+    totalAdded += MINI_GAME_WEEK_ALL_FIVE_BONUS_XP;
+  }
+
   c.level = xpToLevel(c.totalXP);
-  c.lastMiniGameXpDay = d;
+
+  contributeCampusBossDamage(characterId, Math.max(1, Math.floor(totalAdded * 1.15)));
+  for (const gid of c.guildIds ?? []) {
+    contributeGuildBossDamage(characterId, gid, Math.max(1, Math.floor(totalAdded * 1.05)));
+  }
+  recordGuildWeeklyRace(characterId, c.guildIds ?? [], totalAdded);
+  void import("./guildStore").then((mod) => {
+    for (const gid of c.guildIds ?? []) {
+      mod.addGuildXp(gid, Math.max(1, Math.floor(totalAdded / 20)));
+    }
+  });
+
   saveCharacter(c);
-  return c;
+  return { character: c, sessionXp, extras };
 }
 
 /** Grant XP to a character (e.g. when their post gets vouches). Works for current user or friends. */

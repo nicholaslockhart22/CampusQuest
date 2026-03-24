@@ -81,3 +81,15 @@ export function topContributors(state: CampusBossEventState, limit = 8): { userI
     .sort((a, b) => b.damage - a.damage)
     .slice(0, limit);
 }
+
+/** Wipe leaderboard (per-user damage) — e.g. on logout since rows are keyed by character id. Boss HP unchanged. */
+export function clearCampusBossContributors(): void {
+  if (typeof window === "undefined") return;
+  const s = loadCampusBossEvent();
+  s.contributions = {};
+  try {
+    localStorage.setItem(STORAGE, JSON.stringify(s));
+  } catch {
+    // ignore
+  }
+}

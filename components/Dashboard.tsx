@@ -29,7 +29,7 @@ import { playXpDing, playLevelUpFanfare } from "@/lib/playGameSound";
 import { describeCosmeticEquipEffect } from "@/lib/gameBuffs";
 import { SkillTreePanel } from "./SkillTreePanel";
 import { SurpriseQuestBanner } from "./SurpriseQuestBanner";
-import { MiniGameFocus } from "./MiniGameFocus";
+import { DailyTrainingGames } from "./DailyTrainingGames";
 import type { StatKey } from "@/lib/types";
 
 type Tab = "quad" | "friends" | "battle" | "leaderboards" | "character" | "inbox";
@@ -613,7 +613,9 @@ export function Dashboard() {
         )}
 
         {tab === "quad" && (
-          <TheQuad character={character} onRefresh={refresh} />
+          <div className="-mx-4 w-[calc(100%+2rem)] sm:mx-0 sm:w-full">
+            <TheQuad character={character} onRefresh={refresh} />
+          </div>
         )}
 
         {tab === "friends" && (
@@ -741,7 +743,7 @@ export function Dashboard() {
                     <SkillTreePanel character={character} onRefresh={refresh} />
                   </div>
                   <div className="md:col-span-2">
-                    <MiniGameFocus character={character} onRefresh={refresh} />
+                    <DailyTrainingGames character={character} onRefresh={refresh} />
                   </div>
                   <div className="md:col-span-2">
                     <CollapsibleSection title="Weekly recap" defaultCollapsed>

@@ -20,9 +20,11 @@ export function CampusBossRaid({
 
   const inner = (
     <>
-      <p className="text-center font-display text-lg font-bold leading-snug text-white sm:text-lg">{state.name}</p>
+      <p className="px-1 text-center font-display text-lg font-bold leading-snug text-white [overflow-wrap:anywhere] break-words sm:text-lg">
+        {state.name}
+      </p>
       <div className="space-y-2.5 sm:space-y-2">
-        <div className="h-6 overflow-hidden rounded-full border border-white/15 bg-black/50 shadow-inner sm:h-5">
+        <div className="h-5 min-h-[1.25rem] w-full min-w-0 overflow-hidden rounded-full border border-white/15 bg-black/50 shadow-inner sm:h-5">
           <div
             className="h-full bg-gradient-to-r from-uri-gold via-amber-400 to-orange-500 transition-all duration-500"
             style={{ width: `${damagedPct}%` }}

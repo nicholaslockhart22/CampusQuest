@@ -113,3 +113,14 @@ export function guildBossTopContributors(entry: GuildBossEntry, limit = 6): { us
     .sort((a, b) => b.damage - a.damage)
     .slice(0, limit);
 }
+
+/** Wipe striker boards for all guild bosses (on logout). Boss HP unchanged. */
+export function clearGuildBossContributors(): void {
+  if (typeof window === "undefined") return;
+  const s = loadGuildBossEvent();
+  for (const id of Object.keys(s.byGuild)) {
+    const e = s.byGuild[id];
+    if (e) e.contributions = {};
+  }
+  saveGuildBossEvent(s);
+}

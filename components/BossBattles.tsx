@@ -64,7 +64,6 @@ function BattleSection({
   title,
   subtitle,
   tone = "keaney",
-  scrollable = false,
   className = "",
   bodyClassName = "",
   children,
@@ -74,8 +73,6 @@ function BattleSection({
   title: string;
   subtitle?: string;
   tone?: "keaney" | "gold";
-  /** Scroll overflowing content inside the panel (for long boss lists in the 2×2 grid). */
-  scrollable?: boolean;
   className?: string;
   bodyClassName?: string;
   children: ReactNode;
@@ -86,7 +83,7 @@ function BattleSection({
       : "border-uri-keaney/25 bg-gradient-to-r from-uri-keaney/[0.14] via-uri-keaney/[0.05] to-transparent";
   return (
     <section
-      className={`flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] shadow-[0_4px_28px_-6px_rgba(0,0,0,0.45)] ${className}`}
+      className={`flex flex-col rounded-2xl border border-white/[0.08] shadow-[0_4px_28px_-6px_rgba(0,0,0,0.45)] ${className}`}
       aria-labelledby={sectionId}
     >
       <div className={`shrink-0 border-b px-3 py-3 sm:px-5 sm:py-4 ${head}`}>
@@ -104,17 +101,7 @@ function BattleSection({
           </div>
         </div>
       </div>
-      <div
-        className={`flex min-h-0 flex-1 flex-col bg-white/[0.02] p-3 sm:p-4 md:p-5 ${bodyClassName}`}
-      >
-        {scrollable ? (
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
-            {children}
-          </div>
-        ) : (
-          children
-        )}
-      </div>
+      <div className={`bg-white/[0.02] p-3 sm:p-4 md:p-5 ${bodyClassName}`}>{children}</div>
     </section>
   );
 }
@@ -156,16 +143,19 @@ function BossFightRow({
 
   return (
     <article className={`${shell} flex flex-col gap-3 sm:gap-4`}>
-      <div className="flex gap-3 sm:gap-4">
+      <div className="flex min-w-0 gap-3 sm:gap-4">
         <div
           className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl border text-xl shadow-lg sm:h-16 sm:w-16 sm:rounded-2xl sm:text-3xl ${
             isFinal ? "border-uri-gold/45 bg-black/45" : "border-white/12 bg-black/30"
           }`}
+          aria-hidden
         >
           {face}
         </div>
-        <div className="min-w-0 flex-1 space-y-2">
-          <h3 className="font-display break-words text-[15px] font-bold leading-snug text-white sm:text-lg">{boss.name}</h3>
+        <div className="min-w-0 w-0 flex-1 basis-0 space-y-2 overflow-x-hidden">
+          <h3 className="font-display break-words text-base font-bold leading-snug text-white [overflow-wrap:anywhere] sm:text-lg">
+            {boss.name}
+          </h3>
           <div className="flex flex-wrap gap-1.5 sm:gap-2">
             {boss.defeated && (
               <span className="rounded-full border border-emerald-500/45 bg-emerald-500/20 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-200">
@@ -213,19 +203,21 @@ function BossFightRow({
           )}
 
           {!boss.defeated && (
-            <div className="pt-0.5">
-              <div className="mb-1.5 flex items-baseline justify-between gap-2 text-xs text-white/65 sm:text-[11px]">
-                <span>Health</span>
-                <span className={`shrink-0 text-right font-mono text-[13px] font-semibold tabular-nums sm:text-[11px] ${isFinal ? "text-amber-200" : "text-red-200/90"}`}>
+            <div className="w-full min-w-0 pt-0.5">
+              <div className="mb-2 flex flex-col gap-1 sm:mb-1.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+                <span className="shrink-0 text-xs font-medium text-white/65 sm:text-[11px]">Health</span>
+                <span
+                  className={`font-mono text-sm font-semibold tabular-nums sm:shrink-0 sm:text-right sm:text-[11px] ${isFinal ? "text-amber-200" : "text-red-200/90"}`}
+                >
                   {boss.currentHp} / {boss.maxHp}
                 </span>
               </div>
               {isFinal ? (
-                <div className="final-boss-hp-bar h-3.5 sm:h-3 sm:min-h-0">
+                <div className="final-boss-hp-bar h-4 w-full min-w-0 min-h-[1rem] sm:h-3 sm:min-h-0">
                   <div className="final-boss-hp-fill" style={{ width: `${hpPct}%` }} />
                 </div>
               ) : (
-                <div className="boss-hp-bar h-3.5 min-h-[14px] sm:h-3 sm:min-h-[12px]">
+                <div className="boss-hp-bar h-4 w-full min-w-0 min-h-[1rem] sm:h-3 sm:min-h-0">
                   <div className="boss-hp-fill" style={{ width: `${hpPct}%` }} />
                 </div>
               )}
@@ -247,14 +239,14 @@ function BossFightRow({
           className={
             boss.defeated
               ? "flex justify-end"
-              : "grid grid-cols-[1fr_auto] gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end"
+              : "flex w-full min-w-0 flex-row items-stretch gap-2 sm:w-auto sm:flex-wrap sm:items-center sm:justify-end"
           }
         >
           {!boss.defeated && (
             <button
               type="button"
               onClick={onToggleAttack}
-              className={`min-h-[48px] rounded-xl border px-4 py-3 text-sm font-semibold transition-all active:scale-[0.98] sm:min-h-0 sm:py-2.5 ${attackBtn}`}
+              className={`min-h-[48px] min-w-0 flex-1 rounded-xl border px-3 py-3 text-sm font-semibold transition-all active:scale-[0.98] sm:min-h-0 sm:w-auto sm:flex-none sm:min-w-[10rem] sm:px-4 sm:py-2.5 ${attackBtn}`}
             >
               <span className="sm:hidden">{isActive ? "Stop" : "Attack"}</span>
               <span className="hidden sm:inline">{isActive ? "Stop attacking" : "Attack this boss"}</span>
@@ -263,8 +255,8 @@ function BossFightRow({
           <button
             type="button"
             onClick={onRemove}
-            className={`flex items-center justify-center rounded-xl border border-white/10 text-lg text-white/50 transition-colors hover:border-red-500/35 hover:bg-red-500/10 hover:text-red-200 sm:p-2.5 ${
-              boss.defeated ? "min-h-[48px] min-w-[48px]" : "min-h-[48px] min-w-[48px] sm:min-h-0 sm:min-w-0"
+            className={`flex flex-shrink-0 items-center justify-center rounded-xl border border-white/10 text-lg text-white/50 transition-colors hover:border-red-500/35 hover:bg-red-500/10 hover:text-red-200 sm:p-2.5 ${
+              boss.defeated ? "min-h-[48px] min-w-[48px]" : "min-h-[48px] w-[48px] min-w-[48px] sm:min-h-0 sm:w-auto sm:min-w-0"
             }`}
             aria-label={`Remove ${boss.name}`}
             title="Remove boss (frees a slot, no XP)"
@@ -281,7 +273,8 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
   const [bossName, setBossName] = useState("");
   const [bossHp, setBossHp] = useState("250");
   const [bossWeakness, setBossWeakness] = useState<StatKey | "random">("random");
-  const [recruitOpen, setRecruitOpen] = useState(false);
+  /** Open when roster is empty so the full create form shows without an extra tap. */
+  const [recruitOpen, setRecruitOpen] = useState(() => getUserBosses().length === 0);
   const [bossToDelete, setBossToDelete] = useState<UserBoss | null>(null);
   const deleteDialog = useMemo(() => (bossToDelete ? getRandomDeleteDialog() : null), [bossToDelete]);
 
@@ -500,15 +493,14 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
           ) : null}
         </div>
 
-        {/* md+: row1 Campus | Guild · row2 Final | Roster */}
-        <div className="grid min-h-0 grid-cols-1 gap-3 sm:gap-4 md:min-h-[min(72vh,44rem)] md:grid-cols-2 md:grid-rows-2 md:gap-4 lg:gap-5">
+        {/* md+: 2×2 grid; height follows content — no inner scroll so a new boss card is fully visible */}
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 md:gap-4 lg:gap-5 md:items-start">
           <BattleSection
             sectionId="battle-campus-raid"
             icon="🌐"
             title="Campus raid"
             subtitle="Weekly shared boss — every log chips in. Resets Monday."
             tone="gold"
-            className="md:min-h-0"
           >
             <CampusBossRaid character={character} embedded />
           </BattleSection>
@@ -519,8 +511,6 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
             title="Guild battle"
             subtitle="Per-guild raid boss — your guild’s logs deal damage. Resets Monday."
             tone="keaney"
-            scrollable
-            className="md:min-h-0"
           >
             <GuildBossBattle character={character} embedded />
           </BattleSection>
@@ -531,8 +521,6 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
             title="Final bosses"
             subtitle={`${FINAL_BOSS_HP}+ HP · better loot odds`}
             tone="gold"
-            scrollable
-            className="md:min-h-0"
           >
             <div className="final-boss-box rounded-lg p-2.5 sm:rounded-xl sm:p-4">
               {finalBosses.length === 0 ? (
@@ -565,8 +553,6 @@ export function BossBattles({ character, onRefresh }: { character: Character; on
             title="Your bosses"
             subtitle="≤500 HP · Attack, then log activities"
             tone="keaney"
-            scrollable
-            className="md:min-h-0"
           >
             {bosses.length === 0 ? (
               <div className="rounded-xl border border-white/10 bg-white/[0.03] py-10 text-center sm:py-12">

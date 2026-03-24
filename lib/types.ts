@@ -37,6 +37,20 @@ export interface CharacterStats {
   focus: number;
 }
 
+/** Persisted state for stat mini-games (2 plays/day, weekly all-stats bonus). */
+export interface MiniGameTrainingPersist {
+  day: string;
+  playsUsed: number;
+  statsTrainedToday: StatKey[];
+  dailyQuotaBonusClaimed: boolean;
+  weekKey: string;
+  weekStatsTrained: StatKey[];
+  weekAllFiveBonusClaimed: boolean;
+  /** Consecutive days the player used both daily plays */
+  fullTrainingStreak: number;
+  lastFullTrainingDay: string | null;
+}
+
 export interface Character {
   id: string;
   name: string;
@@ -81,8 +95,10 @@ export interface Character {
   lastSurpriseQuestCompletedDay?: string;
   /** Partial progress toward today's surprise (optional). */
   surpriseQuestDay?: string;
-  /** YYYY-MM-DD of last mini-game XP grant. */
+  /** @deprecated Legacy single mini-game; use miniGameTraining */
   lastMiniGameXpDay?: string;
+  /** Daily training plays (stat mini-games), quotas, and weekly ring. */
+  miniGameTraining?: MiniGameTrainingPersist;
   /** Running tally from Quad "Assist" reactions (group quest vibe). */
   quadAssistScore?: number;
 }

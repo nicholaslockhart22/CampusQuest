@@ -28,14 +28,16 @@ function GuildBossCard({
 
   return (
     <div className="rounded-xl border border-violet-400/25 bg-gradient-to-b from-violet-950/40 to-black/25 p-3 shadow-inner sm:p-4">
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <p className="font-display text-sm font-bold leading-snug text-white sm:text-base">{entry.name}</p>
-        <span className="rounded-full border border-white/12 bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-200/90">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2 gap-y-2">
+        <p className="min-w-0 max-w-full flex-1 basis-[min(100%,12rem)] font-display text-base font-bold leading-snug text-white [overflow-wrap:anywhere] break-words sm:text-base">
+          {entry.name}
+        </p>
+        <span className="flex-shrink-0 rounded-full border border-white/12 bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-200/90">
           {guildLabel}
         </span>
       </div>
       <div className="space-y-2.5">
-        <div className="h-6 overflow-hidden rounded-full border border-white/15 bg-black/50 shadow-inner sm:h-5">
+        <div className="h-5 min-h-[1.25rem] w-full min-w-0 overflow-hidden rounded-full border border-white/15 bg-black/50 shadow-inner sm:h-5">
           <div
             className="h-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 transition-all duration-500"
             style={{ width: `${damagedPct}%` }}
