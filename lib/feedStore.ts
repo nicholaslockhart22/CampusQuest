@@ -203,6 +203,61 @@ function migrateNote(n: FieldNote): FieldNote {
   return any;
 }
 
+function cloneFieldNote(n: FieldNote): FieldNote {
+  const reactionBaseline = {
+    nod: n.nodCount,
+    hype: n.hypeCount,
+    verify: n.verifyCount,
+    assist: n.assistCount,
+  };
+  return {
+    ...n,
+    reactionBaseline,
+    ramMarks: n.ramMarks.map((r) => ({ ...r })),
+    nodByUserIds: new Set(n.nodByUserIds),
+    vouchByUserIds: new Set(n.vouchByUserIds),
+    hypeByUserIds: new Set(n.hypeByUserIds ?? n.vouchByUserIds),
+    verifyByUserIds: new Set(n.verifyByUserIds),
+    assistByUserIds: new Set(n.assistByUserIds),
+  };
+}
+
+function syncNodCount(note: FieldNote) {
+  const b = note.reactionBaseline;
+  note.nodCount = b ? b.nod + note.nodByUserIds.size : note.nodByUserIds.size;
+}
+
+function syncHypeCount(note: FieldNote) {
+  const b = note.reactionBaseline;
+  note.hypeCount = b ? b.hype + note.hypeByUserIds.size : note.hypeByUserIds.size;
+  note.vouchByUserIds = note.hypeByUserIds;
+  note.vouchCount = note.hypeCount;
+}
+
+function syncVerifyCount(note: FieldNote) {
+  const b = note.reactionBaseline;
+  note.verifyCount = b ? b.verify + note.verifyByUserIds.size : note.verifyByUserIds.size;
+}
+
+function syncAssistCount(note: FieldNote) {
+  const b = note.reactionBaseline;
+  note.assistCount = b ? b.assist + note.assistByUserIds.size : note.assistByUserIds.size;
+}
+
+/**
+ * User posts live in `feed`. Seed posts are merged at read time from `SEED_FIELD_NOTES` and
+ * are not in `feed` until someone reacts — so we clone the seed into `feed` on first mutation.
+ */
+function getNoteForMutation(noteId: string): FieldNote | null {
+  const existing = feed.find((n) => n.id === noteId);
+  if (existing) return existing;
+  const seed = SEED_FIELD_NOTES.find((n) => n.id === noteId);
+  if (!seed) return null;
+  const copy = cloneFieldNote(seed);
+  feed.push(copy);
+  return copy;
+}
+
 export function normalizeRamMarkTag(tag: string): string {
   return tag
     .replace(/^#+\s*/, "")
@@ -308,36 +363,30 @@ export function createFieldNote(params: CreateFieldNoteParams): FieldNote | null
 }
 
 export function nodFieldNote(noteId: string, userId: string): FieldNote | null {
-  const note = feed.find((n) => n.id === noteId);
+  const note = getNoteForMutation(noteId);
   if (!note) return null;
   migrateNote(note);
   if (note.nodByUserIds.has(userId)) {
     note.nodByUserIds.delete(userId);
-    note.nodCount = note.nodByUserIds.size;
   } else {
     note.nodByUserIds.add(userId);
-    note.nodCount = note.nodByUserIds.size;
   }
+  syncNodCount(note);
   return note;
 }
 
 export function hypeFieldNote(noteId: string, userId: string): FieldNote | null {
-  const note = feed.find((n) => n.id === noteId);
+  const note = getNoteForMutation(noteId);
   if (!note) return null;
   migrateNote(note);
   if (note.hypeByUserIds.has(userId)) {
     note.hypeByUserIds.delete(userId);
-    note.hypeCount = note.hypeByUserIds.size;
-    note.vouchByUserIds = note.hypeByUserIds;
-    note.vouchCount = note.hypeCount;
   } else {
     note.hypeByUserIds.add(userId);
-    note.hypeCount = note.hypeByUserIds.size;
-    note.vouchByUserIds = note.hypeByUserIds;
-    note.vouchCount = note.hypeCount;
     addXpToCharacter(userId, 2);
     addXpToCharacter(note.authorId, 3);
   }
+  syncHypeCount(note);
   return note;
 }
 
@@ -347,36 +396,34 @@ export function vouchFieldNote(noteId: string, userId: string): FieldNote | null
 }
 
 export function verifyFieldNote(noteId: string, userId: string): FieldNote | null {
-  const note = feed.find((n) => n.id === noteId);
+  const note = getNoteForMutation(noteId);
   if (!note) return null;
   migrateNote(note);
   if (note.verifyByUserIds.has(userId)) {
     note.verifyByUserIds.delete(userId);
-    note.verifyCount = note.verifyByUserIds.size;
   } else {
     note.verifyByUserIds.add(userId);
-    note.verifyCount = note.verifyByUserIds.size;
     addXpToCharacter(userId, 5);
     addXpToCharacter(note.authorId, 5);
   }
+  syncVerifyCount(note);
   return note;
 }
 
 export function assistFieldNote(noteId: string, userId: string): FieldNote | null {
-  const note = feed.find((n) => n.id === noteId);
+  const note = getNoteForMutation(noteId);
   if (!note) return null;
   migrateNote(note);
   if (note.assistByUserIds.has(userId)) {
     note.assistByUserIds.delete(userId);
-    note.assistCount = note.assistByUserIds.size;
   } else {
     note.assistByUserIds.add(userId);
-    note.assistCount = note.assistByUserIds.size;
     addXpToCharacter(note.authorId, 2);
     bumpQuadAssistForAuthor(note.authorId);
     const guildIds = getGuildIdsForCharacter(userId);
     recordGuildWeeklyRace(userId, guildIds, 8);
   }
+  syncAssistCount(note);
   return note;
 }
 
@@ -404,7 +451,7 @@ export interface AddCommentParams {
 export function addComment(noteId: string, params: AddCommentParams): QuadComment | null {
   const body = params.body.trim().slice(0, QUAD_COMMENT_MAX_CHARS);
   if (!body) return null;
-  const note = feed.find((n) => n.id === noteId);
+  const note = getNoteForMutation(noteId);
   if (!note) return null;
 
   const comment: QuadComment = {

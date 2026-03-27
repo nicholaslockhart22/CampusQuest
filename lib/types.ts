@@ -240,6 +240,16 @@ export interface FieldNote {
   visibility?: QuadPostVisibility;
   /** Snapshot for feed badges (optional). */
   authorStreakDays?: number;
+  /**
+   * Seeded posts start with display counts before any real user ids exist in the Sets.
+   * When hydrated into `feed`, reactions add on top: e.g. nodCount = baseline.nod + nodByUserIds.size.
+   */
+  reactionBaseline?: {
+    nod: number;
+    hype: number;
+    verify: number;
+    assist: number;
+  };
 }
 
 // For serialization we store nod/rally as arrays

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FieldNote, QuadComment, StatKey } from "@/lib/types";
 import { QUAD_COMMENT_MAX_CHARS } from "@/lib/types";
 import { AvatarDisplay } from "./AvatarDisplay";
@@ -66,6 +66,9 @@ export function FieldNoteCard({
   const [commentDraft, setCommentDraft] = useState("");
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [showImageNodPop, setShowImageNodPop] = useState(false);
+  const lastImageTapAtRef = useRef(0);
+  const nodPopTimerRef = useRef<number | null>(null);
   const hasNodded = note.nodByUserIds.has(currentUserId);
   const hasHyped = note.hypeByUserIds?.has(currentUserId) ?? note.vouchByUserIds.has(currentUserId);
   const hasVerified = note.verifyByUserIds?.has(currentUserId) ?? false;
@@ -75,6 +78,46 @@ export function FieldNoteCard({
   const isImgUrl = proofImgUrl && looksLikeImageProofUrl(proofImgUrl);
   const streak = streakBadge(note.authorStreakDays);
   const isFeed = variant === "feed";
+
+  useEffect(() => {
+    return () => {
+      if (nodPopTimerRef.current != null) {
+        window.clearTimeout(nodPopTimerRef.current);
+        nodPopTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  function triggerImageNodPop() {
+    if (nodPopTimerRef.current != null) {
+      window.clearTimeout(nodPopTimerRef.current);
+      nodPopTimerRef.current = null;
+    }
+    setShowImageNodPop(false);
+    window.setTimeout(() => {
+      setShowImageNodPop(true);
+      nodPopTimerRef.current = window.setTimeout(() => {
+        setShowImageNodPop(false);
+        nodPopTimerRef.current = null;
+      }, 880);
+    }, 0);
+  }
+
+  function addNodFromImage() {
+    // Double-tap should add a nod, not toggle it off.
+    if (!hasNodded) onNod(note.id);
+    triggerImageNodPop();
+  }
+
+  function handleProofImageTap() {
+    const now = Date.now();
+    if (now - lastImageTapAtRef.current < 280) {
+      addNodFromImage();
+      lastImageTapAtRef.current = 0;
+      return;
+    }
+    lastImageTapAtRef.current = now;
+  }
 
   const avatarFrame = (
     <div
@@ -97,17 +140,39 @@ export function FieldNoteCard({
   const proofBlock =
     proofImgUrl &&
     (isImgUrl ? (
-      <img
-        src={proofImgUrl}
-        alt=""
-        loading="lazy"
-        decoding="async"
-        className={
-          isFeed
-            ? "quad-feed-media-img w-full aspect-[4/5] sm:aspect-[4/3] sm:max-h-[min(72vh,32rem)] object-cover"
-            : "w-full max-h-48 object-cover"
-        }
-      />
+      isFeed ? (
+        <button
+          type="button"
+          onDoubleClick={addNodFromImage}
+          onTouchEnd={handleProofImageTap}
+          className="group relative block w-full cursor-pointer touch-manipulation"
+          aria-label="Double tap image to nod"
+        >
+          <img
+            src={proofImgUrl}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="quad-feed-media-img w-full aspect-[4/5] sm:aspect-[4/3] sm:max-h-[min(72vh,32rem)] object-cover"
+          />
+          {showImageNodPop && (
+            <span
+              className="quad-image-nod-pop pointer-events-none absolute left-1/2 top-1/2 z-[2] -translate-x-1/2 -translate-y-1/2 select-none"
+              aria-hidden
+            >
+              👍
+            </span>
+          )}
+        </button>
+      ) : (
+        <img
+          src={proofImgUrl}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="w-full max-h-48 object-cover"
+        />
+      )
     ) : (
       <a
         href={proofImgUrl}

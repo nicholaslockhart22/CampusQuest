@@ -226,43 +226,54 @@ function BossFightRow({
         </div>
       </div>
 
-      <footer className="flex flex-col gap-3 border-t border-white/10 pt-3 sm:flex-row sm:items-stretch sm:justify-between sm:pt-4">
-        <div
-          className={`flex items-baseline justify-center gap-2 rounded-xl border px-3 py-2.5 sm:inline-flex sm:justify-start sm:py-2 ${
-            isFinal ? "border-uri-gold/45 bg-uri-gold/10" : "border-uri-gold/35 bg-uri-gold/[0.08]"
-          }`}
-        >
-          <span className="font-mono text-xl font-bold text-uri-gold sm:text-lg">+{boss.xpReward}</span>
-          <span className="text-xs font-medium text-uri-gold/85 sm:text-[11px]">XP if defeated</span>
-        </div>
-        <div
-          className={
-            boss.defeated
-              ? "flex justify-end"
-              : "flex w-full min-w-0 flex-row items-stretch gap-2 sm:w-auto sm:flex-wrap sm:items-center sm:justify-end"
-          }
-        >
-          {!boss.defeated && (
-            <button
-              type="button"
-              onClick={onToggleAttack}
-              className={`min-h-[48px] min-w-0 flex-1 rounded-xl border px-3 py-3 text-sm font-semibold transition-all active:scale-[0.98] sm:min-h-0 sm:w-auto sm:flex-none sm:min-w-[10rem] sm:px-4 sm:py-2.5 ${attackBtn}`}
-            >
-              <span className="sm:hidden">{isActive ? "Stop" : "Attack"}</span>
-              <span className="hidden sm:inline">{isActive ? "Stop attacking" : "Attack this boss"}</span>
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onRemove}
-            className={`flex flex-shrink-0 items-center justify-center rounded-xl border border-white/10 text-lg text-white/50 transition-colors hover:border-red-500/35 hover:bg-red-500/10 hover:text-red-200 sm:p-2.5 ${
-              boss.defeated ? "min-h-[48px] min-w-[48px]" : "min-h-[48px] w-[48px] min-w-[48px] sm:min-h-0 sm:w-auto sm:min-w-0"
+      <footer className="border-t border-white/10 pt-3 sm:pt-4">
+        <div className="flex flex-col gap-3">
+          <div
+            className={`flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border px-3 py-2.5 ${
+              isFinal ? "border-uri-gold/45 bg-uri-gold/10" : "border-uri-gold/35 bg-uri-gold/[0.08]"
             }`}
-            aria-label={`Remove ${boss.name}`}
-            title="Remove boss (frees a slot, no XP)"
           >
-            🗑️
-          </button>
+            <span className="font-mono text-lg font-bold tabular-nums text-uri-gold sm:text-xl">
+              +{boss.xpReward}
+            </span>
+            <span className="text-[11px] font-medium leading-snug text-uri-gold/90 sm:text-xs sm:text-uri-gold/85">
+              XP if defeated
+            </span>
+          </div>
+
+          {boss.defeated ? (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={onRemove}
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 text-lg text-white/50 transition-colors hover:border-red-500/35 hover:bg-red-500/10 hover:text-red-200"
+                aria-label={`Remove ${boss.name}`}
+                title="Remove boss (frees a slot, no XP)"
+              >
+                🗑️
+              </button>
+            </div>
+          ) : (
+            <div className="flex w-full min-w-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={onToggleAttack}
+                className={`flex min-h-[48px] min-w-0 flex-1 items-center justify-center rounded-xl border px-3 py-3 text-center text-sm font-semibold leading-snug transition-all active:scale-[0.98] sm:min-h-[44px] sm:px-4 sm:py-2.5 ${attackBtn}`}
+              >
+                <span className="sm:hidden">{isActive ? "Stop" : "Attack"}</span>
+                <span className="hidden sm:inline">{isActive ? "Stop attacking" : "Attack this boss"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={onRemove}
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 text-lg text-white/50 transition-colors hover:border-red-500/35 hover:bg-red-500/10 hover:text-red-200"
+                aria-label={`Remove ${boss.name}`}
+                title="Remove boss (frees a slot, no XP)"
+              >
+                🗑️
+              </button>
+            </div>
+          )}
         </div>
       </footer>
     </article>
