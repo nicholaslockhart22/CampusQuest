@@ -12,15 +12,16 @@ let comments: QuadComment[] = [];
 const BASE_TS = Date.now();
 
 /**
- * Same-origin JPEGs in /public/quad-feed — avoids broken embeds on mobile/Safari where
+ * Same-origin images in /public/quad-feed — avoids broken embeds on mobile/Safari where
  * third-party CDNs (e.g. Unsplash) can fail hotlink/referrer checks.
  */
 const SEED_POST_IMAGES = {
   /** Women's basketball — hosted locally; source photo Rhode Island Current (Z915188, Feb 2024). */
   womensBasketball: "/quad-feed/womens-basketball.jpg",
-  /** URI Keaney Gymnasium — Wikimedia Commons (KeaneyGym.jpg, Greenstrat, public domain). */
-  gym: "/quad-feed/gym.jpg",
-  coffee: "/quad-feed/coffee.jpg",
+  /** Keaney-style training floor — weight room (user-provided asset). */
+  gym: "/quad-feed/gym.png",
+  /** URI Memorial Union entrance (user-provided asset). */
+  memorialUnion: "/quad-feed/memorial-union.png",
   running: "/quad-feed/running.jpg",
   groupStudy: "/quad-feed/group-study.jpg",
   careerFair: "/quad-feed/career.jpg",
@@ -107,7 +108,7 @@ const SEED_FIELD_NOTES: FieldNote[] = [
     2,
     0,
     undefined,
-    SEED_POST_IMAGES.coffee
+    SEED_POST_IMAGES.memorialUnion
   ),
   seedNote(
     "seed-4",

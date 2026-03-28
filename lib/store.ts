@@ -121,6 +121,31 @@ function saveLogs(logs: ActivityLog[]): void {
   }
 }
 
+function localDayBoundsMs(isoDate: string): { start: number; end: number } {
+  const [y, mo, d] = isoDate.split("-").map((n) => parseInt(n, 10));
+  const start = new Date(y, mo - 1, d, 0, 0, 0, 0).getTime();
+  return { start, end: start + 24 * 60 * 60 * 1000 };
+}
+
+function sumActivityLogXpForDay(characterId: string, day: string): number {
+  const { start, end } = localDayBoundsMs(day);
+  return loadLogs()
+    .filter((l) => l.characterId === characterId && l.createdAt >= start && l.createdAt < end && l.xpEarned != null)
+    .reduce((sum, l) => sum + (l.xpEarned ?? 0), 0);
+}
+
+function creditStreakBonusXp(c: Character, day: string, amount: number): void {
+  if (amount <= 0) return;
+  if (!c.streakBonusXpByDate) c.streakBonusXpByDate = {};
+  c.streakBonusXpByDate[day] = (c.streakBonusXpByDate[day] ?? 0) + amount;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 21);
+  const cutoffStr = todayString(cutoff);
+  for (const k of Object.keys(c.streakBonusXpByDate)) {
+    if (k < cutoffStr) delete c.streakBonusXpByDate[k];
+  }
+}
+
 type BossProgressRecord = Record<string, BossProgressType>;
 
 function loadBossProgress(): BossProgressRecord {
@@ -243,6 +268,47 @@ function applyStatIncrease(
 
 function ensureAchievement(c: Character, id: string): void {
   if (!c.achievements.includes(id)) c.achievements.push(id);
+}
+
+/** Total XP today that counts toward the daily streak minimum (activity logs + non-log bonuses). */
+export function getTodaysXpForStreak(characterId: string, c: Character, day: string = todayString()): number {
+  return sumActivityLogXpForDay(characterId, day) + (c.streakBonusXpByDate?.[day] ?? 0);
+}
+
+/** Apply streak extend / break from today's combined XP. Safe to call after any XP change. */
+export function updateStreakFromTodaysXp(c: Character, characterId: string, day: string = todayString()): void {
+  const todaysXp = getTodaysXpForStreak(characterId, c, day);
+
+  if (todaysXp >= DAILY_MINIMUM_XP) {
+    if (c.lastActivityDate !== day) {
+      const yesterdayStr = yesterdayString();
+      if (c.lastActivityDate === yesterdayStr) {
+        c.streakDays += 1;
+        onStreakExtended?.(characterId);
+      } else {
+        c.streakDays = 1;
+        onStreakExtended?.(characterId);
+      }
+      c.lastActivityDate = day;
+    }
+  } else {
+    if (c.lastActivityDate != null) {
+      const last = c.lastActivityDate;
+      if (day > last) {
+        if ((c.streakFreezes ?? 0) > 0) {
+          c.streakFreezes = (c.streakFreezes ?? 0) - 1;
+          c.lastActivityDate = day;
+        } else if (rollStreakSave(c)) {
+          c.lastActivityDate = day;
+        } else {
+          c.streakDays = 0;
+        }
+      }
+    }
+  }
+
+  if (c.streakDays >= 7) ensureAchievement(c, "7-Day Streak");
+  if (c.streakDays >= 30) ensureAchievement(c, "30-Day Streak");
 }
 
 function ensureUnlockedCosmetic(c: Character, cosmeticId: string): void {
@@ -371,11 +437,14 @@ export function completeSpecialQuest(characterId: string, questId: string, proof
   if (!quest) return null;
   const completed = c.completedSpecialQuests ?? [];
   if (completed.includes(questId)) return null;
+  const td = todayString();
   c.totalXP += quest.xpReward;
   c.level = xpToLevel(c.totalXP);
+  creditStreakBonusXp(c, td, quest.xpReward);
   c.completedSpecialQuests = [...completed, questId];
   if (!c.specialQuestProofs) c.specialQuestProofs = {};
   c.specialQuestProofs[questId] = trimmed;
+  updateStreakFromTodaysXp(c, characterId, td);
   saveCharacter(c);
   return c;
 }
@@ -465,47 +534,6 @@ export function logActivity(
   c.level = xpToLevel(c.totalXP);
   const leveledUp = c.level > prevLevel;
 
-  const todayStart = new Date(today).getTime();
-  const todayEnd = todayStart + 24 * 60 * 60 * 1000;
-  const todaysXp = logs
-    .filter((l) => l.characterId === characterId && l.createdAt >= todayStart && l.createdAt < todayEnd && l.xpEarned != null)
-    .reduce((sum, l) => sum + (l.xpEarned ?? 0), 0);
-
-  if (todaysXp >= DAILY_MINIMUM_XP) {
-    if (c.lastActivityDate !== today) {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
-      if (c.lastActivityDate === yesterdayStr) {
-        c.streakDays += 1;
-        onStreakExtended?.(characterId);
-      } else {
-        c.streakDays = 1;
-        onStreakExtended?.(characterId);
-      }
-      c.lastActivityDate = today;
-    }
-  } else {
-    if (c.lastActivityDate != null) {
-      const last = c.lastActivityDate;
-      if (today > last) {
-        if ((c.streakFreezes ?? 0) > 0) {
-          c.streakFreezes = (c.streakFreezes ?? 0) - 1;
-          c.lastActivityDate = today;
-        } else if (rollStreakSave(c)) {
-          c.lastActivityDate = today;
-        } else {
-          c.streakDays = 0;
-        }
-      }
-    }
-  }
-
-  ensureAchievement(c, "First Quest Completed");
-  if (c.streakDays >= 7) ensureAchievement(c, "7-Day Streak");
-  if (c.streakDays >= 30) ensureAchievement(c, "30-Day Streak");
-  if (leveledUp) ensureAchievement(c, `Reached Level ${c.level}`);
-
   contributeCampusBossDamage(characterId, Math.max(1, Math.floor(xpEarned * 1.15)));
   const guildDmg = Math.max(1, Math.floor(xpEarned * 1.05));
   for (const gid of c.guildIds ?? []) {
@@ -520,6 +548,10 @@ export function logActivity(
   });
 
   const bossDrop = applyActivityDamageToCurrentBoss(c, activityId, minutes);
+
+  updateStreakFromTodaysXp(c, characterId, today);
+  ensureAchievement(c, "First Quest Completed");
+  if (leveledUp) ensureAchievement(c, `Reached Level ${c.level}`);
 
   saveCharacter(c);
   const lastBossDrop =
@@ -586,6 +618,7 @@ function applyActivityDamageToCurrentBoss(
     boss.defeatedAt = Date.now();
     const xp = boss.xpReward ?? bossXpReward(boss.maxHp);
     c.totalXP += xp;
+    creditStreakBonusXp(c, todayString(), xp);
     const guildIdsForBossXp = [...(c.guildIds ?? [])];
     if (guildIdsForBossXp.length > 0) {
       void import("./guildStore").then((m) => {
@@ -858,16 +891,22 @@ export function grantMiniGameTrainingXp(characterId: string, stat: StatKey, base
     }
   });
 
+  const td = todayString();
+  creditStreakBonusXp(c, td, totalAdded);
+  updateStreakFromTodaysXp(c, characterId, td);
   saveCharacter(c);
   return { character: c, sessionXp, extras };
 }
 
 /** Grant XP to a character (e.g. when their post gets vouches). Works for current user or friends. */
 export function addXpToCharacter(characterId: string, amount: number): void {
+  const td = todayString();
   const current = loadCharacter();
   if (current && current.id === characterId) {
     current.totalXP += amount;
     current.level = xpToLevel(current.totalXP);
+    creditStreakBonusXp(current, td, amount);
+    updateStreakFromTodaysXp(current, characterId, td);
     saveCharacter(current);
     return;
   }
@@ -875,6 +914,8 @@ export function addXpToCharacter(characterId: string, amount: number): void {
   if (c) {
     c.totalXP += amount;
     c.level = xpToLevel(c.totalXP);
+    creditStreakBonusXp(c, td, amount);
+    updateStreakFromTodaysXp(c, characterId, td);
     registerCharacterInFriends(c);
   }
 }

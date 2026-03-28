@@ -177,6 +177,13 @@
   display: block;
 }
 
+/* Long comment threads scroll inside the card so the post + image stay in normal document flow */
+.quad-feed-comments-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+}
+
 @keyframes quad-image-nod-pop {
   0% {
     opacity: 0;

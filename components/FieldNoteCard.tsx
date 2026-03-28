@@ -153,7 +153,7 @@ export function FieldNoteCard({
             alt=""
             loading="lazy"
             decoding="async"
-            className="quad-feed-media-img w-full aspect-[4/5] sm:aspect-[4/3] sm:max-h-[min(72vh,32rem)] object-cover"
+            className="quad-feed-media-img w-full aspect-[4/5] sm:aspect-[4/3] sm:max-h-[min(72vh,32rem)] object-cover max-h-[min(70vh,26rem)]"
           />
           {showImageNodPop && (
             <span
@@ -291,36 +291,49 @@ export function FieldNoteCard({
       </button>
       {commentsOpen && (
         <>
-          {comments.length > 0 && (
-            <ul className={`mt-3 mb-3 space-y-2 ${isFeed ? "space-y-2.5" : ""}`}>
-              {comments.map((c) => (
-                <li
-                  key={c.id}
-                  className={
-                    isFeed
-                      ? "flex gap-2.5 rounded-2xl border border-white/[0.07] bg-white/[0.04] p-2.5 shadow-sm shadow-black/20"
-                      : "flex gap-2"
-                  }
-                >
-                  <div
-                    className={`flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden border ${
-                      isFeed ? "rounded-full border-white/12 bg-black/25" : "rounded-lg border-white/10 bg-white/10"
-                    }`}
-                  >
-                    <AvatarDisplay avatar={c.authorAvatar} size={32} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-sm font-semibold text-white">{c.authorName}</span>
-                      <span className="text-xs text-uri-keaney/85">@{c.authorUsername}</span>
-                      <span className="text-xs text-white/35">· {formatTime(c.createdAt)}</span>
+          {comments.length > 0 &&
+            (isFeed ? (
+              <div className="quad-feed-comments-scroll mt-3 max-h-[min(42svh,19rem)] overflow-y-auto rounded-xl border border-white/[0.06] bg-black/20 px-2 py-2 sm:max-h-[min(48svh,22rem)]">
+                <ul className="mb-0 space-y-2.5 pr-1">
+                  {comments.map((c) => (
+                    <li
+                      key={c.id}
+                      className="flex gap-2.5 rounded-2xl border border-white/[0.07] bg-white/[0.04] p-2.5 shadow-sm shadow-black/20"
+                    >
+                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/12 bg-black/25">
+                        <AvatarDisplay avatar={c.authorAvatar} size={32} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-sm font-semibold text-white">{c.authorName}</span>
+                          <span className="text-xs text-uri-keaney/85">@{c.authorUsername}</span>
+                          <span className="text-xs text-white/35">· {formatTime(c.createdAt)}</span>
+                        </div>
+                        <p className="mt-1 break-words text-sm leading-relaxed text-white/85 whitespace-pre-wrap">{c.body}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <ul className="mt-3 mb-3 space-y-2">
+                {comments.map((c) => (
+                  <li key={c.id} className="flex gap-2">
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/10 bg-white/10">
+                      <AvatarDisplay avatar={c.authorAvatar} size={32} />
                     </div>
-                    <p className="mt-1 break-words text-sm leading-relaxed text-white/85 whitespace-pre-wrap">{c.body}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-sm font-semibold text-white">{c.authorName}</span>
+                        <span className="text-xs text-uri-keaney/85">@{c.authorUsername}</span>
+                        <span className="text-xs text-white/35">· {formatTime(c.createdAt)}</span>
+                      </div>
+                      <p className="mt-1 break-words text-sm leading-relaxed text-white/85 whitespace-pre-wrap">{c.body}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ))}
           {onAddComment && currentUser && (
             <form
               onSubmit={(e) => {
@@ -332,7 +345,7 @@ export function FieldNoteCard({
                 setCommentDraft("");
                 setCommentSubmitting(false);
               }}
-              className="flex gap-2"
+              className={`flex gap-2 ${isFeed ? "mt-3" : ""}`}
             >
               <input
                 type="text"
@@ -358,13 +371,6 @@ export function FieldNoteCard({
         </>
       )}
     </div>
-  );
-
-  const feedCaption = (
-    <p className="break-words whitespace-pre-wrap text-[15px] leading-relaxed text-white/88 sm:text-[16px]">
-      <span className="font-semibold text-white">{note.authorName}</span>{" "}
-      <span>{note.body}</span>
-    </p>
   );
 
   return (
@@ -395,7 +401,9 @@ export function FieldNoteCard({
           {proofImgUrl && <div className="quad-feed-media-wrap">{proofBlock}</div>}
           <div className="space-y-3 px-4 pb-4 pt-2">
             {actionsRow}
-            {feedCaption}
+            <p className="break-words whitespace-pre-wrap text-[15px] leading-relaxed text-white/88 sm:text-[16px]">
+              <span className="font-semibold text-white">{note.authorName}</span> <span>{note.body}</span>
+            </p>
             {note.ramMarks.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {note.ramMarks.map((r) => (

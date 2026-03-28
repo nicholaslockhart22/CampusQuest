@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import type { Character } from "@/lib/types";
-import { getActivityLogs } from "@/lib/store";
+import { getTodaysXpForStreak } from "@/lib/store";
 import { DAILY_MINIMUM_XP } from "@/lib/level";
 import { todayString } from "@/lib/dateUtils";
 
@@ -12,15 +12,10 @@ export function StreakCard({ character }: { character: Character }) {
 
   const { todayXp, atRisk } = useMemo(() => {
     const today = todayString();
-    const start = new Date(today).getTime();
-    const end = start + 24 * 60 * 60 * 1000;
-    const logs = getActivityLogs(character.id);
-    const xp = logs
-      .filter((l) => l.createdAt >= start && l.createdAt < end && l.xpEarned != null)
-      .reduce((s, l) => s + (l.xpEarned ?? 0), 0);
+    const xp = getTodaysXpForStreak(character.id, character, today);
     const risk = hasStreak && xp < DAILY_MINIMUM_XP;
     return { todayXp: xp, atRisk: risk };
-  }, [character.id, character.streakDays, hasStreak]);
+  }, [character, character.id, character.streakDays, hasStreak]);
 
   const fireScale = 1 + Math.min(0.5, days * 0.03);
 

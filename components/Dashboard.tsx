@@ -647,10 +647,14 @@ export function Dashboard() {
               }}
             >
               <div className="mb-4 flex items-start gap-3 sm:mb-5 sm:gap-4">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl border border-uri-keaney/45 bg-gradient-to-br from-uri-keaney/30 to-uri-navy/90 text-2xl shadow-[0_0_20px_rgba(104,171,232,0.2),inset_0_1px_0_rgba(255,255,255,0.08)] sm:h-14 sm:w-14 sm:text-3xl">
-                  <span className="leading-none" aria-hidden>
-                    👤
-                  </span>
+                <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl border border-uri-keaney/45 bg-white shadow-[0_0_20px_rgba(104,171,232,0.2),inset_0_1px_0_rgba(255,255,255,0.08)] sm:h-24 sm:w-24">
+                  <img
+                    src="/rhody-ai-ram.png"
+                    alt="Rhody AI mascot"
+                    className="h-full w-full object-contain object-left"
+                    width={96}
+                    height={96}
+                  />
                 </div>
                 <div className="min-w-0 flex-1 pt-0.5">
                   <h2 className="font-display text-lg font-bold leading-tight tracking-tight text-white sm:text-xl">Your Ram</h2>

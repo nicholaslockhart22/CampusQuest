@@ -101,6 +101,8 @@ export interface Character {
   miniGameTraining?: MiniGameTrainingPersist;
   /** Running tally from Quad "Assist" reactions (group quest vibe). */
   quadAssistScore?: number;
+  /** XP toward daily streak minimum from sources other than activity logs (Quad, bosses, training, quests). Key: YYYY-MM-DD. */
+  streakBonusXpByDate?: Record<string, number>;
 }
 
 // —— Guilds ——
