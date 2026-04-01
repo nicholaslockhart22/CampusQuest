@@ -27,6 +27,7 @@ export function CharacterGate({ onReady }: { onReady: () => void }) {
   const [avatar, setAvatar] = useState(() => serializeAvatar(getDefaultCustomAvatar()));
   const [classId, setClassId] = useState<CharacterClassId | null>(null);
   const [starterWeapon, setStarterWeapon] = useState<string | null>(null);
+  const [scholarGuildId, setScholarGuildId] = useState<string>("undecided");
   const [showConfirm, setShowConfirm] = useState(false);
   const [step, setStep] = useState<"info" | "avatar">("info");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -68,6 +69,7 @@ export function CharacterGate({ onReady }: { onReady: () => void }) {
         username: usernameNormalized,
         classId: classId ?? undefined,
         starterWeapon: starterWeapon ?? undefined,
+        scholarGuildId,
       });
       setShowConfirm(false);
       onReady();
@@ -196,6 +198,32 @@ export function CharacterGate({ onReady }: { onReady: () => void }) {
                 {usernameNormalized.length > 0 && !usernameValid && (
                   <p className="text-xs text-amber-400">Username must be 1–25 characters, only a–z, 0–9, and _.</p>
                 )}
+              </div>
+
+              {/* Step 3: Scholars Guild */}
+              <div className="space-y-2">
+                <label htmlFor="char-scholar-guild" className="block text-xs font-semibold text-white/70 uppercase tracking-wider">
+                  Scholars Guild
+                </label>
+                <select
+                  id="char-scholar-guild"
+                  value={scholarGuildId}
+                  onChange={(e) => setScholarGuildId(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:ring-2 focus:ring-uri-keaney/50 focus:border-uri-keaney/50"
+                >
+                  <option value="arts_sciences">College of Arts &amp; Sciences</option>
+                  <option value="business">College of Business</option>
+                  <option value="education">College of Education</option>
+                  <option value="engineering">College of Engineering</option>
+                  <option value="health_sciences">College of Health Sciences</option>
+                  <option value="environment_life_sciences">College of Environment &amp; Life Sciences</option>
+                  <option value="nursing">College of Nursing</option>
+                  <option value="pharmacy">College of Pharmacy</option>
+                  <option value="undecided">Undecided</option>
+                </select>
+                <p className="text-xs text-white/50">
+                  Pick the college that best fits you. This powers the Scholars Guild leaderboard.
+                </p>
               </div>
 
               <button

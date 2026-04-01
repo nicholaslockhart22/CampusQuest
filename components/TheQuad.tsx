@@ -107,7 +107,7 @@ export function TheQuad({
           </div>
           {/* Centered title */}
           <div className="flex-1 flex items-center justify-center">
-            <h1 className="font-display text-2xl sm:text-3xl font-black tracking-[0.25em] text-center uppercase bg-clip-text text-transparent bg-gradient-to-r from-uri-gold via-white to-uri-gold drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)]">
+            <h1 className="font-display text-2xl sm:text-3xl font-black tracking-[0.25em] text-center uppercase bg-clip-text text-transparent bg-gradient-to-r from-[#68ABE8] via-[#B7E0FF] to-[#68ABE8] drop-shadow-[0_4px_18px_rgba(0,0,0,0.9)]">
               THE&nbsp;QUAD
             </h1>
           </div>

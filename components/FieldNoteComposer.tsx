@@ -150,15 +150,24 @@ export function FieldNoteComposer({
           accept="image/*"
           onChange={handleProofFileChange}
           className="hidden"
-          aria-label="Add photo from device"
+          aria-label="Add photo from device or open camera to scan QR code"
         />
-        <button
-          type="button"
-          onClick={() => proofFileRef.current?.click()}
-          className="mt-2 text-xs font-medium text-uri-keaney hover:text-uri-keaney/80 px-3 py-2 rounded-lg border border-uri-keaney/40 hover:bg-uri-keaney/10 transition-colors"
-        >
-          📷 Add photo from device
-        </button>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => proofFileRef.current?.click()}
+            className="text-xs font-medium text-uri-keaney hover:text-uri-keaney/80 px-3 py-2 rounded-lg border border-uri-keaney/40 hover:bg-uri-keaney/10 transition-colors"
+          >
+            📷 Add photo from device
+          </button>
+          <button
+            type="button"
+            onClick={() => proofFileRef.current?.click()}
+            className="text-xs font-medium text-white/80 hover:text-white px-3 py-2 rounded-lg border border-white/25 hover:bg-white/10 transition-colors flex items-center gap-1.5"
+          >
+            📱 Open camera to scan QR code
+          </button>
+        </div>
         {proofUrl.startsWith("data:") && (
           <div className="mt-2 rounded-xl overflow-hidden border border-white/15 max-w-[180px]">
             <img src={proofUrl} alt="Proof" className="w-full h-20 object-cover" />

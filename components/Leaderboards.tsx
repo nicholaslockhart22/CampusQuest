@@ -20,6 +20,137 @@ const SORT_OPTIONS: { value: SortBy; label: string; icon: string }[] = [
   { value: "guildLevel", label: "Guild level", icon: "🛡️" },
 ];
 
+const SCHOLAR_GUILDS = [
+  { id: "arts_sciences", name: "College of Arts & Sciences", crest: "📚" },
+  { id: "business", name: "College of Business", crest: "💼" },
+  { id: "education", name: "College of Education", crest: "🧑‍🏫" },
+  { id: "engineering", name: "College of Engineering", crest: "⚙️" },
+  { id: "health_sciences", name: "College of Health Sciences", crest: "🩺" },
+  { id: "environment_life_sciences", name: "College of Environment & Life Sciences", crest: "🌿" },
+  { id: "nursing", name: "College of Nursing", crest: "💙" },
+  { id: "pharmacy", name: "College of Pharmacy", crest: "💊" },
+  { id: "undecided", name: "Undecided Scholars", crest: "🎓" },
+];
+
+const SCHOLAR_GUILD_SEED_MEMBERS = [
+  // Arts & Sciences
+  { guildId: "arts_sciences", name: "Alex Carter", totalXP: 420, avatar: "📘" },
+  { guildId: "arts_sciences", name: "Priya Desai", totalXP: 380, avatar: "📗" },
+  { guildId: "arts_sciences", name: "Evan Morales", totalXP: 360, avatar: "📙" },
+  { guildId: "arts_sciences", name: "Jordan Li", totalXP: 340, avatar: "📖" },
+  { guildId: "arts_sciences", name: "Sofia Ramirez", totalXP: 325, avatar: "🖋️" },
+  { guildId: "arts_sciences", name: "Logan Bennett", totalXP: 310, avatar: "🎨" },
+  { guildId: "arts_sciences", name: "Hannah Cole", totalXP: 295, avatar: "🎭" },
+  { guildId: "arts_sciences", name: "Mateo Silva", totalXP: 280, avatar: "📚" },
+  { guildId: "arts_sciences", name: "Grace Young", totalXP: 265, avatar: "✏️" },
+  { guildId: "arts_sciences", name: "Omar Aziz", totalXP: 250, avatar: "📜" },
+  { guildId: "arts_sciences", name: "Avery Ross", totalXP: 235, avatar: "📒" },
+
+  // Business
+  { guildId: "business", name: "Jordan Reyes", totalXP: 430, avatar: "📊" },
+  { guildId: "business", name: "Lena Howard", totalXP: 390, avatar: "💳" },
+  { guildId: "business", name: "Marcus Allen", totalXP: 370, avatar: "💹" },
+  { guildId: "business", name: "Emily Chen", totalXP: 350, avatar: "🏦" },
+  { guildId: "business", name: "Tyler Scott", totalXP: 330, avatar: "📈" },
+  { guildId: "business", name: "Riya Kapoor", totalXP: 310, avatar: "🧾" },
+  { guildId: "business", name: "Dylan Price", totalXP: 295, avatar: "💼" },
+  { guildId: "business", name: "Bella Martinez", totalXP: 280, avatar: "📋" },
+  { guildId: "business", name: "Owen Carter", totalXP: 265, avatar: "💰" },
+  { guildId: "business", name: "Chloe Nguyen", totalXP: 250, avatar: "📌" },
+  { guildId: "business", name: "Isaac Lopez", totalXP: 235, avatar: "🧮" },
+
+  // Education
+  { guildId: "education", name: "Sam Patel", totalXP: 360, avatar: "📝" },
+  { guildId: "education", name: "Mia Robinson", totalXP: 340, avatar: "📓" },
+  { guildId: "education", name: "Aiden Brooks", totalXP: 325, avatar: "📎" },
+  { guildId: "education", name: "Lila Gomez", totalXP: 310, avatar: "📚" },
+  { guildId: "education", name: "Ethan Wright", totalXP: 295, avatar: "🧑‍🏫" },
+  { guildId: "education", name: "Nora Hayes", totalXP: 280, avatar: "✏️" },
+  { guildId: "education", name: "Caleb Morris", totalXP: 265, avatar: "📒" },
+  { guildId: "education", name: "Riley James", totalXP: 250, avatar: "📘" },
+  { guildId: "education", name: "Zoe Carter", totalXP: 235, avatar: "📗" },
+  { guildId: "education", name: "Noah Green", totalXP: 220, avatar: "📙" },
+  { guildId: "education", name: "Isla Ford", totalXP: 205, avatar: "📖" },
+
+  // Engineering
+  { guildId: "engineering", name: "Riley Nguyen", totalXP: 440, avatar: "🔧" },
+  { guildId: "engineering", name: "Diego Alvarez", totalXP: 420, avatar: "🛠️" },
+  { guildId: "engineering", name: "Linh Tran", totalXP: 400, avatar: "📐" },
+  { guildId: "engineering", name: "Mason Clark", totalXP: 385, avatar: "📏" },
+  { guildId: "engineering", name: "Sara Khan", totalXP: 370, avatar: "💡" },
+  { guildId: "engineering", name: "Leo Turner", totalXP: 355, avatar: "⚙️" },
+  { guildId: "engineering", name: "Ariana Flores", totalXP: 340, avatar: "🔩" },
+  { guildId: "engineering", name: "Jasper Lin", totalXP: 325, avatar: "🧪" },
+  { guildId: "engineering", name: "Mila Brooks", totalXP: 310, avatar: "🧰" },
+  { guildId: "engineering", name: "Hudson Lee", totalXP: 295, avatar: "🔬" },
+  { guildId: "engineering", name: "Ivy Sanders", totalXP: 280, avatar: "🛰️" },
+
+  // Health Sciences
+  { guildId: "health_sciences", name: "Casey Ortiz", totalXP: 380, avatar: "🧬" },
+  { guildId: "health_sciences", name: "Nia Thompson", totalXP: 360, avatar: "🫀" },
+  { guildId: "health_sciences", name: "Griffin Shaw", totalXP: 345, avatar: "🧫" },
+  { guildId: "health_sciences", name: "Aaliyah Stone", totalXP: 330, avatar: "🧬" },
+  { guildId: "health_sciences", name: "Logan Pierce", totalXP: 315, avatar: "🧪" },
+  { guildId: "health_sciences", name: "Ruby Adams", totalXP: 300, avatar: "💊" },
+  { guildId: "health_sciences", name: "Owen Fisher", totalXP: 285, avatar: "🩺" },
+  { guildId: "health_sciences", name: "Chase Rivera", totalXP: 270, avatar: "🩹" },
+  { guildId: "health_sciences", name: "Lena Brooks", totalXP: 255, avatar: "🧻" },
+  { guildId: "health_sciences", name: "Faith Long", totalXP: 240, avatar: "🧴" },
+  { guildId: "health_sciences", name: "Eli Parker", totalXP: 225, avatar: "🧼" },
+
+  // Environment & Life Sciences
+  { guildId: "environment_life_sciences", name: "Morgan Lee", totalXP: 360, avatar: "🌎" },
+  { guildId: "environment_life_sciences", name: "Owen Brooks", totalXP: 340, avatar: "🌱" },
+  { guildId: "environment_life_sciences", name: "Hazel Kim", totalXP: 325, avatar: "🌿" },
+  { guildId: "environment_life_sciences", name: "River James", totalXP: 310, avatar: "🌊" },
+  { guildId: "environment_life_sciences", name: "Sienna Lopez", totalXP: 295, avatar: "🌤️" },
+  { guildId: "environment_life_sciences", name: "Theo Grant", totalXP: 280, avatar: "🦋" },
+  { guildId: "environment_life_sciences", name: "Lila Stone", totalXP: 265, avatar: "🍃" },
+  { guildId: "environment_life_sciences", name: "Arlo King", totalXP: 250, avatar: "🌾" },
+  { guildId: "environment_life_sciences", name: "Jun Park", totalXP: 235, avatar: "🍀" },
+  { guildId: "environment_life_sciences", name: "Piper Cruz", totalXP: 220, avatar: "🌻" },
+  { guildId: "environment_life_sciences", name: "Rowan Hill", totalXP: 205, avatar: "🌲" },
+
+  // Nursing
+  { guildId: "nursing", name: "Taylor Kim", totalXP: 390, avatar: "🩹" },
+  { guildId: "nursing", name: "Isabella Rossi", totalXP: 370, avatar: "🧑‍⚕️" },
+  { guildId: "nursing", name: "Quinn Foster", totalXP: 355, avatar: "🩺" },
+  { guildId: "nursing", name: "Liam Torres", totalXP: 340, avatar: "💊" },
+  { guildId: "nursing", name: "Amara Singh", totalXP: 325, avatar: "🩻" },
+  { guildId: "nursing", name: "Brooke Hayes", totalXP: 310, avatar: "🧴" },
+  { guildId: "nursing", name: "Kai Morgan", totalXP: 295, avatar: "💉" },
+  { guildId: "nursing", name: "Olivia Shaw", totalXP: 280, avatar: "🧼" },
+  { guildId: "nursing", name: "Elias Ward", totalXP: 265, avatar: "🧪" },
+  { guildId: "nursing", name: "Sage Bell", totalXP: 250, avatar: "🧫" },
+  { guildId: "nursing", name: "Maya Cruz", totalXP: 235, avatar: "🩺" },
+
+  // Pharmacy
+  { guildId: "pharmacy", name: "Jamie Park", totalXP: 385, avatar: "🧪" },
+  { guildId: "pharmacy", name: "Noah Clarke", totalXP: 365, avatar: "💉" },
+  { guildId: "pharmacy", name: "Ava Mitchell", totalXP: 350, avatar: "💊" },
+  { guildId: "pharmacy", name: "Ethan Rivera", totalXP: 335, avatar: "🧫" },
+  { guildId: "pharmacy", name: "Lily Chen", totalXP: 320, avatar: "🧴" },
+  { guildId: "pharmacy", name: "Carter James", totalXP: 305, avatar: "🧪" },
+  { guildId: "pharmacy", name: "Zoey Carter", totalXP: 290, avatar: "📘" },
+  { guildId: "pharmacy", name: "Miles Brown", totalXP: 275, avatar: "📗" },
+  { guildId: "pharmacy", name: "Aria Lee", totalXP: 260, avatar: "📙" },
+  { guildId: "pharmacy", name: "Jude Foster", totalXP: 245, avatar: "📚" },
+  { guildId: "pharmacy", name: "Nolan Price", totalXP: 230, avatar: "📒" },
+
+  // Undecided
+  { guildId: "undecided", name: "Chris Allen", totalXP: 210, avatar: "🎒" },
+  { guildId: "undecided", name: "Harper Green", totalXP: 200, avatar: "📎" },
+  { guildId: "undecided", name: "Rory Blake", totalXP: 190, avatar: "📓" },
+  { guildId: "undecided", name: "Skyler Jones", totalXP: 180, avatar: "🧠" },
+  { guildId: "undecided", name: "Peyton Hall", totalXP: 170, avatar: "📘" },
+  { guildId: "undecided", name: "Jules Carter", totalXP: 160, avatar: "📗" },
+  { guildId: "undecided", name: "River Fox", totalXP: 150, avatar: "📙" },
+  { guildId: "undecided", name: "Blake Simmons", totalXP: 140, avatar: "📚" },
+  { guildId: "undecided", name: "Emerson Lee", totalXP: 130, avatar: "📒" },
+  { guildId: "undecided", name: "Kendall Watts", totalXP: 120, avatar: "📝" },
+  { guildId: "undecided", name: "Sasha Nguyen", totalXP: 110, avatar: "📎" },
+];
+
 function getSortValueFriend(f: Friend, sortBy: SortBy, getGuildLevel: (userId: string) => number): number {
   if (sortBy === "level") return f.level;
   if (sortBy === "bossesDefeated") return f.bossesDefeatedCount ?? 0;
@@ -51,6 +182,7 @@ export function Leaderboards({ character }: { character: Character }) {
   const [sortBy, setSortBy] = useState<SortBy>("level");
   const [refreshKey, setRefreshKey] = useState(0);
   const [expandedGuildId, setExpandedGuildId] = useState<string | null>(null);
+  const [expandedScholarGuildId, setExpandedScholarGuildId] = useState<string | null>(null);
 
   const getGuildLevel = (userId: string) => getMaxGuildLevelForCharacter(userId);
   const currentUserGuildLevel = getMaxGuildLevelForCharacter(character.id);
@@ -75,6 +207,29 @@ export function Leaderboards({ character }: { character: Character }) {
   }, [sortBy]);
 
   const sortLabel = SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? "Level";
+
+  const scholarGuildsRanked = useMemo(() => {
+    return SCHOLAR_GUILDS.map((g) => {
+      const baseMembers = SCHOLAR_GUILD_SEED_MEMBERS.filter((m) => m.guildId === g.id);
+      const members = [...baseMembers];
+      if (character.scholarGuildId === g.id || (!character.scholarGuildId && g.id === "undecided")) {
+        members.push({
+          guildId: g.id,
+          name: character.name,
+          totalXP: character.totalXP,
+          avatar: character.avatar,
+        });
+      }
+      const totalXP = members.reduce((sum, m) => sum + m.totalXP, 0);
+      return {
+        id: g.id,
+        name: g.name,
+        crest: g.crest,
+        totalXP,
+        members,
+      };
+    }).sort((a, b) => b.totalXP - a.totalXP);
+  }, [character]);
 
   const guildsSorted = useMemo(() => {
     const list = getGuilds();
@@ -350,7 +505,77 @@ export function Leaderboards({ character }: { character: Character }) {
             );
           })}
         </ul>
-      </div>
+          </div>
+
+          {/* Scholars Guild leaderboard */}
+          <div className="card p-4 sm:p-5">
+            <h2 className="font-display font-semibold text-white mb-2 flex items-center gap-2">
+              <span aria-hidden>🎓</span> Scholars Guild leaderboard
+            </h2>
+            <p className="text-sm text-white/50 mb-4">
+              Colleges ranked by total XP from their scholars (including you). Pick your Scholars Guild when creating your character.
+            </p>
+            <ul className="space-y-2">
+              {scholarGuildsRanked.map((g, index) => {
+                const isExpanded = expandedScholarGuildId === g.id;
+                return (
+                  <li
+                    key={g.id}
+                    className="rounded-xl border border-white/12 bg-white/5 overflow-hidden"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setExpandedScholarGuildId(isExpanded ? null : g.id)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-white/7 transition-colors"
+                      aria-expanded={isExpanded}
+                    >
+                      <span className="w-7 text-sm font-mono text-white/70 flex-shrink-0">#{index + 1}</span>
+                      <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center text-xl border border-uri-keaney/40 flex-shrink-0">
+                        {g.crest}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-white truncate">{g.name}</p>
+                        <p className="text-xs text-white/50">
+                          {g.members.length} scholars ·{" "}
+                          <span className="font-mono text-uri-keaney font-semibold">
+                            {g.totalXP.toLocaleString()} XP
+                          </span>
+                        </p>
+                      </div>
+                      <span className="text-white/50 text-sm flex-shrink-0" aria-hidden>
+                        {isExpanded ? "▼" : "▶"}
+                      </span>
+                    </button>
+                    {isExpanded && (
+                      <div className="border-t border-white/10 bg-black/20 px-3 py-3">
+                        <p className="text-xs font-semibold text-white/70 uppercase tracking-wider mb-2">
+                          Example scholars
+                        </p>
+                        <ul className="space-y-1.5">
+                          {g.members.map((m) => (
+                            <li
+                              key={`${g.id}-${m.name}`}
+                              className="flex items-center gap-2 rounded-lg bg-white/5 border border-white/10 px-2.5 py-1.5"
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-lg flex-shrink-0">
+                                {m.avatar}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-white truncate">{m.name}</p>
+                              </div>
+                              <span className="text-xs font-mono text-uri-keaney flex-shrink-0">
+                                {m.totalXP.toLocaleString()} XP
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </>
       )}
     </section>

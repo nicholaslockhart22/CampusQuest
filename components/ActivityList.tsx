@@ -244,7 +244,7 @@ export function ActivityList({
                               accept="image/*"
                               onChange={handleProofFileChange}
                               className="hidden"
-                              aria-label="Add photo from device"
+                              aria-label="Add photo from device or open camera to scan QR code"
                             />
                             <div className="flex items-center gap-2 mt-2 flex-wrap">
                               <button
@@ -253,6 +253,13 @@ export function ActivityList({
                                 className="text-xs font-medium text-uri-keaney hover:text-uri-keaney/80 px-3 py-2 rounded-lg border border-uri-keaney/40 hover:bg-uri-keaney/10 transition-colors"
                               >
                                 📷 Add photo from device
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => proofFileRef.current?.click()}
+                                className="text-xs font-medium text-white/80 px-3 py-2 rounded-lg border border-white/25 hover:bg-white/10 transition-colors flex items-center gap-1.5"
+                              >
+                                📱 Open camera to scan QR code
                               </button>
                               {proof.startsWith("data:") && (
                                 <span className="text-xs text-uri-keaney/90">Image attached</span>

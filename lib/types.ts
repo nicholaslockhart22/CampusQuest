@@ -103,6 +103,8 @@ export interface Character {
   quadAssistScore?: number;
   /** XP toward daily streak minimum from sources other than activity logs (Quad, bosses, training, quests). Key: YYYY-MM-DD. */
   streakBonusXpByDate?: Record<string, number>;
+  /** Optional: college-based Scholars Guild grouping for themed leaderboards. */
+  scholarGuildId?: string;
 }
 
 // —— Guilds ——

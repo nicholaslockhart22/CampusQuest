@@ -84,6 +84,7 @@ function loadCharacter(): Character | null {
     if (data.streakFreezes == null) data.streakFreezes = 0;
     if (data.equippedCosmetics != null && typeof data.equippedCosmetics !== "object") data.equippedCosmetics = {};
     if (data.quadAssistScore == null) data.quadAssistScore = 0;
+  if (!data.scholarGuildId) data.scholarGuildId = "undecided";
     return data;
   } catch {
     return null;
@@ -336,6 +337,7 @@ export interface CreateCharacterOptions {
   username?: string;
   classId?: CharacterClassId;
   starterWeapon?: string;
+  scholarGuildId?: string;
 }
 
 export function createCharacter(
@@ -371,6 +373,7 @@ export function createCharacter(
     unlockedSkillNodes: [],
     streakFreezes: 0,
     quadAssistScore: 0,
+    scholarGuildId: options?.scholarGuildId ?? "undecided",
   };
   saveCharacter(character);
   return character;

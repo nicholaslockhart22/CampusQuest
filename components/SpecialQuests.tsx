@@ -164,7 +164,7 @@ export function SpecialQuests({
                     type="text"
                     value={proofInput.startsWith("data:") ? "" : proofInput}
                     onChange={(e) => setProofInput(e.target.value)}
-                    placeholder="Paste image URL or describe your proof"
+                    placeholder="Paste image URL or briefly describe your proof"
                     className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-uri-gold/20 text-white text-sm placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-uri-gold/50 focus:border-uri-gold/40 transition-shadow"
                   />
                   <input
@@ -173,7 +173,7 @@ export function SpecialQuests({
                     accept="image/*"
                     onChange={handleProofFileChange}
                     className="hidden"
-                    aria-label="Add photo from device"
+                    aria-label="Add photo from device or open camera to scan QR code"
                   />
                   <div className="flex items-center gap-2 flex-wrap">
                     <button
@@ -182,6 +182,13 @@ export function SpecialQuests({
                       className="text-xs font-medium text-uri-gold px-3 py-2 rounded-xl border border-uri-gold/40 hover:bg-uri-gold/15 transition-colors flex items-center gap-1.5"
                     >
                       📷 Add photo from device
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => proofFileRef.current?.click()}
+                      className="text-xs font-medium text-white/80 px-3 py-2 rounded-xl border border-white/25 hover:bg-white/10 transition-colors flex items-center gap-1.5"
+                    >
+                      📱 Open camera to scan QR code
                     </button>
                     {proofInput.startsWith("data:") && (
                       <>
