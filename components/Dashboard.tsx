@@ -775,7 +775,7 @@ export function Dashboard() {
         style={{ paddingBottom: 0 }}
       >
         <nav
-          className="w-full flex items-center justify-around rounded-t-xl bg-uri-navy border border-b-0 border-uri-keaney/20 shadow-[0_-4px_24px_-4px_rgba(0,0,0,0.35),0_-1px_0_0_rgba(104,171,232,0.08)]"
+          className="w-full sm:max-w-2xl sm:mx-auto flex items-center justify-around rounded-t-2xl bg-uri-navy/95 border border-b-0 border-uri-keaney/25 shadow-[0_-4px_24px_-4px_rgba(0,0,0,0.45),0_-1px_0_0_rgba(104,171,232,0.12)] backdrop-blur-md"
           style={{ paddingTop: "0.5rem", paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 0px))" }}
           aria-label="Main navigation"
         >
@@ -784,13 +784,15 @@ export function Dashboard() {
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={`flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-2.5 px-1 rounded-xl transition-colors touch-manipulation ${
-              tab === t ? "text-uri-keaney bg-uri-keaney/15" : "text-white/60 active:text-white/80 active:bg-white/5"
+            className={`flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-2.5 px-1 rounded-xl transition-all touch-manipulation ${
+              tab === t
+                ? "text-uri-keaney bg-gradient-to-b from-uri-keaney/25 to-uri-keaney/10 shadow-[0_6px_18px_-6px_rgba(104,171,232,0.9)]"
+                : "text-white/60 hover:text-white/85 hover:bg-white/5 active:text-white/90"
             }`}
             aria-current={tab === t ? "page" : undefined}
           >
             <span className="text-xl leading-none" aria-hidden>{icon}</span>
-            <span className={`text-xs font-bold truncate w-full text-center ${tab === t ? "text-uri-keaney" : "text-white/90"}`}>{label}</span>
+            <span className={`text-[11px] font-semibold tracking-wide truncate w-full text-center ${tab === t ? "text-uri-keaney" : "text-white/80"}`}>{label}</span>
           </button>
         ))}
         </nav>

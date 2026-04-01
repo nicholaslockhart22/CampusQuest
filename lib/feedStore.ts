@@ -25,7 +25,9 @@ const SEED_POST_IMAGES = {
   running: "/quad-feed/running.jpg",
   groupStudy: "/quad-feed/group-study.jpg",
   careerFair: "/quad-feed/career.jpg",
-  raceCrowd: "/quad-feed/race.jpg",
+  raceCrowd: "/quad-feed/ram-run.png",
+  housingGroundbreaking: "/quad-feed/housing-groundbreaking.png",
+  careerFairTwo: "/quad-feed/career-fair-2.png",
   concert: "/quad-feed/concert.jpg",
   guitar: "/quad-feed/guitar.jpg",
 } as const;
@@ -83,6 +85,20 @@ const SEED_FIELD_NOTES: FieldNote[] = [
     8,
     undefined,
     SEED_POST_IMAGES.womensBasketball
+  ),
+  // New example: student at groundbreaking for new housing
+  seedNote(
+    "seed-1-groundbreaking",
+    "Taylor Brooks",
+    "taylor_brooks",
+    "🏗️",
+    "Huge day on campus 🏗️ Just got back from the groundbreaking for the new student housing building and it already feels like the future of URI. Hard hats, shovels, and a lot of excitement about more room for Rams to live right in the heart of campus. Can’t wait to say “I was here when it all started.” 🐏💙",
+    [{ tag: "newhousing" }, { tag: "groundbreaking" }],
+    2,
+    4,
+    6,
+    0,
+    SEED_POST_IMAGES.housingGroundbreaking
   ),
   seedNote(
     "seed-2",
@@ -142,13 +158,13 @@ const SEED_FIELD_NOTES: FieldNote[] = [
     "Morgan Blake",
     "morgan_blake",
     "💼",
-    "Went to the career fair today. So many companies! Dropped my resume at 4 booths. #networking #career",
-    [{ tag: "networking" }, { tag: "career" }],
-    24,
-    8,
-    4,
-    undefined,
-    SEED_POST_IMAGES.careerFair
+    "Just wrapped up an incredible afternoon at the URI Career Fair 💼✨ Talked with a bunch of employers, got feedback on my resume, and even spotted a couple of dream internships I’m going to apply for tonight. It was so cool seeing how many paths are open to Rams if we put ourselves out there. #careerfair #internships",
+    [{ tag: "careerfair" }, { tag: "internships" }],
+    6,
+    10,
+    6,
+    0,
+    SEED_POST_IMAGES.careerFairTwo
   ),
   seedNote(
     "seed-8",

@@ -91,26 +91,35 @@ export function TheQuad({
         style={{ top: quadStickyTop }}
       >
         <header className="flex items-center justify-between gap-3 border-b border-white/[0.07] bg-uri-navy/[0.88] px-4 py-2.5">
-          <h1 className="font-display text-lg font-bold tracking-tight text-white drop-shadow-sm">Quad</h1>
-          <div className="flex rounded-full bg-black/35 p-0.5 ring-1 ring-white/12 shadow-inner shadow-black/30">
+          {/* Left: For you */}
+          <div className="flex items-center justify-start">
             <button
               type="button"
               onClick={() => setFeedType("public")}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ring-1 ring-white/10 ${
                 feedType === "public"
                   ? "bg-gradient-to-b from-white/20 to-white/10 text-white shadow-md shadow-black/20"
-                  : "text-white/50 hover:text-white/80"
+                  : "bg-black/35 text-white/55 hover:text-white/85"
               }`}
             >
               For you
             </button>
+          </div>
+          {/* Centered title */}
+          <div className="flex-1 flex items-center justify-center">
+            <h1 className="font-display text-2xl sm:text-3xl font-black tracking-[0.25em] text-center uppercase bg-clip-text text-transparent bg-gradient-to-r from-uri-gold via-white to-uri-gold drop-shadow-[0_4px_16px_rgba(0,0,0,0.8)]">
+              THE&nbsp;QUAD
+            </h1>
+          </div>
+          {/* Right: Following */}
+          <div className="flex items-center justify-end">
             <button
               type="button"
               onClick={() => setFeedType("friends")}
-              className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ring-1 ring-white/10 ${
                 feedType === "friends"
                   ? "bg-gradient-to-b from-white/20 to-white/10 text-white shadow-md shadow-black/20"
-                  : "text-white/50 hover:text-white/80"
+                  : "bg-black/35 text-white/55 hover:text-white/85"
               }`}
             >
               Following
@@ -122,14 +131,14 @@ export function TheQuad({
           <button
             type="button"
             onClick={() => setComposerOpen((open) => !open)}
-            className="flex w-full items-center gap-3 rounded-2xl border border-white/[0.1] bg-gradient-to-b from-white/[0.07] to-white/[0.02] px-3 py-2.5 text-left shadow-md shadow-black/20 transition-colors hover:border-white/15 hover:from-white/[0.09] hover:to-white/[0.04] active:scale-[0.99]"
+            className="flex w-full items-center gap-3 rounded-2xl border border-white/[0.12] bg-gradient-to-r from-black/40 via-uri-navy/70 to-black/40 px-3 py-2.5 text-left shadow-md shadow-black/40 transition-all hover:border-white/20 hover:shadow-[0_10px_28px_rgba(0,0,0,0.65)] active:scale-[0.99]"
             aria-expanded={composerOpen}
             aria-label={composerOpen ? "Close composer" : "Create new Field Note"}
           >
-            <div className="h-9 w-9 flex-shrink-0 overflow-hidden rounded-full border border-white/15 bg-black/30">
+            <div className="h-9 w-9 flex-shrink-0 overflow-hidden rounded-full border border-white/20 bg-black/40">
               <AvatarDisplay avatar={character.avatar} size={36} classId={character.classId} starterWeapon={character.starterWeapon} />
             </div>
-            <span className="min-w-0 flex-1 truncate text-sm text-white/50">
+            <span className="min-w-0 flex-1 truncate text-sm text-white/70">
               {composerOpen ? "Close composer" : "What’s happening on campus?"}
             </span>
             <span

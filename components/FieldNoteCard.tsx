@@ -153,7 +153,7 @@ export function FieldNoteCard({
             alt=""
             loading="lazy"
             decoding="async"
-            className="quad-feed-media-img w-full aspect-[4/5] sm:aspect-[4/3] sm:max-h-[min(60vh,24rem)] object-cover max-h-[min(60vh,24rem)]"
+            className="quad-feed-media-img w-full aspect-[4/5] sm:aspect-[4/3] sm:max-h-[min(40vh,18rem)] object-cover max-h-[min(40vh,18rem)]"
           />
           {showImageNodPop && (
             <span
@@ -377,7 +377,7 @@ export function FieldNoteCard({
     <article
       className={
         isFeed
-          ? "quad-feed-post border-b border-white/[0.07] bg-gradient-to-b from-white/[0.035] via-transparent to-transparent"
+          ? "quad-feed-post border-b border-white/[0.07] bg-gradient-to-b from-white/[0.035] via-transparent to-transparent py-3 sm:py-4"
           : "p-4 transition-colors hover:bg-white/[0.04]"
       }
     >
@@ -402,9 +402,19 @@ export function FieldNoteCard({
           {proofImgUrl && <div className="quad-feed-media-wrap">{proofBlock}</div>}
           <div className="space-y-3 px-4 pb-4 pt-2">
             {actionsRow}
-            <p className="break-words whitespace-pre-wrap text-[15px] leading-relaxed text-white/88 sm:text-[16px]">
-              <span className="font-semibold text-white">{note.authorName}</span> <span>{note.body}</span>
-            </p>
+            <div className="rounded-2xl bg-gradient-to-r from-[#E0F0FF1A] via-[#C5E2FF33] to-[#E0F0FF1A] px-3 py-2.5 sm:px-3.5 sm:py-3 border border-[#9FC4FF33]">
+              <p className="break-words whitespace-pre-wrap text-[15px] leading-relaxed text-white/90 sm:text-[16px]">
+                <span className="mr-1 font-semibold text-white">
+                  {note.authorName}
+                </span>
+                <span className="mr-1 text-xs font-medium uppercase tracking-[0.16em] text-white/45 align-middle">
+                  · @{note.authorUsername}
+                </span>
+                <span className="block mt-1.5 text-[15px] leading-relaxed text-white/90">
+                  {note.body}
+                </span>
+              </p>
+            </div>
             {note.ramMarks.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {note.ramMarks.map((r) => (
