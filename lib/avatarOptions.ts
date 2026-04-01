@@ -3,12 +3,15 @@
  */
 
 export const SKIN_TONES = [
-  { id: "1", label: "Light", color: "#f5d0c4" },
-  { id: "2", label: "Fair", color: "#e8b4a0" },
-  { id: "3", label: "Medium", color: "#c6866a" },
-  { id: "4", label: "Olive", color: "#a67c52" },
-  { id: "5", label: "Brown", color: "#8d5524" },
-  { id: "6", label: "Dark", color: "#5c3317" },
+  { id: "1", label: "Porcelain", color: "#fbe3d6" },
+  { id: "2", label: "Light", color: "#f5d0c4" },
+  { id: "3", label: "Light neutral", color: "#e8b4a0" },
+  { id: "4", label: "Medium", color: "#c6866a" },
+  { id: "5", label: "Olive", color: "#a67c52" },
+  { id: "6", label: "Tan", color: "#996037" },
+  { id: "7", label: "Brown", color: "#8d5524" },
+  { id: "8", label: "Deep brown", color: "#6b3a1b" },
+  { id: "9", label: "Dark", color: "#4b2812" },
 ] as const;
 
 export const HAIR_STYLES = [
@@ -110,7 +113,7 @@ export interface CustomAvatarData {
 
 const DEFAULT_AVATAR: CustomAvatarData = {
   v: 1,
-  skin: "2",
+  skin: "3",
   hair: "short",
   hairColor: "brown",
   clothes: "hoodie",

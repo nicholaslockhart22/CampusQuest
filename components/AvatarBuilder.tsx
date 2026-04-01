@@ -18,9 +18,20 @@ import {
   BACKPACK_STYLES,
   type CustomAvatarData,
 } from "@/lib/avatarOptions";
-import { CHARACTER_CLASSES, CLASS_AVATAR_PRESETS, STARTER_WEAPONS, type CharacterClassId } from "@/lib/characterClasses";
+import {
+  CHARACTER_CLASSES,
+  CLASS_AVATAR_PRESETS,
+  STARTER_WEAPONS,
+  type CharacterClassId,
+} from "@/lib/characterClasses";
 import { isCosmeticUnlocked } from "@/lib/cosmetics";
 import { AvatarDisplay } from "./AvatarDisplay";
+
+type UnlockContext = {
+  achievements: string[];
+  level: number;
+  unlockedCosmetics?: string[] | null;
+} | null;
 
 export function AvatarBuilder({
   value,
@@ -41,7 +52,7 @@ export function AvatarBuilder({
   onClassChange?: (classId: CharacterClassId | null) => void;
   selectedWeapon?: string | null;
   onWeaponChange?: (weaponId: string | null) => void;
-  unlockContext?: { achievements: string[]; level: number; unlockedCosmetics?: string[] | null } | null;
+  unlockContext?: UnlockContext;
 }) {
   const [data, setData] = useState<CustomAvatarData>(() => {
     const parsed = parseAvatar(value);
@@ -74,51 +85,166 @@ export function AvatarBuilder({
     onClassChange?.(classId);
   };
 
-  const previewSize = compact ? 72 : 100;
+  const previewSize = compact ? 72 : 132;
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-4 items-center">
-        <div
-          className="rounded-2xl bg-white/10 border border-uri-keaney/30 flex items-center justify-center overflow-hidden"
-          style={{ width: previewSize + 16, height: previewSize + 16 }}
-        >
-          <AvatarDisplay avatar={serializeAvatar(data)} size={previewSize} />
+  // Compact version used inside small modals (e.g. edit avatar on character card)
+  if (compact) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-center">
+          <div
+            className="flex items-center justify-center rounded-2xl border border-white/15 bg-white/5 overflow-hidden"
+            style={{ width: previewSize + 16, height: previewSize + 16 }}
+          >
+            <AvatarDisplay avatar={serializeAvatar(data)} size={previewSize} />
+          </div>
         </div>
-        {!compact && (
-          <p className="text-xs text-white/50 text-center sm:text-left">Preview updates as you choose.</p>
-        )}
-      </div>
 
-      {showClassPresets && !compact && (
-        <>
-          <div>
-            <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider mb-2">
-              🐏 Class (outfit style)
+        <div className="space-y-4 rounded-2xl bg-white/5 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
+            Appearance
+          </p>
+
+          {/* Skin */}
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-semibold text-white/70 uppercase tracking-wider">
+              Skin tone
             </label>
             <div className="flex flex-wrap gap-2">
-              {CHARACTER_CLASSES.map((cls) => (
+              {SKIN_TONES.map((t) => (
                 <button
-                  key={cls.id}
+                  key={t.id}
                   type="button"
-                  onClick={() => applyClassPreset(cls.id)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                    selectedClassId === cls.id
-                      ? "bg-uri-keaney text-white ring-2 ring-uri-gold/50"
-                      : "bg-white/10 text-white/80 hover:bg-white/15"
+                  onClick={() => update({ skin: t.id })}
+                  className={`h-7 w-7 rounded-full border-2 transition-all ${
+                    data.skin === t.id
+                      ? "border-uri-keaney scale-110 ring-2 ring-uri-keaney/40"
+                      : "border-white/30 hover:border-white/50"
                   }`}
-                  title={`${cls.name} — ${cls.styleSub}`}
-                >
-                  <span aria-hidden>{cls.icon}</span>
-                  <span>{cls.outfitLabel}</span>
-                </button>
+                  style={{ backgroundColor: t.color }}
+                  title={t.label}
+                  aria-pressed={data.skin === t.id}
+                />
               ))}
             </div>
-            <p className="text-xs text-white/40 mt-1">Picks a look that matches your CampusQuest class.</p>
+          </div>
+
+          {/* Hair + face (summary) */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-semibold text-white/70 uppercase tracking-wider">
+                Hair
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {HAIR_STYLES.map((h) => (
+                  <button
+                    key={h.id}
+                    type="button"
+                    onClick={() => update({ hair: h.id })}
+                    className={`rounded-xl px-2 py-1 text-[11px] font-medium transition-all ${
+                      data.hair === h.id
+                        ? "bg-uri-keaney text-white"
+                        : "bg-white/10 text-white/80 hover:bg-white/15"
+                    }`}
+                  >
+                    {h.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-semibold text-white/70 uppercase tracking-wider">
+                Face
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {FACE_STYLES.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => update({ face: f.id })}
+                    className={`rounded-xl px-2 py-1 text-[11px] font-medium transition-all ${
+                      (data.face ?? "smile") === f.id
+                        ? "bg-uri-keaney text-white"
+                        : "bg-white/10 text-white/80 hover:bg-white/15"
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Full-screen CampusQuest-themed creator
+  return (
+    <div className="space-y-6">
+      {/* Preview */}
+      <div className="flex justify-center">
+        <div className="relative rounded-3xl border border-white/15 bg-gradient-to-br from-uri-navy via-uri-navy/90 to-uri-keaney/40 px-6 py-5 shadow-[0_18px_45px_rgba(0,0,0,0.6)] w-full max-w-md">
+          <div className="pointer-events-none absolute inset-0 rounded-[1.6rem] border border-white/10/5" />
+          <div className="pointer-events-none absolute inset-0 rounded-[1.7rem] bg-[radial-gradient(circle_at_0_0,rgba(255,255,255,0.12),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(80,178,255,0.28),transparent_55%)] opacity-80 mix-blend-screen" />
+
+          <div className="relative flex flex-col items-center gap-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
+              Live Avatar Preview
+            </p>
+            <div className="relative flex items-center justify-center rounded-3xl bg-[radial-gradient(circle_at_50%_0,#ffffff1f,transparent_55%)] px-6 pt-4 pb-3">
+              <AvatarDisplay
+                avatar={serializeAvatar(data)}
+                size={previewSize}
+                className="drop-shadow-[0_12px_32px_rgba(0,0,0,0.75)]"
+              />
+            </div>
+            <p className="text-[11px] text-white/70">
+              Every change you make updates this CampusQuest hero instantly.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Class presets strip */}
+      {showClassPresets && (
+        <section className="space-y-3 rounded-2xl border border-white/10 bg-uri-navy/80 px-4 py-4 sm:px-5 sm:py-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-uri-keaney/80">
+                Step 1 · Pick a vibe
+              </p>
+              <h3 className="text-sm font-semibold text-white">
+                Class presets
+              </h3>
+              <p className="text-xs text-white/65">
+                Start from a curated look inspired by each CampusQuest class.
+              </p>
+            </div>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {CHARACTER_CLASSES.map((cls) => (
+              <button
+                key={cls.id}
+                type="button"
+                onClick={() => applyClassPreset(cls.id)}
+                className={`flex items-center gap-1.5 rounded-2xl border px-3 py-2 text-xs font-medium tracking-wide transition-all ${
+                  selectedClassId === cls.id
+                    ? "border-uri-gold/70 bg-uri-keaney/90 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.14),0_12px_28px_rgba(0,0,0,0.65)]"
+                    : "border-white/10 bg-white/5 text-white/80 hover:border-uri-keaney/60 hover:bg-uri-keaney/20"
+                }`}
+                title={`${cls.name} — ${cls.styleSub}`}
+              >
+                <span aria-hidden className="text-base">
+                  {cls.icon}
+                </span>
+                <span className="truncate">{cls.outfitLabel}</span>
+              </button>
+            ))}
           </div>
           {onWeaponChange && (
-            <div>
-              <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider mb-2">
+            <div className="mt-3 border-t border-white/10 pt-3">
+              <label className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80">
                 Starter weapon
               </label>
               <div className="flex flex-wrap gap-2">
@@ -127,303 +253,368 @@ export function AvatarBuilder({
                     key={w.id}
                     type="button"
                     onClick={() => onWeaponChange(selectedWeapon === w.id ? null : w.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
+                    className={`flex items-center gap-1.5 rounded-2xl border px-3 py-1.5 text-xs font-medium tracking-wide transition-all ${
                       selectedWeapon === w.id
-                        ? "bg-uri-gold/30 text-uri-gold border border-uri-gold/50"
-                        : "bg-white/10 text-white/80 hover:bg-white/15"
+                        ? "border-uri-gold/70 bg-uri-gold/20 text-uri-gold shadow-[0_0_0_1px_rgba(0,0,0,0.4)]"
+                        : "border-white/10 bg-white/5 text-white/80 hover:border-uri-gold/60 hover:bg-uri-gold/10"
                     }`}
                   >
-                    <span aria-hidden>{w.icon}</span>
-                    <span>{w.label}</span>
+                    <span aria-hidden className="text-sm">
+                      {w.icon}
+                    </span>
+                    <span className="truncate">{w.label}</span>
                   </button>
                 ))}
               </div>
             </div>
           )}
-        </>
+        </section>
       )}
 
-      <div className={`grid gap-4 ${compact ? "grid-cols-1" : "sm:grid-cols-2"}`}>
-        {/* Skin tone */}
-        <div>
-          <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider mb-2">
-            Skin tone
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {SKIN_TONES.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => update({ skin: t.id })}
-                className={`w-8 h-8 rounded-full border-2 transition-all ${
-                  data.skin === t.id ? "border-uri-keaney scale-110 ring-2 ring-uri-keaney/40" : "border-white/30 hover:border-white/50"
-                }`}
-                style={{ backgroundColor: t.color }}
-                title={t.label}
-                aria-pressed={data.skin === t.id}
-              />
-            ))}
+      {/* Main controls – tall, stacked sections for readability */}
+      <section className="space-y-5 rounded-3xl border border-white/10 bg-uri-navy/90 px-4 py-5 sm:px-6 sm:py-6">
+        {/* Appearance */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-uri-keaney/80">
+                Step 2 · Appearance
+              </p>
+              <h3 className="text-sm font-semibold text-white">
+                Face & body
+              </h3>
+            </div>
           </div>
-        </div>
 
-        {/* Face style */}
-        <div>
-          <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider mb-2">
-            Face
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {FACE_STYLES.map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => update({ face: f.id })}
-                className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
-                  (data.face ?? "smile") === f.id
-                    ? "bg-uri-keaney text-white"
-                    : "bg-white/10 text-white/80 hover:bg-white/15"
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
+          {/* Skin */}
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-semibold text-white/70 uppercase tracking-wider">
+              Skin tone
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {SKIN_TONES.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => update({ skin: t.id })}
+                  className={`h-9 w-9 rounded-full border-2 transition-all ${
+                    data.skin === t.id
+                      ? "border-uri-keaney scale-110 ring-2 ring-uri-keaney/40"
+                      : "border-white/30 hover:border-white/50"
+                  }`}
+                  style={{ backgroundColor: t.color }}
+                  title={t.label}
+                  aria-pressed={data.skin === t.id}
+                />
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Gender */}
-        <div>
-          <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider mb-2">
-            Gender
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {GENDERS.map((g) => (
-              <button
-                key={g.id}
-                type="button"
-                onClick={() => update({ gender: g.id })}
-                className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
-                  data.gender === g.id
-                    ? "bg-uri-keaney text-white"
-                    : "bg-white/10 text-white/80 hover:bg-white/15"
-                }`}
-              >
-                {g.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Body type */}
-        <div>
-          <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider mb-2">
-            Body type
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {BODY_TYPES.map((b) => (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => update({ body: b.id })}
-                className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
-                  data.body === b.id
-                    ? "bg-uri-keaney text-white"
-                    : "bg-white/10 text-white/80 hover:bg-white/15"
-                }`}
-              >
-                {b.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Hair style */}
-        <div>
-          <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider mb-2">
-            Hair style
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {HAIR_STYLES.map((h) => (
-              <button
-                key={h.id}
-                type="button"
-                onClick={() => update({ hair: h.id })}
-                className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
-                  data.hair === h.id
-                    ? "bg-uri-keaney text-white"
-                    : "bg-white/10 text-white/80 hover:bg-white/15"
-                }`}
-              >
-                {h.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Hair color */}
-        <div>
-          <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider mb-2">
-            Hair color
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {HAIR_COLORS.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => update({ hairColor: c.id })}
-                className={`w-8 h-8 rounded-full border-2 transition-all ${
-                  data.hairColor === c.id ? "border-uri-keaney scale-110 ring-2 ring-uri-keaney/40" : "border-white/30 hover:border-white/50"
-                }`}
-                style={{ backgroundColor: c.color }}
-                title={c.label}
-                aria-pressed={data.hairColor === c.id}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Glasses */}
-        <div>
-          <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider mb-2">
-            Glasses
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {GLASSES_STYLES.map((g) => (
-              (() => {
-                const locked = !isUnlocked("glasses", g.id);
-                const selected = (data.glasses ?? "none") === g.id;
-                return (
-              <button
-                key={g.id}
-                type="button"
-                onClick={() => update({ glasses: g.id })}
-                disabled={locked}
-                className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
-                  selected
-                    ? "bg-uri-keaney text-white"
-                    : locked
-                      ? "bg-white/5 text-white/30 cursor-not-allowed"
+          {/* Face */}
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-semibold text-white/70 uppercase tracking-wider">
+              Face
+            </label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
+              {FACE_STYLES.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => update({ face: f.id })}
+                  className={`rounded-2xl px-3 py-1.5 text-xs font-medium transition-all text-left ${
+                    (data.face ?? "smile") === f.id
+                      ? "bg-uri-keaney text-white shadow-[0_6px_18px_rgba(0,0,0,0.5)]"
                       : "bg-white/10 text-white/80 hover:bg-white/15"
-                }`}
-                title={locked ? "Locked — earn achievements to unlock" : g.label}
-              >
-                {g.label}{locked ? " 🔒" : ""}
-              </button>
-                );
-              })()
-            ))}
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Body & gender */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-semibold text-white/70 uppercase tracking-wider">
+                Body type
+              </label>
+              <div className="grid gap-2">
+                {BODY_TYPES.map((b) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => update({ body: b.id })}
+                    className={`rounded-2xl px-3 py-1.5 text-xs font-medium transition-all text-left ${
+                      data.body === b.id
+                        ? "bg-uri-keaney text-white shadow-[0_6px_18px_rgba(0,0,0,0.5)]"
+                        : "bg-white/10 text-white/80 hover:bg-white/15"
+                    }`}
+                  >
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-semibold text-white/70 uppercase tracking-wider">
+                Gender expression
+              </label>
+              <div className="grid gap-2">
+                {GENDERS.map((g) => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => update({ gender: g.id })}
+                    className={`rounded-2xl px-3 py-1.5 text-xs font-medium transition-all text-left ${
+                      data.gender === g.id
+                        ? "bg-uri-keaney text-white shadow-[0_6px_18px_rgba(0,0,0,0.5)]"
+                        : "bg-white/10 text-white/80 hover:bg-white/15"
+                    }`}
+                  >
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Hat */}
-        <div>
-          <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider mb-2">
-            Hat
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {HAT_STYLES.map((h) => (
-              (() => {
-                const locked = !isUnlocked("hat", h.id);
-                const selected = (data.hat ?? "none") === h.id;
-                return (
-              <button
-                key={h.id}
-                type="button"
-                onClick={() => update({ hat: h.id })}
-                disabled={locked}
-                className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
-                  selected
-                    ? "bg-uri-keaney text-white"
-                    : locked
-                      ? "bg-white/5 text-white/30 cursor-not-allowed"
-                      : "bg-white/10 text-white/80 hover:bg-white/15"
-                }`}
-                title={locked ? "Locked — earn achievements to unlock" : h.label}
-              >
-                {h.label}{locked ? " 🔒" : ""}
-              </button>
-                );
-              })()
-            ))}
+        {/* Hair */}
+        <div className="space-y-3 border-t border-white/10 pt-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-uri-keaney/80">
+                Step 3 · Hair
+              </p>
+              <h3 className="text-sm font-semibold text-white">
+                Style & color
+              </h3>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-semibold text-white/70 uppercase tracking-wider">
+                Hair style
+              </label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {HAIR_STYLES.map((h) => (
+                  <button
+                    key={h.id}
+                    type="button"
+                    onClick={() => update({ hair: h.id })}
+                    className={`rounded-2xl px-3 py-1.5 text-xs font-medium transition-all text-left ${
+                      data.hair === h.id
+                        ? "bg-uri-keaney text-white shadow-[0_6px_18px_rgba(0,0,0,0.5)]"
+                        : "bg-white/10 text-white/80 hover:bg-white/15"
+                    }`}
+                  >
+                    {h.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-semibold text-white/70 uppercase tracking-wider">
+                Hair color
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {HAIR_COLORS.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => update({ hairColor: c.id })}
+                    className={`h-9 w-9 rounded-full border-2 transition-all ${
+                      data.hairColor === c.id
+                        ? "border-uri-keaney scale-110 ring-2 ring-uri-keaney/40"
+                        : "border-white/30 hover:border-white/50"
+                    }`}
+                    style={{ backgroundColor: c.color }}
+                    title={c.label}
+                    aria-pressed={data.hairColor === c.id}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Backpack */}
-        <div>
-          <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider mb-2">
-            Backpack
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {BACKPACK_STYLES.map((b) => (
-              (() => {
-                const locked = !isUnlocked("backpack", b.id);
-                const selected = (data.backpack ?? "none") === b.id;
-                return (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => update({ backpack: b.id })}
-                disabled={locked}
-                className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
-                  selected
-                    ? "bg-uri-keaney text-white"
-                    : locked
-                      ? "bg-white/5 text-white/30 cursor-not-allowed"
-                      : "bg-white/10 text-white/80 hover:bg-white/15"
-                }`}
-                title={locked ? "Locked — earn achievements to unlock" : b.label}
-              >
-                {b.label}{locked ? " 🔒" : ""}
-              </button>
-                );
-              })()
-            ))}
+        {/* Outfit */}
+        <div className="space-y-3 border-t border-white/10 pt-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-uri-keaney/80">
+                Step 4 · Outfit
+              </p>
+              <h3 className="text-sm font-semibold text-white">
+                Clothes & colors
+              </h3>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-semibold text-white/70 uppercase tracking-wider">
+                Clothes
+              </label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {CLOTHES_STYLES.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => update({ clothes: c.id })}
+                    className={`rounded-2xl px-3 py-1.5 text-xs font-medium transition-all text-left ${
+                      data.clothes === c.id
+                        ? "bg-uri-keaney text-white shadow-[0_6px_18px_rgba(0,0,0,0.5)]"
+                        : "bg-white/10 text-white/80 hover:bg-white/15"
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-semibold text-white/70 uppercase tracking-wider">
+                Clothes color
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {CLOTHES_COLORS.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => update({ clothesColor: c.id })}
+                    className={`h-9 w-9 rounded-full border-2 transition-all ${
+                      data.clothesColor === c.id
+                        ? "border-uri-keaney scale-110 ring-2 ring-uri-keaney/40"
+                        : "border-white/30 hover:border-white/50"
+                    }`}
+                    style={{ backgroundColor: c.color }}
+                    aria-pressed={data.clothesColor === c.id}
+                    title={c.id === "keaney" ? "URI blue" : c.id === "gold" ? "URI gold" : undefined}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Clothes style */}
-        <div>
-          <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider mb-2">
-            Clothes
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {CLOTHES_STYLES.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => update({ clothes: c.id })}
-                className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all ${
-                  data.clothes === c.id
-                    ? "bg-uri-keaney text-white"
-                    : "bg-white/10 text-white/80 hover:bg-white/15"
-                }`}
-              >
-                {c.label}
-              </button>
-            ))}
+        {/* Accessories */}
+        <div className="space-y-3 border-t border-white/10 pt-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-uri-keaney/80">
+                Step 5 · Accessories
+              </p>
+              <h3 className="text-sm font-semibold text-white">
+                Glasses, hats, backpacks
+              </h3>
+            </div>
           </div>
-        </div>
 
-        {/* Clothes color */}
-        <div>
-          <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider mb-2">
-            Clothes color
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {CLOTHES_COLORS.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => update({ clothesColor: c.id })}
-                className={`w-8 h-8 rounded-full border-2 transition-all ${
-                  data.clothesColor === c.id ? "border-uri-keaney scale-110 ring-2 ring-uri-keaney/40" : "border-white/30 hover:border-white/50"
-                }`}
-                style={{ backgroundColor: c.color }}
-                aria-pressed={data.clothesColor === c.id}
-                title={c.id === "keaney" ? "URI blue" : c.id === "gold" ? "URI gold" : undefined}
-              />
-            ))}
+          <div className="grid gap-4 md:grid-cols-3">
+            {/* Glasses */}
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-semibold text-white/70 uppercase tracking-wider">
+                Glasses
+              </label>
+              <div className="grid gap-2">
+                {GLASSES_STYLES.map((g) => {
+                  const locked = !isUnlocked("glasses", g.id);
+                  const selected = (data.glasses ?? "none") === g.id;
+                  return (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => update({ glasses: g.id })}
+                      disabled={locked}
+                      className={`rounded-2xl px-3 py-1.5 text-[11px] font-medium transition-all text-left ${
+                        selected
+                          ? "bg-uri-keaney text-white shadow-[0_6px_18px_rgba(0,0,0,0.5)]"
+                          : locked
+                            ? "cursor-not-allowed bg-white/5 text-white/30"
+                            : "bg-white/10 text-white/80 hover:bg-white/15"
+                      }`}
+                      title={locked ? "Locked — earn achievements to unlock" : g.label}
+                    >
+                      {g.label}
+                      {locked ? " 🔒" : ""}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Hat */}
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-semibold text-white/70 uppercase tracking-wider">
+                Hat
+              </label>
+              <div className="grid gap-2">
+                {HAT_STYLES.map((h) => {
+                  const locked = !isUnlocked("hat", h.id);
+                  const selected = (data.hat ?? "none") === h.id;
+                  return (
+                    <button
+                      key={h.id}
+                      type="button"
+                      onClick={() => update({ hat: h.id })}
+                      disabled={locked}
+                      className={`rounded-2xl px-3 py-1.5 text-[11px] font-medium transition-all text-left ${
+                        selected
+                          ? "bg-uri-keaney text-white shadow-[0_6px_18px_rgba(0,0,0,0.5)]"
+                          : locked
+                            ? "cursor-not-allowed bg-white/5 text-white/30"
+                            : "bg-white/10 text-white/80 hover:bg-white/15"
+                      }`}
+                      title={locked ? "Locked — earn achievements to unlock" : h.label}
+                    >
+                      {h.label}
+                      {locked ? " 🔒" : ""}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Backpack */}
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-semibold text-white/70 uppercase tracking-wider">
+                Backpack
+              </label>
+              <div className="grid gap-2">
+                {BACKPACK_STYLES.map((b) => {
+                  const locked = !isUnlocked("backpack", b.id);
+                  const selected = (data.backpack ?? "none") === b.id;
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => update({ backpack: b.id })}
+                      disabled={locked}
+                      className={`rounded-2xl px-3 py-1.5 text-[11px] font-medium transition-all text-left ${
+                        selected
+                          ? "bg-uri-keaney text-white shadow-[0_6px_18px_rgba(0,0,0,0.5)]"
+                          : locked
+                            ? "cursor-not-allowed bg-white/5 text-white/30"
+                            : "bg-white/10 text-white/80 hover:bg-white/15"
+                      }`}
+                      title={locked ? "Locked — earn achievements to unlock" : b.label}
+                    >
+                      {b.label}
+                      {locked ? " 🔒" : ""}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
+

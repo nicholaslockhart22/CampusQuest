@@ -28,6 +28,7 @@ export function CharacterGate({ onReady }: { onReady: () => void }) {
   const [classId, setClassId] = useState<CharacterClassId | null>(null);
   const [starterWeapon, setStarterWeapon] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [step, setStep] = useState<"info" | "avatar">("info");
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const nameTrimmed = name.trim();
@@ -55,8 +56,9 @@ export function CharacterGate({ onReady }: { onReady: () => void }) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitError(null);
-    if (!canSubmit) return;
-    setShowConfirm(true);
+    if (!nameValid || !usernameValid) return;
+    // move to avatar step instead of finishing immediately
+    setStep("avatar");
   }
 
   function handleConfirm() {
@@ -128,101 +130,153 @@ export function CharacterGate({ onReady }: { onReady: () => void }) {
 
   return (
     <>
-      <section
-        className="max-w-lg mx-auto mt-6 sm:mt-10 px-4"
-        aria-label="Create your character"
-      >
-        <div className="rounded-2xl border border-uri-keaney/30 bg-uri-navy/80 shadow-xl overflow-hidden">
-          {/* Header */}
-          <div className="p-6 sm:p-8 pb-4 text-center border-b border-white/10">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-uri-keaney/30 to-uri-navy border border-uri-keaney/40 flex items-center justify-center text-3xl">
-              🐏
-            </div>
-            <h1 className="font-display font-bold text-2xl text-white mb-1">
-              Create your character
-            </h1>
-            <p className="text-sm text-white/60">
-              Name, username, and avatar. You can change details later.
-            </p>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 sm:p-8 pt-4 space-y-6">
-            {/* Step 1: Name */}
-            <div className="space-y-2">
-              <label htmlFor="char-name" className="block text-xs font-semibold text-white/70 uppercase tracking-wider">
-                Display name <span className="text-amber-400">*</span>
-              </label>
-              <input
-                id="char-name"
-                type="text"
-                value={name}
-                onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="e.g. Alex"
-                maxLength={NAME_MAX}
-                autoComplete="name"
-                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-uri-keaney/50 focus:border-uri-keaney/50"
-                aria-required
-                aria-invalid={name.length > 0 && !nameValid}
-              />
-              {name.length > 0 && !nameValid && (
-                <p className="text-xs text-amber-400">Use 1–40 characters.</p>
-              )}
-            </div>
-
-            {/* Step 2: Username */}
-            <div className="space-y-2">
-              <label htmlFor="char-username" className="block text-xs font-semibold text-white/70 uppercase tracking-wider">
-                Username <span className="text-amber-400">*</span>
-              </label>
-              <input
-                id="char-username"
-                type="text"
-                value={username}
-                onChange={(e) => handleUsernameChange(e.target.value)}
-                placeholder="e.g. alex_rhody"
-                maxLength={USERNAME_MAX}
-                autoComplete="username"
-                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-uri-keaney/50 focus:border-uri-keaney/50 font-mono text-sm"
-                aria-required
-                aria-invalid={usernameNormalized.length > 0 && !usernameValid}
-              />
-              <p className="text-xs text-white/50">
-                Letters, numbers, underscores only. You’ll appear as @{usernameNormalized || "username"}
+      {step === "info" ? (
+        <section
+          className="max-w-lg mx-auto mt-6 sm:mt-10 px-4"
+          aria-label="Create your character"
+        >
+          <div className="rounded-2xl border border-uri-keaney/30 bg-uri-navy/80 shadow-xl overflow-hidden">
+            {/* Header */}
+            <div className="p-6 sm:p-8 pb-4 text-center border-b border-white/10">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-uri-keaney/30 to-uri-navy border border-uri-keaney/40 flex items-center justify-center text-3xl">
+                🐏
+              </div>
+              <h1 className="font-display font-bold text-2xl text-white mb-1">
+                Create your character
+              </h1>
+              <p className="text-sm text-white/60">
+                First pick your name and username.
               </p>
-              {usernameNormalized.length > 0 && !usernameValid && (
-                <p className="text-xs text-amber-400">Username must be 1–25 characters, only a–z, 0–9, and _.</p>
-              )}
             </div>
 
-            {/* Step 3: Avatar */}
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider">
-                Avatar
-              </label>
-              <div className="rounded-xl bg-white/5 border border-white/10 p-4 max-h-[50vh] overflow-y-auto">
-                <AvatarBuilder
-                  value={avatar}
-                  onChange={setAvatar}
-                  showClassPresets
-                  selectedClassId={classId}
-                  onClassChange={setClassId}
-                  selectedWeapon={starterWeapon}
-                  onWeaponChange={setStarterWeapon}
+            {/* Form – basic info only */}
+            <form onSubmit={handleSubmit} className="p-6 sm:p-8 pt-4 space-y-6">
+              {/* Step 1: Name */}
+              <div className="space-y-2">
+                <label htmlFor="char-name" className="block text-xs font-semibold text-white/70 uppercase tracking-wider">
+                  Display name <span className="text-amber-400">*</span>
+                </label>
+                <input
+                  id="char-name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  placeholder="e.g. Alex"
+                  maxLength={NAME_MAX}
+                  autoComplete="name"
+                  className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-uri-keaney/50 focus:border-uri-keaney/50"
+                  aria-required
+                  aria-invalid={name.length > 0 && !nameValid}
                 />
+                {name.length > 0 && !nameValid && (
+                  <p className="text-xs text-amber-400">Use 1–40 characters.</p>
+                )}
+              </div>
+
+              {/* Step 2: Username */}
+              <div className="space-y-2">
+                <label htmlFor="char-username" className="block text-xs font-semibold text-white/70 uppercase tracking-wider">
+                  Username <span className="text-amber-400">*</span>
+                </label>
+                <input
+                  id="char-username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => handleUsernameChange(e.target.value)}
+                  placeholder="e.g. alex_rhody"
+                  maxLength={USERNAME_MAX}
+                  autoComplete="username"
+                  className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-uri-keaney/50 focus:border-uri-keaney/50 font-mono text-sm"
+                  aria-required
+                  aria-invalid={usernameNormalized.length > 0 && !usernameValid}
+                />
+                <p className="text-xs text-white/50">
+                  Letters, numbers, underscores only. You’ll appear as @{usernameNormalized || "username"}
+                </p>
+                {usernameNormalized.length > 0 && !usernameValid && (
+                  <p className="text-xs text-amber-400">Username must be 1–25 characters, only a–z, 0–9, and _.</p>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={!nameValid || !usernameValid}
+                className="w-full py-3.5 rounded-xl font-semibold text-white bg-uri-keaney hover:bg-uri-keaney/90 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-uri-keaney focus:ring-offset-2 focus:ring-offset-uri-navy transition-colors"
+              >
+                Continue to avatar
+              </button>
+            </form>
+          </div>
+        </section>
+      ) : (
+        <section
+          className="max-w-4xl mx-auto mt-6 sm:mt-10 px-4"
+          aria-label="Customize your avatar"
+        >
+          <div className="rounded-3xl border border-uri-keaney/40 bg-gradient-to-br from-uri-navy via-uri-navy/90 to-uri-keaney/30 shadow-2xl overflow-hidden">
+            {/* Header with basic info + mini preview */}
+            <div className="flex flex-col gap-4 border-b border-white/10 px-6 py-5 sm:px-8 sm:py-6 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-uri-keaney/80 mb-1">
+                  Step 2 · Avatar
+                </p>
+                <h2 className="font-display font-bold text-xl sm:text-2xl text-white">
+                  CREATE YOUR CAMPUSQUEST AVATAR
+                </h2>
+                <p className="text-sm text-white/70 mt-1">
+                  Choose a look that feels like you. Every change updates your character instantly.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <p className="text-xs text-white/60">You as</p>
+                  <p className="font-medium text-white">
+                    {nameTrimmed || "Your name"}
+                  </p>
+                  <p className="text-xs text-uri-keaney/90">@{usernameNormalized || "username"}</p>
+                </div>
+                <div className="w-16 h-16 rounded-2xl bg-white/10 border border-uri-keaney/40 flex items-center justify-center overflow-hidden">
+                  <AvatarDisplay avatar={avatar} size={56} />
+                </div>
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className="w-full py-3.5 rounded-xl font-semibold text-white bg-uri-keaney hover:bg-uri-keaney/90 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-uri-keaney focus:ring-offset-2 focus:ring-offset-uri-navy transition-colors"
-            >
-              Continue
-            </button>
-          </form>
-        </div>
-      </section>
+            {/* Avatar builder full-screen style */}
+            <div className="px-4 py-4 sm:px-6 sm:py-6 md:px-8 md:py-7 bg-[radial-gradient(circle_at_0_0,rgba(255,255,255,0.08),transparent_55%),radial-gradient(circle_at_100%_100%,rgba(80,178,255,0.25),transparent_55%)]">
+              <AvatarBuilder
+                value={avatar}
+                onChange={setAvatar}
+                showClassPresets
+                selectedClassId={classId}
+                onClassChange={setClassId}
+                selectedWeapon={starterWeapon}
+                onWeaponChange={setStarterWeapon}
+              />
+
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <button
+                  type="button"
+                  onClick={() => setStep("info")}
+                  className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-medium text-white/80 bg-white/5 border border-white/15 hover:bg-white/10"
+                >
+                  ← Back to name & username
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!canSubmit) return;
+                    setShowConfirm(true);
+                  }}
+                  disabled={!canSubmit}
+                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-uri-keaney hover:bg-uri-keaney/90 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-uri-keaney focus:ring-offset-2 focus:ring-offset-uri-navy"
+                >
+                  Finish character
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {confirmModal}
     </>

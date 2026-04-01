@@ -153,7 +153,7 @@ export function FieldNoteCard({
             alt=""
             loading="lazy"
             decoding="async"
-            className="quad-feed-media-img w-full aspect-[4/5] sm:aspect-[4/3] sm:max-h-[min(72vh,32rem)] object-cover max-h-[min(70vh,26rem)]"
+            className="quad-feed-media-img w-full aspect-[4/5] sm:aspect-[4/3] sm:max-h-[min(60vh,24rem)] object-cover max-h-[min(60vh,24rem)]"
           />
           {showImageNodPop && (
             <span
@@ -383,6 +383,7 @@ export function FieldNoteCard({
     >
       {isFeed ? (
         <>
+          {/* Quad feed layout: Instagram-style — avatar + name row, full-width media, then actions and caption */}
           <div className="flex items-start gap-3 px-4 pt-3.5 pb-2">
             {avatarFrame}
             <div className="min-w-0 flex-1 pt-0.5">
